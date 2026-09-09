@@ -1,4 +1,4 @@
-// Neon Dash: High-Speed Gravity Rhythm Runner - Ultra Optimized & Stutter-Free
+// Neon Dash: Gravity Runner with Air-Dash, Streak Multipliers & Sonic Portals
 import { sound } from '../engine/audio.js';
 import { storage } from '../engine/storage.js';
 
@@ -25,6 +25,9 @@ export class NeonDashGame {
     this.distance = 0;
     this.speed = 360;
     this.starsCollected = 0;
+
+    // Streak Multiplier
+    this.starStreak = 0;
     this.multiplier = 1;
 
     this.player = {
@@ -34,12 +37,14 @@ export class NeonDashGame {
       vy: 0,
       gravityDir: 1, // 1 = down (floor), -1 = up (ceiling)
       onGround: true,
+      canAirDash: true,
       color: '#00f3ff',
       angle: 0
     };
 
     this.obstacles = [];
     this.collectibles = [];
+    this.sonicGates = [];
     this.backgroundBuildings = [];
     this.spawnTimer = 0;
 
@@ -49,7 +54,7 @@ export class NeonDashGame {
   init() {
     this.reset();
     this.isRunning = true;
-    sound.startBgm('dash');
+    sound.startBgm(storage.getSetting('bgmTrack') || 'synthwave');
   }
 
   initBackground() {
@@ -68,18 +73,38 @@ export class NeonDashGame {
   handleAction() {
     if (!this.isRunning || this.isPaused) return;
 
-    // Invert Gravity
-    this.player.gravityDir *= -1;
-    this.player.onGround = false;
-    this.player.vy = this.player.gravityDir * 320;
+    if (this.player.onGround) {
+      // Normal Gravity Flip
+      this.player.gravityDir *= -1;
+      this.player.onGround = false;
+      this.player.vy = this.player.gravityDir * 320;
+      this.player.canAirDash = true;
 
-    sound.playJump();
-    this.particles.burst(this.player.x, this.player.y, 8, {
-      color: this.player.gravityDir === 1 ? '#00f3ff' : '#ff00aa',
-      minSpeed: 40,
-      maxSpeed: 120,
-      life: 0.2
-    });
+      sound.playJump();
+      this.particles.burst(this.player.x, this.player.y, 8, {
+        color: this.player.gravityDir === 1 ? '#00f3ff' : '#ff00aa',
+        minSpeed: 40,
+        maxSpeed: 120,
+        life: 0.2
+      });
+    } else if (this.player.canAirDash) {
+      // Mid-Air Thruster Dash!
+      this.player.canAirDash = false;
+      this.player.vy = 0; // Float briefly
+      sound.playAirDash();
+
+      this.particles.shake(6, 0.2);
+      this.particles.burst(this.player.x - 10, this.player.y, 14, {
+        color: '#ffe600',
+        minSpeed: 80,
+        maxSpeed: 220,
+        life: 0.25
+      });
+      this.particles.addFloatingText('AIR DASH!', this.player.x, this.player.y - 20, {
+        color: '#ffe600',
+        size: 15
+      });
+    }
   }
 
   handleKeyDown(code) {
@@ -97,18 +122,23 @@ export class NeonDashGame {
   update(dt) {
     if (!this.isRunning || this.isPaused) return;
 
-    // Progressive speed increase
-    this.speed = Math.min(680, 360 + (this.distance / 120) * 16);
+    this.speed = Math.min(700, 360 + (this.distance / 120) * 16);
     this.distance += this.speed * dt * 0.1;
-    this.score = Math.floor(this.distance + this.starsCollected * 50);
-    this.callbacks.onScoreUpdate(this.score, Math.floor(this.distance), this.starsCollected);
+    this.score = Math.floor(this.distance + this.starsCollected * 50 * this.multiplier);
 
-    // 1. Gravity & Physics
+    // Multiplier calculation based on streak
+    if (this.starStreak >= 9) this.multiplier = 5;
+    else if (this.starStreak >= 5) this.multiplier = 3;
+    else if (this.starStreak >= 3) this.multiplier = 2;
+    else this.multiplier = 1;
+
+    this.callbacks.onScoreUpdate(this.score, Math.floor(this.distance), this.starsCollected, this.multiplier);
+
+    // 1. Physics & Gravity
     const gravityForce = 1800 * this.player.gravityDir;
     this.player.vy += gravityForce * dt;
     this.player.y += this.player.vy * dt;
 
-    // Hard bounds clamping to prevent phasing / clipping
     const minY = this.ceilY + this.player.size / 2;
     const maxY = this.floorY - this.player.size / 2;
 
@@ -117,6 +147,7 @@ export class NeonDashGame {
       this.player.vy = 0;
       if (!this.player.onGround) {
         this.player.onGround = true;
+        this.player.canAirDash = true;
         this.particles.burst(this.player.x, this.floorY, 4, { color: '#00f3ff', life: 0.15 });
       }
     } else if (this.player.gravityDir === -1 && this.player.y <= minY) {
@@ -124,17 +155,43 @@ export class NeonDashGame {
       this.player.vy = 0;
       if (!this.player.onGround) {
         this.player.onGround = true;
+        this.player.canAirDash = true;
         this.particles.burst(this.player.x, this.ceilY, 4, { color: '#ff00aa', life: 0.15 });
       }
     } else {
       this.player.onGround = false;
     }
 
-    // Spin animation when airborne
     if (!this.player.onGround) {
       this.player.angle += this.player.gravityDir * 8 * dt;
     } else {
       this.player.angle = 0;
+    }
+
+    // Custom Particle Trail
+    if (Math.random() < 0.45) {
+      const equippedTrail = storage.getEquipped('trail') || 'cyan';
+      let trailColor = this.player.gravityDir === 1 ? '#00f3ff' : '#ff00aa';
+      if (equippedTrail === 'rainbow') {
+        const colors = ['#ff0055', '#ffe600', '#00ff88', '#00f3ff', '#a855f7'];
+        trailColor = colors[Math.floor(Math.random() * colors.length)];
+      } else if (equippedTrail === 'gold') {
+        trailColor = '#ffe600';
+      } else if (equippedTrail === 'neon_pink') {
+        trailColor = '#ff007b';
+      }
+
+      this.particles.particles.push({
+        x: this.player.x - 12,
+        y: this.player.y + (Math.random() * 8 - 4),
+        vx: -this.speed * 0.4 + (Math.random() * 30 - 15),
+        vy: (Math.random() * 2 - 1) * 30,
+        size: 3,
+        color: trailColor,
+        maxLife: 0.2,
+        life: 0.2,
+        friction: 0.95
+      });
     }
 
     // 2. Parallax background
@@ -147,7 +204,7 @@ export class NeonDashGame {
       }
     }
 
-    // 3. Spawning Obstacles & Stars
+    // 3. Spawning
     this.spawnTimer += dt;
     const currentInterval = Math.max(0.7, 1.4 - (this.distance / 1500) * 0.6);
     if (this.spawnTimer >= currentInterval) {
@@ -202,6 +259,8 @@ export class NeonDashGame {
       }
 
       if (c.x < -30) {
+        // Star missed -> reset streak
+        this.starStreak = 0;
         this.collectibles.splice(i, 1);
       }
     }
@@ -236,7 +295,7 @@ export class NeonDashGame {
       });
       this.obstacles.push({
         type: 'spike',
-        x: this.width + 120,
+        x: this.width + 130,
         y: !onCeiling ? this.ceilY : this.floorY - 36,
         width: 28,
         height: 36,
@@ -254,7 +313,7 @@ export class NeonDashGame {
       });
     }
 
-    if (Math.random() < 0.65) {
+    if (Math.random() < 0.7) {
       const starY = Math.random() < 0.5 ? this.floorY - 50 : this.ceilY + 50;
       this.collectibles.push({
         x: this.width + 75,
@@ -267,9 +326,16 @@ export class NeonDashGame {
 
   collectStar(c) {
     this.starsCollected++;
-    sound.playGemPickup(this.starsCollected);
+    this.starStreak++;
+    const rewardCredits = 2 * this.multiplier;
+    storage.addCredits(rewardCredits);
+
+    sound.playGemPickup(this.starStreak);
     this.particles.burst(c.x, c.y, 8, { color: '#ffe600', life: 0.3 });
-    this.particles.addFloatingText('+50', c.x, c.y - 10, { color: '#ffe600', size: 15 });
+    this.particles.addFloatingText(`+${50 * this.multiplier}${this.multiplier > 1 ? ` (${this.multiplier}x)` : ''}`, c.x, c.y - 10, {
+      color: '#ffe600',
+      size: 15
+    });
   }
 
   gameOver() {
@@ -291,6 +357,7 @@ export class NeonDashGame {
       score: this.score,
       distance: Math.floor(this.distance),
       stars: this.starsCollected,
+      multiplier: `${this.multiplier}x`,
       isRecord
     });
   }
@@ -299,7 +366,7 @@ export class NeonDashGame {
     const ctx = this.ctx;
     ctx.clearRect(0, 0, this.width, this.height);
 
-    // 1. Neon Cyber City Backdrop
+    // 1. City backdrop
     for (let i = 0; i < this.backgroundBuildings.length; i++) {
       const b = this.backgroundBuildings[i];
       ctx.fillStyle = b.color;
@@ -313,7 +380,7 @@ export class NeonDashGame {
       ctx.globalAlpha = 1.0;
     }
 
-    // 2. Floor & Ceiling Rails
+    // 2. Rails
     ctx.strokeStyle = '#00f3ff';
     ctx.lineWidth = 3;
     ctx.beginPath();
@@ -372,6 +439,13 @@ export class NeonDashGame {
 
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(-this.player.size / 4, -this.player.size / 4, this.player.size / 2, this.player.size / 2);
+
+      // Dash readiness thruster flare
+      if (this.player.canAirDash && !this.player.onGround) {
+        ctx.strokeStyle = '#ffe600';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(-this.player.size / 2 - 2, -this.player.size / 2 - 2, this.player.size + 4, this.player.size + 4);
+      }
 
       ctx.restore();
     }

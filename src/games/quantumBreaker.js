@@ -1,4 +1,4 @@
-// Quantum Breaker: Hyper-Kinetic Neon Brick Breaker - Ultra Optimized & Stutter-Free
+// Quantum Breaker: Hyper-Kinetic Brick Breaker with 5 Handcrafted Stages & Aim Assist
 import { sound } from '../engine/audio.js';
 import { storage } from '../engine/storage.js';
 
@@ -20,7 +20,8 @@ export class QuantumBreakerGame {
     this.isPaused = false;
     this.score = 0;
     this.lives = 3;
-    this.level = 1;
+    this.stage = 1;
+    this.maxStages = 5;
     this.combo = 0;
     this.maxComboThisRun = 0;
     this.isExploding = false;
@@ -48,14 +49,14 @@ export class QuantumBreakerGame {
     this.keys = {};
     this.pointerX = this.width / 2;
 
-    this.initLevel(1);
+    this.initStage(1);
     this.spawnInitialBall();
   }
 
   init() {
     this.reset();
     this.isRunning = true;
-    sound.startBgm('synthwave');
+    sound.startBgm(storage.getSetting('bgmTrack') || 'synthwave');
   }
 
   spawnInitialBall() {
@@ -72,47 +73,93 @@ export class QuantumBreakerGame {
     ];
   }
 
-  initLevel(lvl) {
-    this.level = lvl;
+  // 5 HANDCRAFTED STAGES
+  initStage(stageNum) {
+    this.stage = stageNum;
     this.bricks = [];
 
-    const rows = 6;
-    const cols = 10;
-    const brickWidth = 68;
-    const brickHeight = 22;
-    const padding = 8;
-    const offsetX = (this.width - (cols * (brickWidth + padding) - padding)) / 2;
-    const offsetY = 70;
+    const brickWidth = 58;
+    const brickHeight = 20;
+    const padding = 6;
+    const startY = 70;
 
-    for (let r = 0; r < rows; r++) {
-      for (let c = 0; c < cols; c++) {
-        if (lvl > 1 && (r + c) % 4 === 0 && Math.random() < 0.3) continue;
+    const createBrick = (r, c, hp = 1, color = '#00f3ff', isExplosive = false) => {
+      const offsetX = (this.width - (11 * (brickWidth + padding) - padding)) / 2;
+      return {
+        x: offsetX + c * (brickWidth + padding),
+        y: startY + r * (brickHeight + padding),
+        width: brickWidth,
+        height: brickHeight,
+        hp,
+        maxHp: hp,
+        color,
+        isExplosive
+      };
+    };
 
-        let hp = 1;
-        let color = '#00f3ff';
-        let isExplosive = false;
-
-        if (Math.random() < 0.12) {
-          isExplosive = true;
-          color = '#ff003c';
-        } else if (r === 0 || r === 1) {
-          hp = 3;
-          color = '#ffe600';
-        } else if (r === 2 || r === 3) {
-          hp = 2;
-          color = '#ff00aa';
+    if (stageNum === 1) {
+      // Stage 1: Neon Grid
+      for (let r = 0; r < 5; r++) {
+        for (let c = 0; c < 11; c++) {
+          const isExp = (r === 2 && (c === 2 || c === 8));
+          let hp = r < 2 ? 2 : 1;
+          let color = isExp ? '#ff003c' : (hp === 2 ? '#ffe600' : '#00f3ff');
+          this.bricks.push(createBrick(r, c, hp, color, isExp));
         }
-
-        this.bricks.push({
-          x: offsetX + c * (brickWidth + padding),
-          y: offsetY + r * (brickHeight + padding),
-          width: brickWidth,
-          height: brickHeight,
-          hp,
-          maxHp: hp,
-          color,
-          isExplosive
-        });
+      }
+    } else if (stageNum === 2) {
+      // Stage 2: Space Invader Pattern
+      const invaderMap = [
+        [0,0,1,0,0,0,0,0,1,0,0],
+        [0,0,0,1,0,0,0,1,0,0,0],
+        [0,0,1,1,1,1,1,1,1,0,0],
+        [0,1,1,2,1,1,1,2,1,1,0],
+        [1,1,1,1,1,1,1,1,1,1,1],
+        [1,0,1,1,1,1,1,1,1,0,1],
+        [1,0,1,0,0,0,0,0,1,0,1]
+      ];
+      for (let r = 0; r < invaderMap.length; r++) {
+        for (let c = 0; c < 11; c++) {
+          const val = invaderMap[r][c];
+          if (val > 0) {
+            const isExp = (val === 2);
+            this.bricks.push(createBrick(r, c, val, isExp ? '#ff003c' : '#ff00aa', isExp));
+          }
+        }
+      }
+    } else if (stageNum === 3) {
+      // Stage 3: Cyber Skull
+      for (let r = 0; r < 7; r++) {
+        for (let c = 0; c < 11; c++) {
+          // Eye sockets empty
+          if ((r === 2 || r === 3) && (c === 3 || c === 7)) continue;
+          if (r === 5 && (c === 2 || c === 8)) continue;
+          const isExp = (r === 4 && c === 5);
+          const hp = r === 0 ? 3 : (r < 3 ? 2 : 1);
+          const color = isExp ? '#ff003c' : (hp === 3 ? '#ffe600' : (hp === 2 ? '#ff00aa' : '#00f3ff'));
+          this.bricks.push(createBrick(r, c, hp, color, isExp));
+        }
+      }
+    } else if (stageNum === 4) {
+      // Stage 4: Quantum Fortress
+      for (let r = 0; r < 6; r++) {
+        for (let c = 0; c < 11; c++) {
+          if ((r === 1 || r === 2) && c >= 4 && c <= 6) continue; // Inner chamber
+          const isExp = (r === 0 && (c === 0 || c === 10));
+          const hp = (c === 0 || c === 10 || r === 0) ? 3 : 2;
+          const color = isExp ? '#ff003c' : (hp === 3 ? '#a855f7' : '#00ff88');
+          this.bricks.push(createBrick(r, c, hp, color, isExp));
+        }
+      }
+    } else {
+      // Stage 5: The Matrix Core
+      for (let r = 0; r < 7; r++) {
+        for (let c = 0; c < 11; c++) {
+          const isExp = (r + c) % 5 === 0;
+          const hp = 3;
+          const color = isExp ? '#ff003c' : '#00ff88';
+          this.bricks.push(createBrick(r, c, hp, color, isExp));
+        }
       }
     }
   }
@@ -161,7 +208,7 @@ export class QuantumBreakerGame {
   update(dt) {
     if (!this.isRunning || this.isPaused) return;
 
-    this.callbacks.onScoreUpdate(this.score, this.lives, this.combo, this.level);
+    this.callbacks.onScoreUpdate(this.score, this.lives, this.combo, this.stage);
 
     // 1. Paddle Movement
     let dx = 0;
@@ -177,7 +224,6 @@ export class QuantumBreakerGame {
     const halfWidth = this.paddle.width / 2;
     this.paddle.x = Math.max(halfWidth, Math.min(this.width - halfWidth, this.paddle.x));
 
-    // Timed powerup buffs
     if (this.paddle.hasLaser) {
       this.paddle.laserTimer -= dt;
       if (this.paddle.laserTimer <= 0) this.paddle.hasLaser = false;
@@ -187,7 +233,7 @@ export class QuantumBreakerGame {
       if (this.paddle.fireballTimer <= 0) this.paddle.hasFireball = false;
     }
 
-    // 2. Update Lasers
+    // 2. Lasers
     for (let i = this.lasers.length - 1; i >= 0; i--) {
       const l = this.lasers[i];
       l.y += l.vy * dt;
@@ -206,7 +252,7 @@ export class QuantumBreakerGame {
       }
     }
 
-    // 3. Update Powerups
+    // 3. Powerups
     for (let i = this.powerups.length - 1; i >= 0; i--) {
       const p = this.powerups[i];
       p.y += p.vy * dt;
@@ -227,18 +273,17 @@ export class QuantumBreakerGame {
       }
     }
 
-    // 4. Update Balls
+    // 4. Balls
     for (let i = this.balls.length - 1; i >= 0; i--) {
       const b = this.balls[i];
       b.x += b.vx * dt;
       b.y += b.vy * dt;
 
-      // ANTI-STUCK: Ensure ball always has vertical movement!
       if (Math.abs(b.vy) < 80) {
         b.vy = (b.vy >= 0 ? 1 : -1) * 110;
       }
 
-      // Walls bounce
+      // Walls
       if (b.x - b.radius <= 0) {
         b.x = b.radius;
         b.vx = Math.abs(b.vx);
@@ -335,7 +380,7 @@ export class QuantumBreakerGame {
     }
 
     if (this.bricks.length === 0) {
-      this.levelClear();
+      this.stageClear();
     }
   }
 
@@ -349,6 +394,7 @@ export class QuantumBreakerGame {
 
     const points = (100 * this.combo);
     this.score += points;
+    storage.addCredits(1); // 1 credit per brick hit
 
     if (brick.hp <= 0) {
       this.bricks.splice(index, 1);
@@ -368,13 +414,12 @@ export class QuantumBreakerGame {
 
       sound.playExplosion(brick.isExplosive ? 1.5 : 0.5);
 
-      // Safe non-recursive detonation
       if (brick.isExplosive && !preventChain) {
         this.particles.shake(10, 0.25);
         this.detonateExplosion(brick.x + brick.width / 2, brick.y + brick.height / 2);
       }
 
-      if (Math.random() < 0.18 && this.powerups.length < 5) {
+      if (Math.random() < 0.2 && this.powerups.length < 5) {
         const types = ['multiball', 'laser', 'fireball', 'expand', 'shield'];
         const type = types[Math.floor(Math.random() * types.length)];
         this.powerups.push({
@@ -390,7 +435,6 @@ export class QuantumBreakerGame {
     }
   }
 
-  // Safe non-recursive explosion detonation
   detonateExplosion(x, y) {
     if (this.isExploding) return;
     this.isExploding = true;
@@ -455,16 +499,20 @@ export class QuantumBreakerGame {
     }
   }
 
-  levelClear() {
+  stageClear() {
     sound.playLevelUp();
-    this.score += 2000;
+    this.score += 2500;
+    storage.addCredits(50); // 50 credits per stage clear
+
     this.particles.shake(6, 0.3);
-    this.particles.addFloatingText('LEVEL COMPLETE! +2000', this.width / 2, this.height / 2, {
+    this.particles.addFloatingText(`STAGE ${this.stage} CLEARED! +2500`, this.width / 2, this.height / 2, {
       color: '#ffe600',
       size: 24,
       duration: 1.5
     });
-    this.initLevel(this.level + 1);
+
+    const nextStage = (this.stage % this.maxStages) + 1;
+    this.initStage(nextStage);
     this.spawnInitialBall();
   }
 
@@ -478,7 +526,7 @@ export class QuantumBreakerGame {
 
     this.callbacks.onGameOver({
       score: this.score,
-      level: this.level,
+      stage: this.stage,
       maxCombo: this.maxComboThisRun,
       isRecord
     });
@@ -508,7 +556,21 @@ export class QuantumBreakerGame {
       ctx.stroke();
     }
 
-    // 2. Render Bricks
+    // 2. Trajectory Aim Guide from Paddle
+    if (this.isRunning && this.balls.length > 0) {
+      ctx.save();
+      ctx.strokeStyle = 'rgba(0, 243, 255, 0.25)';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([4, 6]);
+      ctx.beginPath();
+      ctx.moveTo(this.paddle.x, this.paddle.y - 8);
+      // Project subtle guide upwards
+      ctx.lineTo(this.paddle.x, this.paddle.y - 75);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // 3. Bricks
     for (let i = 0; i < this.bricks.length; i++) {
       const b = this.bricks[i];
       ctx.fillStyle = b.color;
@@ -526,7 +588,7 @@ export class QuantumBreakerGame {
       }
     }
 
-    // 3. Render Powerups
+    // 4. Powerups
     for (let i = 0; i < this.powerups.length; i++) {
       const p = this.powerups[i];
       ctx.fillStyle = p.type === 'multiball' ? '#00f3ff' : p.type === 'laser' ? '#ff0055' : '#ffe600';
@@ -542,14 +604,14 @@ export class QuantumBreakerGame {
       ctx.fillText(icon, p.x, p.y);
     }
 
-    // 4. Render Lasers
+    // 5. Lasers
     for (let i = 0; i < this.lasers.length; i++) {
       const l = this.lasers[i];
       ctx.fillStyle = l.color;
       ctx.fillRect(l.x - l.width / 2, l.y, l.width, l.height);
     }
 
-    // 5. Render Balls
+    // 6. Balls
     for (let i = 0; i < this.balls.length; i++) {
       const b = this.balls[i];
       ctx.fillStyle = this.paddle.hasFireball ? '#ff3300' : b.color;
@@ -558,7 +620,7 @@ export class QuantumBreakerGame {
       ctx.fill();
     }
 
-    // 6. Render Paddle
+    // 7. Paddle
     if (this.isRunning) {
       ctx.fillStyle = this.paddle.color;
       const px = this.paddle.x - this.paddle.width / 2;

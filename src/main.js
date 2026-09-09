@@ -1,4 +1,4 @@
-// NeonPulse Arcade Main Orchestrator - Ultra-Smooth & Stutter-Free
+// NeonPulse Arcade Main Orchestrator - Mega Evolution Edition
 import { sound } from './engine/audio.js';
 import { ParticleSystem } from './engine/particles.js';
 import { storage } from './engine/storage.js';
@@ -14,16 +14,22 @@ class ArcadeApp {
 
     this.activeGameKey = null;
     this.activeGame = null;
+    this.selectedMech = storage.getEquipped('mech') || 'specter';
     this.lastTime = performance.now();
     this.isPaused = false;
 
     this.initDOMElements();
+    this.applyCabinetTheme(storage.getEquipped('theme') || 'cyberpunk');
     this.initGames();
     this.bindEvents();
     this.updateLobbyScores();
+    this.updateCreditsDisplay();
 
+    // Setup Storage Listeners
     storage.onAchievementUnlock = (ach) => this.showAchievementToast(ach);
+    storage.onCreditsChange = () => this.updateCreditsDisplay();
 
+    // Start Main Render Loop
     requestAnimationFrame((t) => this.loop(t));
   }
 
@@ -31,20 +37,49 @@ class ArcadeApp {
     this.lobbyView = document.getElementById('lobby-view');
     this.gameView = document.getElementById('game-view');
 
-    this.btnSound = document.getElementById('btn-toggle-sound');
-    this.soundIcon = document.getElementById('sound-icon');
+    // Header Controls
+    this.headerCredits = document.getElementById('header-credits');
+    this.btnOpenArmory = document.getElementById('btn-open-armory');
+    this.btnOpenArmoryBadge = document.getElementById('btn-open-armory-badge');
+    this.btnOpenAudio = document.getElementById('btn-open-audio');
     this.btnCrt = document.getElementById('btn-toggle-crt');
     this.btnAchievements = document.getElementById('btn-open-achievements');
+    this.btnFullscreen = document.getElementById('btn-toggle-fullscreen');
     this.btnHomeLogo = document.getElementById('btn-home-logo');
     this.btnBackToHub = document.getElementById('btn-back-to-hub');
     this.btnPause = document.getElementById('btn-pause-game');
 
+    // HUD
     this.hudGameName = document.getElementById('hud-game-name');
     this.hudScore = document.getElementById('hud-score');
     this.hudSecondary = document.getElementById('hud-secondary-stat');
+    this.hudSuperContainer = document.getElementById('hud-super-container');
+    this.btnSuperAbility = document.getElementById('btn-super-ability');
+    this.hudSuperFill = document.getElementById('hud-super-fill');
+    this.hudSuperText = document.getElementById('hud-super-text');
     this.hudHpContainer = document.getElementById('hud-hp-container');
     this.hudHpFill = document.getElementById('hud-hp-fill');
     this.instructionsEl = document.getElementById('game-instructions');
+
+    // Modals
+    this.modalMechSelect = document.getElementById('modal-mech-select');
+    this.btnLaunchMech = document.getElementById('btn-launch-mech');
+    this.btnCancelMech = document.getElementById('btn-cancel-mech');
+
+    this.modalArmory = document.getElementById('modal-armory');
+    this.shopCreditsDisplay = document.getElementById('shop-credits-display');
+    this.tabTrails = document.getElementById('tab-trails');
+    this.tabThemes = document.getElementById('tab-themes');
+    this.shopTrailsList = document.getElementById('shop-trails-list');
+    this.shopThemesList = document.getElementById('shop-themes-list');
+    this.btnCloseArmory = document.getElementById('btn-close-armory');
+
+    this.modalAudio = document.getElementById('modal-audio');
+    this.sliderBgm = document.getElementById('slider-bgm');
+    this.sliderSfx = document.getElementById('slider-sfx');
+    this.valBgm = document.getElementById('val-bgm');
+    this.valSfx = document.getElementById('val-sfx');
+    this.btnCloseAudio = document.getElementById('btn-close-audio');
 
     this.modalUpgrade = document.getElementById('modal-upgrade');
     this.upgradeCardsContainer = document.getElementById('upgrade-cards');
@@ -70,11 +105,16 @@ class ArcadeApp {
     this.games = {
       cyberSurvivors: new CyberSurvivorsGame(this.canvas, this.particles, {
         onGameOver: (data) => this.handleGameOver(data),
-        onScoreUpdate: (score, level, hp, maxHp) => {
+        onScoreUpdate: (score, level, hp, maxHp, superPercent) => {
           this.hudScore.textContent = score;
           this.hudSecondary.innerHTML = `LVL: <span>${level}</span>`;
           if (this.hudHpFill) {
             this.hudHpFill.style.width = `${Math.max(0, (hp / maxHp) * 100)}%`;
+          }
+          if (this.hudSuperFill) {
+            this.hudSuperFill.style.width = `${superPercent}%`;
+            this.hudSuperText.textContent = superPercent >= 100 ? 'READY!' : `${superPercent}%`;
+            this.btnSuperAbility.classList.toggle('ready', superPercent >= 100);
           }
         },
         onLevelUpChoice: (cards, onSelect) => this.showUpgradeModal(cards, onSelect)
@@ -82,17 +122,18 @@ class ArcadeApp {
 
       neonDash: new NeonDashGame(this.canvas, this.particles, {
         onGameOver: (data) => this.handleGameOver(data),
-        onScoreUpdate: (score, distance, stars) => {
+        onScoreUpdate: (score, distance, stars, multiplier) => {
           this.hudScore.textContent = score;
-          this.hudSecondary.innerHTML = `DIST: <span>${distance}m</span> | ⭐ <span>${stars}</span>`;
+          const multiText = multiplier > 1 ? ` | <span style="color:#ffe600;font-weight:900;">${multiplier}x STREAK</span>` : '';
+          this.hudSecondary.innerHTML = `DIST: <span>${distance}m</span> | ⭐ <span>${stars}</span>${multiText}`;
         }
       }),
 
       quantumBreaker: new QuantumBreakerGame(this.canvas, this.particles, {
         onGameOver: (data) => this.handleGameOver(data),
-        onScoreUpdate: (score, lives, combo, level) => {
+        onScoreUpdate: (score, lives, combo, stage) => {
           this.hudScore.textContent = score;
-          this.hudSecondary.innerHTML = `LIVES: <span>${'❤️'.repeat(Math.max(0, lives))}</span> | LVL: <span>${level}</span> | COMBO: <span>${combo}x</span>`;
+          this.hudSecondary.innerHTML = `LIVES: <span>${'❤️'.repeat(Math.max(0, lives))}</span> | STAGE: <span>${stage}/5</span> | COMBO: <span>${combo}x</span>`;
         }
       })
     };
@@ -108,20 +149,100 @@ class ArcadeApp {
     document.getElementById('best-score-breaker').textContent = `${bScore.toLocaleString()} PTS`;
   }
 
+  updateCreditsDisplay() {
+    const credits = storage.getCredits();
+    if (this.headerCredits) this.headerCredits.textContent = credits.toLocaleString();
+    if (this.shopCreditsDisplay) this.shopCreditsDisplay.textContent = credits.toLocaleString();
+  }
+
+  applyCabinetTheme(theme) {
+    document.body.className = `theme-${theme}`;
+    if (!storage.getSetting('crtFilter')) {
+      document.body.classList.add('crt-off');
+    }
+  }
+
   bindEvents() {
-    // Audio Toggle
-    this.btnSound.addEventListener('click', () => {
+    // Fullscreen Toggle
+    this.btnFullscreen.addEventListener('click', () => {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      } else {
+        document.exitFullscreen().catch(() => {});
+      }
+    });
+
+    // Audio Modal
+    this.btnOpenAudio.addEventListener('click', () => {
       sound.init();
-      const muted = sound.toggleMute();
-      this.soundIcon.textContent = muted ? '🔇' : '🔊';
-      this.btnSound.innerHTML = `<span id="sound-icon">${muted ? '🔇' : '🔊'}</span> Sound: ${muted ? 'OFF' : 'ON'}`;
+      this.sliderBgm.value = sound.bgmVolume * 100;
+      this.sliderSfx.value = sound.sfxVolume * 100;
+      this.valBgm.textContent = `${Math.round(sound.bgmVolume * 100)}%`;
+      this.valSfx.textContent = `${Math.round(sound.sfxVolume * 100)}%`;
+      this.modalAudio.style.display = 'flex';
+    });
+
+    this.btnCloseAudio.addEventListener('click', () => {
+      this.modalAudio.style.display = 'none';
+    });
+
+    this.sliderBgm.addEventListener('input', (e) => {
+      const val = e.target.value / 100;
+      sound.setBgmVolume(val);
+      this.valBgm.textContent = `${e.target.value}%`;
+      storage.setSetting('bgmVolume', val);
+    });
+
+    this.sliderSfx.addEventListener('input', (e) => {
+      const val = e.target.value / 100;
+      sound.setSfxVolume(val);
+      this.valSfx.textContent = `${e.target.value}%`;
+      storage.setSetting('sfxVolume', val);
+    });
+
+    // Track buttons
+    document.querySelectorAll('.track-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.track-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const track = btn.dataset.track;
+        storage.setSetting('bgmTrack', track);
+        sound.startBgm(track);
+      });
     });
 
     // CRT Toggle
     this.btnCrt.addEventListener('click', () => {
       document.body.classList.toggle('crt-off');
       const isOff = document.body.classList.contains('crt-off');
+      storage.setSetting('crtFilter', !isOff);
       this.btnCrt.textContent = `📺 CRT: ${isOff ? 'OFF' : 'ON'}`;
+    });
+
+    // Cyber Armory Shop
+    const openArmory = () => {
+      sound.init();
+      this.renderArmory();
+      this.modalArmory.style.display = 'flex';
+    };
+    this.btnOpenArmory.addEventListener('click', openArmory);
+    this.btnOpenArmoryBadge.addEventListener('click', openArmory);
+    this.btnCloseArmory.addEventListener('click', () => {
+      this.modalArmory.style.display = 'none';
+    });
+
+    this.tabTrails.addEventListener('click', () => {
+      this.tabTrails.classList.add('active');
+      this.tabThemes.classList.remove('active');
+      this.shopTrailsList.style.display = 'grid';
+      this.shopThemesList.style.display = 'none';
+    });
+
+    this.tabThemes.addEventListener('click', () => {
+      this.tabThemes.classList.add('active');
+      this.tabTrails.classList.remove('active');
+      this.shopTrailsList.style.display = 'none';
+      this.shopThemesList.style.display = 'grid';
     });
 
     // Trophies Modal
@@ -130,8 +251,30 @@ class ArcadeApp {
       this.modalAchievements.style.display = 'none';
     });
 
-    // Lobby Play Buttons
-    document.getElementById('btn-play-survivors').addEventListener('click', () => this.launchGame('cyberSurvivors'));
+    // Cyber Survivors Mech Chooser
+    document.getElementById('btn-play-survivors').addEventListener('click', () => {
+      this.modalMechSelect.style.display = 'flex';
+    });
+
+    document.querySelectorAll('.mech-card').forEach(card => {
+      card.addEventListener('click', () => {
+        document.querySelectorAll('.mech-card').forEach(c => c.classList.remove('active'));
+        card.classList.add('active');
+        this.selectedMech = card.dataset.mech;
+        storage.equipItem('mech', this.selectedMech);
+      });
+    });
+
+    this.btnLaunchMech.addEventListener('click', () => {
+      this.modalMechSelect.style.display = 'none';
+      this.launchGame('cyberSurvivors', this.selectedMech);
+    });
+
+    this.btnCancelMech.addEventListener('click', () => {
+      this.modalMechSelect.style.display = 'none';
+    });
+
+    // Play Buttons for other games
     document.getElementById('btn-play-dash').addEventListener('click', () => this.launchGame('neonDash'));
     document.getElementById('btn-play-breaker').addEventListener('click', () => this.launchGame('quantumBreaker'));
 
@@ -145,10 +288,17 @@ class ArcadeApp {
       this.returnToHub();
     });
 
+    // Super Ability Button Click (HUD)
+    this.btnSuperAbility.addEventListener('click', () => {
+      if (this.activeGame && this.activeGame.triggerSuperAbility) {
+        this.activeGame.triggerSuperAbility();
+      }
+    });
+
     // Game Over Buttons
     this.btnRestart.addEventListener('click', () => {
       this.modalGameOver.style.display = 'none';
-      if (this.activeGameKey) this.launchGame(this.activeGameKey);
+      if (this.activeGameKey) this.launchGame(this.activeGameKey, this.selectedMech);
     });
     this.btnGoHub.addEventListener('click', () => {
       this.modalGameOver.style.display = 'none';
@@ -174,7 +324,6 @@ class ArcadeApp {
       }
     });
 
-    // ANTI-STUCK: Clear all stuck keys when window loses focus
     window.addEventListener('blur', () => {
       if (this.activeGame) {
         this.activeGame.keys = {};
@@ -216,7 +365,7 @@ class ArcadeApp {
       }
     });
 
-    // Touch support
+    // Touch events
     this.canvas.addEventListener('touchstart', (e) => {
       e.preventDefault();
       sound.init();
@@ -241,9 +390,9 @@ class ArcadeApp {
       }
     }, { passive: false });
 
-    // Mobile Virtual Touch Buttons
+    // Mobile Action Buttons
     const btnTouchA = document.getElementById('touch-action-a');
-    const btnTouchB = document.getElementById('touch-action-b');
+    const btnTouchSuper = document.getElementById('touch-super-btn');
 
     btnTouchA.addEventListener('touchstart', (e) => {
       e.preventDefault();
@@ -251,13 +400,127 @@ class ArcadeApp {
       if (this.activeGame && this.activeGame.fireLaser) this.activeGame.fireLaser();
     });
 
-    btnTouchB.addEventListener('touchstart', (e) => {
+    btnTouchSuper.addEventListener('touchstart', (e) => {
       e.preventDefault();
-      if (this.activeGame && this.activeGame.handleAction) this.activeGame.handleAction();
+      if (this.activeGame && this.activeGame.triggerSuperAbility) {
+        this.activeGame.triggerSuperAbility();
+      }
     });
   }
 
-  launchGame(gameKey) {
+  renderArmory() {
+    this.updateCreditsDisplay();
+
+    // 1. Trails Catalog
+    const trails = [
+      { id: 'cyan', name: 'Electric Cyan', desc: 'Sleek standard pulsing cyber trail', cost: 0, color: '#00f3ff' },
+      { id: 'neon_pink', name: 'Hot Pink Neon', desc: 'Vibrant cyberpunk magenta thruster glow', cost: 50, color: '#ff007b' },
+      { id: 'gold', name: 'Golden Plasma', desc: 'Blazing gilded flare particles', cost: 100, color: '#ffe600' },
+      { id: 'rainbow', name: 'Rainbow Prism', desc: 'Dynamic spectrum trail cycling colors', cost: 200, color: 'linear-gradient(90deg, #ff0055, #ffe600, #00ff88, #00f3ff)' }
+    ];
+
+    this.shopTrailsList.innerHTML = '';
+    const equippedTrail = storage.getEquipped('trail') || 'cyan';
+
+    for (const t of trails) {
+      const owned = storage.hasItem('trails', t.id) || t.cost === 0;
+      const isEquipped = equippedTrail === t.id;
+
+      const card = document.createElement('div');
+      card.className = `shop-item-card ${isEquipped ? 'equipped' : ''}`;
+      card.innerHTML = `
+        <div>
+          <div class="shop-item-header">
+            <span class="shop-item-name">${t.name}</span>
+            <div style="width: 16px; height: 16px; border-radius: 50%; background: ${t.color}; box-shadow: 0 0 8px ${t.color};"></div>
+          </div>
+          <div class="shop-item-desc">${t.desc}</div>
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
+          <span style="font-family: var(--font-mono); font-weight: 700; color: var(--neon-yellow);">${t.cost === 0 ? 'FREE' : `💎 ${t.cost} NC`}</span>
+          <button class="shop-btn ${isEquipped ? 'equipped' : (owned ? 'equip' : 'buy')}">${isEquipped ? 'ACTIVE' : (owned ? 'EQUIP' : 'UNLOCK')}</button>
+        </div>
+      `;
+
+      const btn = card.querySelector('.shop-btn');
+      btn.addEventListener('click', () => {
+        if (isEquipped) return;
+        if (owned) {
+          storage.equipItem('trail', t.id);
+          sound.playPowerup();
+          this.renderArmory();
+        } else {
+          if (storage.spendCredits(t.cost)) {
+            storage.unlockItem('trails', t.id);
+            storage.equipItem('trail', t.id);
+            sound.playVictory();
+            this.renderArmory();
+          } else {
+            sound.playHit();
+            alert('Not enough Neon Credits! Destroy more drones or complete stages to earn more.');
+          }
+        }
+      });
+
+      this.shopTrailsList.appendChild(card);
+    }
+
+    // 2. Themes Catalog
+    const themes = [
+      { id: 'cyberpunk', name: 'Cyberpunk 2077', desc: 'Classic electric cyan & neon pink aesthetic', cost: 0 },
+      { id: 'vaporwave', name: '1984 Vaporwave', desc: 'Dreamy retro magenta, purple & sunset cyan', cost: 75 },
+      { id: 'matrix', name: 'Matrix Terminal', desc: 'Dark retro phosphor green mainframe theme', cost: 150 }
+    ];
+
+    this.shopThemesList.innerHTML = '';
+    const equippedTheme = storage.getEquipped('theme') || 'cyberpunk';
+
+    for (const th of themes) {
+      const owned = storage.hasItem('themes', th.id) || th.cost === 0;
+      const isEquipped = equippedTheme === th.id;
+
+      const card = document.createElement('div');
+      card.className = `shop-item-card ${isEquipped ? 'equipped' : ''}`;
+      card.innerHTML = `
+        <div>
+          <div class="shop-item-header">
+            <span class="shop-item-name">${th.name}</span>
+          </div>
+          <div class="shop-item-desc">${th.desc}</div>
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
+          <span style="font-family: var(--font-mono); font-weight: 700; color: var(--neon-yellow);">${th.cost === 0 ? 'FREE' : `💎 ${th.cost} NC`}</span>
+          <button class="shop-btn ${isEquipped ? 'equipped' : (owned ? 'equip' : 'buy')}">${isEquipped ? 'ACTIVE' : (owned ? 'EQUIP' : 'UNLOCK')}</button>
+        </div>
+      `;
+
+      const btn = card.querySelector('.shop-btn');
+      btn.addEventListener('click', () => {
+        if (isEquipped) return;
+        if (owned) {
+          storage.equipItem('theme', th.id);
+          this.applyCabinetTheme(th.id);
+          sound.playPowerup();
+          this.renderArmory();
+        } else {
+          if (storage.spendCredits(th.cost)) {
+            storage.unlockItem('themes', th.id);
+            storage.equipItem('theme', th.id);
+            this.applyCabinetTheme(th.id);
+            sound.playVictory();
+            this.renderArmory();
+          } else {
+            sound.playHit();
+            alert('Not enough Neon Credits! Play games to earn credits.');
+          }
+        }
+      });
+
+      this.shopThemesList.appendChild(card);
+    }
+  }
+
+  launchGame(gameKey, mechClass = 'specter') {
     sound.init();
     this.activeGameKey = gameKey;
     this.activeGame = this.games[gameKey];
@@ -272,20 +535,24 @@ class ArcadeApp {
     this.particles.clear();
 
     if (gameKey === 'cyberSurvivors') {
-      this.hudGameName.textContent = 'Cyber Survivors';
+      this.hudGameName.textContent = `Cyber Survivors (${mechClass.toUpperCase()})`;
       this.hudHpContainer.style.display = 'flex';
-      this.instructionsEl.innerHTML = `Move: <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or Drag Mouse | Weapons Auto-Fire | Grab XP Gems to Level Up`;
+      this.hudSuperContainer.style.display = 'flex';
+      this.instructionsEl.innerHTML = `Move: <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or Mouse Drag | Super Nova EMP: <kbd>SPACE</kbd> | Auto-Fire`;
+      this.activeGame.init(mechClass);
     } else if (gameKey === 'neonDash') {
       this.hudGameName.textContent = 'Neon Dash';
       this.hudHpContainer.style.display = 'none';
-      this.instructionsEl.innerHTML = `Flip Gravity: <kbd>SPACE</kbd>, <kbd>W</kbd>, <kbd>↑</kbd> or Click Canvas | Dodge Spikes & Lasers`;
+      this.hudSuperContainer.style.display = 'none';
+      this.instructionsEl.innerHTML = `Flip Gravity: <kbd>SPACE</kbd> or Click | Air-Dash: Tap while airborne | Dodge Spikes`;
+      this.activeGame.init();
     } else if (gameKey === 'quantumBreaker') {
       this.hudGameName.textContent = 'Quantum Breaker';
       this.hudHpContainer.style.display = 'none';
-      this.instructionsEl.innerHTML = `Paddle: Move Mouse or <kbd>A</kbd><kbd>D</kbd> | Fire Lasers: <kbd>SPACE</kbd> or Click | Catch Glowing Power-ups`;
+      this.hudSuperContainer.style.display = 'none';
+      this.instructionsEl.innerHTML = `Paddle: Mouse or <kbd>A</kbd><kbd>D</kbd> | Fire Lasers: <kbd>SPACE</kbd> or Click | Catch Power-ups`;
+      this.activeGame.init();
     }
-
-    this.activeGame.init();
   }
 
   returnToHub() {
@@ -300,6 +567,7 @@ class ArcadeApp {
     this.modalGameOver.style.display = 'none';
     this.modalUpgrade.style.display = 'none';
     this.updateLobbyScores();
+    this.updateCreditsDisplay();
   }
 
   togglePause() {
@@ -358,10 +626,11 @@ class ArcadeApp {
       statsHtml += `
         <div class="stat-row"><span>DISTANCE RUN:</span><span class="stat-val">${data.distance}m</span></div>
         <div class="stat-row"><span>STARS COLLECTED:</span><span class="stat-val">${data.stars}</span></div>
+        <div class="stat-row"><span>MAX MULTIPLIER:</span><span class="stat-val">${data.multiplier || '1x'}</span></div>
       `;
-    } else if (data.maxCombo !== undefined) {
+    } else if (data.stage !== undefined) {
       statsHtml += `
-        <div class="stat-row"><span>LEVEL REACHED:</span><span class="stat-val">${data.level}</span></div>
+        <div class="stat-row"><span>STAGE REACHED:</span><span class="stat-val">${data.stage}/5</span></div>
         <div class="stat-row"><span>MAX COMBO:</span><span class="stat-val">${data.maxCombo}x</span></div>
       `;
     }
@@ -369,6 +638,7 @@ class ArcadeApp {
     this.goStats.innerHTML = statsHtml;
     this.modalGameOver.style.display = 'flex';
     this.updateLobbyScores();
+    this.updateCreditsDisplay();
   }
 
   openAchievementsModal() {
@@ -399,7 +669,7 @@ class ArcadeApp {
     toast.innerHTML = `
       <div class="toast-icon">${ach.icon}</div>
       <div class="toast-text">
-        <h5>Achievement Unlocked!</h5>
+        <h5>Achievement Unlocked! (+100 💎)</h5>
         <p>${ach.title}</p>
       </div>
     `;
@@ -414,7 +684,6 @@ class ArcadeApp {
   }
 
   loop(currentTime) {
-    // Tightly capped delta time (max 50ms) to prevent position jumping on hitches
     const rawDt = (currentTime - this.lastTime) / 1000;
     const dt = Math.min(0.05, Math.max(0.001, rawDt));
     this.lastTime = currentTime;
@@ -425,7 +694,6 @@ class ArcadeApp {
         this.particles.update(dt);
       }
 
-      // Always draw even when paused so scene remains visible
       const shake = this.particles.getShakeOffset();
       this.ctx.save();
       this.ctx.translate(shake.x, shake.y);

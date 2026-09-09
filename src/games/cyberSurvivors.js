@@ -1,4 +1,4 @@
-// Cyber Survivors: Arena Roguelite / Bullet Heaven - Ultra Optimized & Stutter-Free
+// Cyber Survivors: Arena Roguelite with Mech Classes, Ultimate Super Abilities & Custom Trails
 import { sound } from '../engine/audio.js';
 import { storage } from '../engine/storage.js';
 
@@ -7,12 +7,17 @@ export class CyberSurvivorsGame {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d');
     this.particles = particleSystem;
-    this.callbacks = callbacks;
+    this.callbacks = callbacks; // { onGameOver, onScoreUpdate, onLevelUpChoice }
 
     this.width = 800;
     this.height = 600;
+    this.mechClass = 'specter';
 
     this.reset();
+  }
+
+  setMechClass(mech) {
+    this.mechClass = mech;
   }
 
   reset() {
@@ -22,36 +27,63 @@ export class CyberSurvivorsGame {
     this.score = 0;
     this.kills = 0;
 
-    // Player Stats
+    // Super Meter (0 to 100%)
+    this.superCharge = 0;
+    this.superMax = 100;
+    this.superReady = false;
+
+    // Base Player Stats
+    let speed = 210;
+    let maxHp = 100;
+    let blasterLevel = 1;
+    let orbsCount = 0;
+    let lightningLevel = 0;
+    let color = '#00f3ff';
+
+    if (this.mechClass === 'specter') {
+      speed = 250;
+      orbsCount = 2;
+      color = '#00f3ff';
+    } else if (this.mechClass === 'vanguard') {
+      maxHp = 150;
+      blasterLevel = 2;
+      speed = 190;
+      color = '#ffe600';
+    } else if (this.mechClass === 'stormweaver') {
+      lightningLevel = 1;
+      speed = 220;
+      color = '#a855f7';
+    }
+
     this.player = {
       x: this.width / 2,
       y: this.height / 2,
       vx: 0,
       vy: 0,
       radius: 14,
-      color: '#00f3ff',
-      maxHp: 100,
-      hp: 100,
-      speed: 210,
+      color,
+      maxHp,
+      hp: maxHp,
+      speed,
       level: 1,
       xp: 0,
       xpToNextLevel: 15,
       invulnerableTimer: 0,
       magnetRange: 95,
 
-      // Weapons & Upgrades
-      blasterLevel: 1,
-      blasterCooldown: 0.35,
+      // Weapons
+      blasterLevel,
+      blasterCooldown: this.mechClass === 'stormweaver' ? 0.3 : 0.35,
       blasterTimer: 0,
 
-      orbsCount: 0,
+      orbsCount,
       orbsAngle: 0,
       orbsSpeed: 3.2,
-      orbsDamage: 24,
+      orbsDamage: 26,
 
-      lightningLevel: 0,
+      lightningLevel,
       lightningTimer: 0,
-      lightningCooldown: 2.8,
+      lightningCooldown: 2.5,
 
       shieldActive: false,
       shieldLevel: 0,
@@ -70,19 +102,52 @@ export class CyberSurvivorsGame {
     this.spawnInterval = 1.0;
     this.bossSpawned = false;
 
-    // Input state
     this.keys = {};
     this.pointer = { x: this.width / 2, y: this.height / 2, active: false };
   }
 
-  init() {
+  init(mechClass = 'specter') {
+    this.mechClass = mechClass;
     this.reset();
     this.isRunning = true;
-    sound.startBgm('synthwave');
+    sound.startBgm(storage.getSetting('bgmTrack') || 'synthwave');
+  }
+
+  triggerSuperAbility() {
+    if (this.superCharge < this.superMax || !this.isRunning || this.isPaused) return;
+
+    this.superCharge = 0;
+    this.superReady = false;
+
+    sound.playSuperNova();
+    this.particles.shake(18, 0.5);
+    this.particles.addShockwave(this.player.x, this.player.y, '#ffe600', 450, 0.45);
+    this.particles.addFloatingText('⚡ SUPER NOVA EMP! ⚡', this.player.x, this.player.y - 35, {
+      color: '#ffe600',
+      size: 24,
+      duration: 1.5
+    });
+
+    // Clear enemy bullets
+    for (let i = this.bullets.length - 1; i >= 0; i--) {
+      if (this.bullets[i].isEnemy) {
+        this.bullets.splice(i, 1);
+      }
+    }
+
+    // Freeze and damage all enemies
+    for (let i = this.enemies.length - 1; i >= 0; i--) {
+      const e = this.enemies[i];
+      e.frozenTimer = 2.0; // Stun
+      this.hitEnemy(e, i, 250);
+    }
   }
 
   handleKeyDown(code) {
     this.keys[code] = true;
+    if (code === 'Space') {
+      this.triggerSuperAbility();
+    }
   }
 
   handleKeyUp(code) {
@@ -109,12 +174,19 @@ export class CyberSurvivorsGame {
 
     this.gameTime += dt;
     this.score = Math.floor(this.gameTime * 25 + this.kills * 40);
-    this.callbacks.onScoreUpdate(this.score, this.player.level, this.player.hp, this.player.maxHp);
 
-    // Dynamic difficulty scaling
+    // Report super charge %
+    this.callbacks.onScoreUpdate(
+      this.score,
+      this.player.level,
+      this.player.hp,
+      this.player.maxHp,
+      Math.floor((this.superCharge / this.superMax) * 100)
+    );
+
     this.spawnInterval = Math.max(0.24, 1.1 - (this.gameTime / 90) * 0.7);
 
-    // 1. Player Movement
+    // 1. Movement
     let dx = 0;
     let dy = 0;
     if (this.keys['KeyW'] || this.keys['ArrowUp']) dy -= 1;
@@ -122,7 +194,6 @@ export class CyberSurvivorsGame {
     if (this.keys['KeyA'] || this.keys['ArrowLeft']) dx -= 1;
     if (this.keys['KeyD'] || this.keys['ArrowRight']) dx += 1;
 
-    // Mouse / Touch Follow
     if (this.pointer.active) {
       const pdx = this.pointer.x - this.player.x;
       const pdy = this.pointer.y - this.player.y;
@@ -148,35 +219,59 @@ export class CyberSurvivorsGame {
     this.player.x = Math.max(margin, Math.min(this.width - margin, this.player.x));
     this.player.y = Math.max(margin, Math.min(this.height - margin, this.player.y));
 
-    // Invulnerability timer
+    // Custom Particle Trail from Armory
+    if (dx !== 0 || dy !== 0) {
+      if (Math.random() < 0.35) {
+        const equippedTrail = storage.getEquipped('trail') || 'cyan';
+        let trailColor = '#00f3ff';
+        if (equippedTrail === 'rainbow') {
+          const colors = ['#ff0055', '#ffe600', '#00ff88', '#00f3ff', '#a855f7'];
+          trailColor = colors[Math.floor(Math.random() * colors.length)];
+        } else if (equippedTrail === 'gold') {
+          trailColor = '#ffe600';
+        } else if (equippedTrail === 'neon_pink') {
+          trailColor = '#ff007b';
+        }
+
+        this.particles.particles.push({
+          x: this.player.x - dx * 10,
+          y: this.player.y - dy * 10,
+          vx: -dx * 30 + (Math.random() * 16 - 8),
+          vy: -dy * 30 + (Math.random() * 16 - 8),
+          size: 3,
+          color: trailColor,
+          maxLife: 0.22,
+          life: 0.22,
+          friction: 0.9
+        });
+      }
+    }
+
     if (this.player.invulnerableTimer > 0) {
       this.player.invulnerableTimer -= dt;
     }
 
     // Shield Recharge
-    if (this.player.shieldLevel > 0) {
-      if (this.player.shieldHp < this.player.shieldMaxHp) {
-        this.player.shieldTimer += dt;
-        if (this.player.shieldTimer >= this.player.shieldCooldown) {
-          this.player.shieldHp = this.player.shieldMaxHp;
-          this.player.shieldTimer = 0;
-          this.particles.addShockwave(this.player.x, this.player.y, '#00ffcc', 30, 0.2);
-          sound.playPowerup();
-        }
+    if (this.player.shieldLevel > 0 && this.player.shieldHp < this.player.shieldMaxHp) {
+      this.player.shieldTimer += dt;
+      if (this.player.shieldTimer >= this.player.shieldCooldown) {
+        this.player.shieldHp = this.player.shieldMaxHp;
+        this.player.shieldTimer = 0;
+        this.particles.addShockwave(this.player.x, this.player.y, '#00ffcc', 30, 0.2);
+        sound.playPowerup();
       }
     }
 
-    // 2. Weapons Automation
+    // Weapons
     this.updateWeapons(dt);
 
-    // 3. Spawning Enemies (Max 50 on screen to avoid CPU spikes)
+    // Spawning
     this.spawnTimer += dt;
     if (this.spawnTimer >= this.spawnInterval && this.enemies.length < 50) {
       this.spawnTimer = 0;
       this.spawnEnemy();
     }
 
-    // Boss spawn at 60s
     if (this.gameTime >= 60 && !this.bossSpawned) {
       this.bossSpawned = true;
       this.spawnBoss();
@@ -184,9 +279,16 @@ export class CyberSurvivorsGame {
       this.particles.addFloatingText('⚠️ DREADNOUGHT ARRIVAL ⚠️', this.width / 2, 100, { color: '#ff0055', size: 22 });
     }
 
-    // 4. Update Enemies
+    // Update Enemies
     for (let i = this.enemies.length - 1; i >= 0; i--) {
       const e = this.enemies[i];
+
+      // Frozen state from EMP
+      if (e.frozenTimer > 0) {
+        e.frozenTimer -= dt;
+        continue;
+      }
+
       const edx = this.player.x - e.x;
       const edy = this.player.y - e.y;
       const dsq = edx * edx + edy * edy;
@@ -196,7 +298,6 @@ export class CyberSurvivorsGame {
         e.x += (edx / dist) * e.speed * dt;
         e.y += (edy / dist) * e.speed * dt;
 
-        // Boss attacks
         if (e.isBoss) {
           e.shootTimer = (e.shootTimer || 0) + dt;
           if (e.shootTimer >= 3.0) {
@@ -205,7 +306,6 @@ export class CyberSurvivorsGame {
           }
         }
 
-        // Check collision with player
         const hitDist = this.player.radius + e.radius;
         if (dsq < hitDist * hitDist) {
           this.hitPlayer(e.damage || 15);
@@ -213,7 +313,7 @@ export class CyberSurvivorsGame {
       }
     }
 
-    // 5. Update Bullets
+    // Update Bullets
     for (let i = this.bullets.length - 1; i >= 0; i--) {
       const b = this.bullets[i];
       b.x += b.vx * dt;
@@ -256,7 +356,7 @@ export class CyberSurvivorsGame {
       }
     }
 
-    // 6. Orbital Orbs Collision
+    // Orbital Orbs
     if (this.player.orbsCount > 0) {
       this.player.orbsAngle += this.player.orbsSpeed * dt;
       const orbDist = 55;
@@ -281,7 +381,7 @@ export class CyberSurvivorsGame {
       }
     }
 
-    // 7. Update Gems & Pickups
+    // Gems & Magnet
     const magnetSq = this.player.magnetRange * this.player.magnetRange;
     for (let i = this.gems.length - 1; i >= 0; i--) {
       const g = this.gems[i];
@@ -301,14 +401,11 @@ export class CyberSurvivorsGame {
         const gemVal = g.value;
         this.gems.splice(i, 1);
         this.collectGem(gemVal);
-        if (this.isPaused) {
-          // If level-up occurred, pause processing remaining gems this frame
-          break;
-        }
+        if (this.isPaused) break;
       }
     }
 
-    // Update Pickups (health, bomb)
+    // Pickups
     for (let i = this.pickups.length - 1; i >= 0; i--) {
       const p = this.pickups[i];
       const pdx = this.player.x - p.x;
@@ -322,14 +419,12 @@ export class CyberSurvivorsGame {
   }
 
   updateWeapons(dt) {
-    // 1. Primary Blaster
     this.player.blasterTimer += dt;
     if (this.player.blasterTimer >= this.player.blasterCooldown) {
       this.player.blasterTimer = 0;
       this.fireBlaster();
     }
 
-    // 2. Chain Lightning
     if (this.player.lightningLevel > 0) {
       this.player.lightningTimer += dt;
       if (this.player.lightningTimer >= this.player.lightningCooldown) {
@@ -339,7 +434,6 @@ export class CyberSurvivorsGame {
     }
   }
 
-  // ULTRA-FAST O(N) Targeting without Array Sorting or Math.hypot allocations!
   fireBlaster() {
     if (this.enemies.length === 0) return;
 
@@ -376,7 +470,7 @@ export class CyberSurvivorsGame {
         vx: Math.cos(angle) * speed,
         vy: Math.sin(angle) * speed,
         radius: 4,
-        color: '#00f3ff',
+        color: this.player.color,
         damage: 30 + (this.player.blasterLevel * 4),
         pierce: this.player.blasterLevel >= 4 ? 2 : 1,
         life: 1.6,
@@ -465,7 +559,7 @@ export class CyberSurvivorsGame {
       damage = 10;
     }
 
-    this.enemies.push({ x, y, type, hp, maxHp: hp, speed, radius, color, damage });
+    this.enemies.push({ x, y, type, hp, maxHp: hp, speed, radius, color, damage, frozenTimer: 0 });
   }
 
   spawnBoss() {
@@ -480,7 +574,8 @@ export class CyberSurvivorsGame {
       radius: 32,
       color: '#ff003c',
       damage: 30,
-      shootTimer: 0
+      shootTimer: 0,
+      frozenTimer: 0
     });
   }
 
@@ -496,6 +591,16 @@ export class CyberSurvivorsGame {
       this.kills++;
       storage.recordEnemiesKilled(1);
 
+      // Charge super meter
+      this.superCharge = Math.min(this.superMax, this.superCharge + (enemy.isBoss ? 45 : (enemy.type === 'brute' ? 8 : 3)));
+      if (this.superCharge >= this.superMax && !this.superReady) {
+        this.superReady = true;
+        this.particles.addFloatingText('SUPER READY! [SPACE]', this.player.x, this.player.y - 30, {
+          color: '#ffe600',
+          size: 18
+        });
+      }
+
       this.particles.burst(enemy.x, enemy.y, enemy.isBoss ? 24 : 8, {
         color: enemy.color,
         minSpeed: 40,
@@ -508,6 +613,7 @@ export class CyberSurvivorsGame {
         this.particles.shake(10, 0.4);
         this.particles.addFloatingText('BOSS DESTROYED! +1000', this.width / 2, 200, { color: '#00ffcc', size: 24 });
         this.score += 1000;
+        storage.addCredits(50); // Bonus credits for boss
       }
 
       // Drop Gem
@@ -538,6 +644,7 @@ export class CyberSurvivorsGame {
 
   collectGem(value) {
     this.player.xp += value;
+    storage.addCredits(1); // 1 Neon Credit per XP gem!
     sound.playGemPickup(this.player.level);
 
     if (this.player.xp >= this.player.xpToNextLevel) {
@@ -555,7 +662,6 @@ export class CyberSurvivorsGame {
       this.particles.addShockwave(this.player.x, this.player.y, '#ffe600', 300, 0.35);
       sound.playExplosion(1.8);
 
-      // Hit visible enemies safely
       for (let i = this.enemies.length - 1; i >= 0; i--) {
         this.enemies[i].hp -= 180;
         if (this.enemies[i].hp <= 0) {
@@ -570,6 +676,7 @@ export class CyberSurvivorsGame {
     this.player.xp -= this.player.xpToNextLevel;
     this.player.xpToNextLevel = Math.floor(this.player.xpToNextLevel * 1.4 + 10);
     storage.recordSurvivorLevel(this.player.level);
+    storage.addCredits(10); // 10 Credits per level
 
     sound.playLevelUp();
     this.particles.burst(this.player.x, this.player.y, 20, {
@@ -577,9 +684,8 @@ export class CyberSurvivorsGame {
       life: 0.5
     });
 
-    // Pause cleanly
     this.isPaused = true;
-    this.keys = {}; // Clear input sticking
+    this.keys = {};
     this.pointer.active = false;
     this.presentUpgradeChoices();
   }
@@ -599,7 +705,6 @@ export class CyberSurvivorsGame {
     this.callbacks.onLevelUpChoice(shuffled, (chosenUpgradeId) => {
       this.applyUpgrade(chosenUpgradeId);
       this.isPaused = false;
-      // If remaining XP is enough for another level, queue it next frame
       if (this.player.xp >= this.player.xpToNextLevel) {
         setTimeout(() => {
           if (this.isRunning) this.levelUp();
@@ -683,7 +788,7 @@ export class CyberSurvivorsGame {
     const ctx = this.ctx;
     ctx.clearRect(0, 0, this.width, this.height);
 
-    // 1. Cyber Grid Arena
+    // 1. Grid
     ctx.strokeStyle = 'rgba(0, 243, 255, 0.08)';
     ctx.lineWidth = 1;
     const gridSize = 40;
@@ -700,7 +805,7 @@ export class CyberSurvivorsGame {
       ctx.stroke();
     }
 
-    // 2. Render Gems
+    // 2. Gems
     for (let i = 0; i < this.gems.length; i++) {
       const g = this.gems[i];
       ctx.fillStyle = g.color;
@@ -709,7 +814,7 @@ export class CyberSurvivorsGame {
       ctx.fill();
     }
 
-    // 3. Render Pickups
+    // 3. Pickups
     for (let i = 0; i < this.pickups.length; i++) {
       const p = this.pickups[i];
       ctx.fillStyle = p.type === 'health' ? '#00ff88' : '#ffe600';
@@ -723,7 +828,7 @@ export class CyberSurvivorsGame {
       ctx.fillText(p.type === 'health' ? '+' : '💣', p.x, p.y);
     }
 
-    // 4. Render Bullets
+    // 4. Bullets
     for (let i = 0; i < this.bullets.length; i++) {
       const b = this.bullets[i];
       ctx.fillStyle = b.color;
@@ -732,10 +837,10 @@ export class CyberSurvivorsGame {
       ctx.fill();
     }
 
-    // 5. Render Enemies
+    // 5. Enemies
     for (let i = 0; i < this.enemies.length; i++) {
       const e = this.enemies[i];
-      ctx.fillStyle = e.color;
+      ctx.fillStyle = e.frozenTimer > 0 ? '#00f3ff' : e.color;
 
       if (e.isBoss) {
         ctx.beginPath();
@@ -745,7 +850,6 @@ export class CyberSurvivorsGame {
         ctx.lineWidth = 2;
         ctx.stroke();
 
-        // Boss Health Bar
         const barWidth = 120;
         const hpPercent = Math.max(0, e.hp / e.maxHp);
         ctx.fillStyle = 'rgba(0,0,0,0.6)';
@@ -765,19 +869,52 @@ export class CyberSurvivorsGame {
       }
     }
 
-    // 6. Render Player
+    // 6. Player
     ctx.save();
     if (this.player.invulnerableTimer > 0 && Math.floor(Date.now() / 70) % 2 === 0) {
       ctx.globalAlpha = 0.4;
     }
 
-    // Player Body
-    ctx.fillStyle = this.player.color;
-    ctx.beginPath();
-    ctx.arc(this.player.x, this.player.y, this.player.radius, 0, Math.PI * 2);
-    ctx.fill();
+    // Glowing Super Aura when Ready
+    if (this.superReady) {
+      ctx.strokeStyle = '#ffe600';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(this.player.x, this.player.y, this.player.radius + 10 + Math.sin(Date.now() / 150) * 3, 0, Math.PI * 2);
+      ctx.stroke();
+    }
 
-    // Player Core
+    // Body Shape based on Mech Class
+    ctx.fillStyle = this.player.color;
+    if (this.mechClass === 'vanguard') {
+      // Hexagonal armored titan
+      ctx.beginPath();
+      for (let s = 0; s < 6; s++) {
+        const ang = (s * Math.PI) / 3;
+        const hx = this.player.x + Math.cos(ang) * (this.player.radius + 2);
+        const hy = this.player.y + Math.sin(ang) * (this.player.radius + 2);
+        if (s === 0) ctx.moveTo(hx, hy);
+        else ctx.lineTo(hx, hy);
+      }
+      ctx.closePath();
+      ctx.fill();
+    } else if (this.mechClass === 'stormweaver') {
+      // Diamond technomancer
+      ctx.beginPath();
+      ctx.moveTo(this.player.x, this.player.y - this.player.radius - 2);
+      ctx.lineTo(this.player.x + this.player.radius + 2, this.player.y);
+      ctx.lineTo(this.player.x, this.player.y + this.player.radius + 2);
+      ctx.lineTo(this.player.x - this.player.radius - 2, this.player.y);
+      ctx.closePath();
+      ctx.fill();
+    } else {
+      // Specter circle
+      ctx.beginPath();
+      ctx.arc(this.player.x, this.player.y, this.player.radius, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Core
     ctx.fillStyle = '#ffffff';
     ctx.beginPath();
     ctx.arc(this.player.x, this.player.y, this.player.radius * 0.45, 0, Math.PI * 2);
@@ -802,7 +939,7 @@ export class CyberSurvivorsGame {
         const ox = this.player.x + Math.cos(angle) * orbDist;
         const oy = this.player.y + Math.sin(angle) * orbDist;
 
-        ctx.fillStyle = '#00f3ff';
+        ctx.fillStyle = this.player.color;
         ctx.beginPath();
         ctx.arc(ox, oy, 6, 0, Math.PI * 2);
         ctx.fill();

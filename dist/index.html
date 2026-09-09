@@ -4,10 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>NeonPulse Arcade | Cyber Retro Web Games</title>
-  <script type="module" crossorigin src="./assets/index-BTIWGSqC.js"></script>
-  <link rel="stylesheet" crossorigin href="./assets/index-B5UE0S1Y.css">
+  <script type="module" crossorigin src="./assets/index-CHNHZvoP.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-CCCJDm38.css">
 </head>
-<body>
+<body class="theme-cyberpunk">
   <!-- CRT Scanlines Overlay -->
   <div class="crt-overlay" id="crt-overlay"></div>
 
@@ -17,15 +17,31 @@
       <div class="logo-badge">🕹️</div>
       <div class="logo-text">NeonPulse</div>
     </div>
+    
     <div class="header-controls">
-      <button class="control-btn" id="btn-toggle-sound" title="Toggle Sound & Music">
-        <span id="sound-icon">🔊</span> Sound: ON
+      <!-- Neon Credits Counter -->
+      <div class="credits-badge" id="btn-open-armory-badge" title="Neon Credits (Earned by playing)">
+        💎 <span id="header-credits">150</span> NC
+      </div>
+
+      <button class="control-btn" id="btn-open-armory" title="Cyber Armory & Cosmetics">
+        🛍️ Armory
       </button>
+
+      <button class="control-btn" id="btn-open-audio" title="Audio Settings & Music Tracks">
+        🎵 Audio
+      </button>
+
       <button class="control-btn" id="btn-toggle-crt" title="Toggle Retro CRT Scanlines">
         📺 CRT: ON
       </button>
+
       <button class="control-btn" id="btn-open-achievements" title="View Trophy Room">
         🏆 Trophies
+      </button>
+
+      <button class="control-btn" id="btn-toggle-fullscreen" title="Toggle Fullscreen">
+        ⛶
       </button>
     </div>
   </header>
@@ -36,7 +52,7 @@
     <div id="lobby-view">
       <div class="hero-banner">
         <h1 class="hero-title">NeonPulse Arcade</h1>
-        <p class="hero-subtitle">Step into a hyper-kinetic retro cyberpunk world. Three juicy games, procedural synth soundtrack, zero loading time.</p>
+        <p class="hero-subtitle">Step into a hyper-kinetic retro cyberpunk world. Three juicy games, procedural synth soundtrack, hero classes, and unlockable armory.</p>
       </div>
 
       <div class="games-grid">
@@ -46,7 +62,7 @@
             <div class="card-badge badge-rogue">Bullet-Heaven Roguelite</div>
             <div class="card-icon">🛸</div>
             <h2 class="card-title">Cyber Survivors</h2>
-            <p class="card-desc">Fight off relentless swarms of neon combat drones! Collect XP gems, unlock orbital laser shields, chain lightning, and defeat colossal dreadnought bosses.</p>
+            <p class="card-desc">Choose from 3 Mech Classes! Unleash the screen-clearing Super Nova EMP, auto-fire plasma, and level up combat perks against endless drone swarms.</p>
           </div>
           <div>
             <div class="card-meta">
@@ -54,7 +70,7 @@
               <span class="high-score-tag" id="best-score-survivors">0 PTS</span>
             </div>
             <button class="play-btn" id="btn-play-survivors">
-              <span>▶</span> Play Mission
+              <span>▶</span> Select Mech & Play
             </button>
           </div>
         </div>
@@ -65,7 +81,7 @@
             <div class="card-badge badge-runner">Gravity Rhythm Runner</div>
             <div class="card-icon">🚀</div>
             <h2 class="card-title">Neon Dash</h2>
-            <p class="card-desc">Shatter the laws of physics at breakneck speeds! Tap or click to invert gravity between floor and ceiling, dodge razor-sharp spikes, and grab speed orbs.</p>
+            <p class="card-desc">Features Mid-Air Rocket Dashing! Invert gravity, collect stars to ramp your score multiplier up to 5x, and leap through pulsing hazard gates.</p>
           </div>
           <div>
             <div class="card-meta">
@@ -84,7 +100,7 @@
             <div class="card-badge badge-arcade">Hyper Brick Breaker</div>
             <div class="card-icon">💥</div>
             <h2 class="card-title">Quantum Breaker</h2>
-            <p class="card-desc">Hyper-kinetic brick breaker packed with explosive combos! Catch multi-ball orbs, fire twin laser cannons, build massive combos, and shatter neon barriers.</p>
+            <p class="card-desc">5 Handcrafted Stages (Space Invader, Cyber Skull, Fortress)! Features trajectory aim guide, explosive chain detonations, and twin lasers.</p>
           </div>
           <div>
             <div class="card-meta">
@@ -111,6 +127,17 @@
           <!-- Dynamic HUD stats -->
           <div class="hud-item">SCORE: <span class="hud-score" id="hud-score">0</span></div>
           <div class="hud-item" id="hud-secondary-stat">LVL: <span id="hud-level">1</span></div>
+          
+          <!-- Super EMP Nova Gauge (Cyber Survivors) -->
+          <div class="hud-item" id="hud-super-container">
+            SUPER:
+            <button class="super-btn" id="btn-super-ability" title="Press SPACE or Click to trigger Super Nova">
+              <div class="super-fill" id="hud-super-fill"></div>
+              <span class="super-text" id="hud-super-text">0%</span>
+            </button>
+          </div>
+
+          <!-- HP Bar -->
           <div class="hud-item" id="hud-hp-container">
             HP:
             <div class="hud-hp-bar">
@@ -127,26 +154,122 @@
       </div>
 
       <!-- Keybindings & Instruction Guide -->
-      <div class="instructions-panel" id="game-instructions">
-        <!-- Injected dynamically per game -->
-      </div>
+      <div class="instructions-panel" id="game-instructions"></div>
 
       <!-- Mobile Touch Controls Overlay -->
       <div class="mobile-controls" id="mobile-controls">
-        <button class="touch-btn" id="touch-action-a">⚡</button>
-        <button class="touch-btn" id="touch-action-b">▲</button>
+        <button class="touch-btn" id="touch-action-a" title="Action / Air Dash">⚡</button>
+        <button class="touch-btn" id="touch-super-btn" title="Super Nova EMP">💣</button>
       </div>
     </div>
   </main>
+
+  <!-- Mech Class Chooser Modal (Cyber Survivors) -->
+  <div class="modal-overlay" id="modal-mech-select">
+    <div class="modal-box" style="max-width: 650px;">
+      <h2 class="modal-title gold">SELECT YOUR COMBAT MECH</h2>
+      <p class="modal-subtitle">Each mech features distinct starting abilities and chassis traits</p>
+      
+      <div class="mechs-grid">
+        <div class="mech-card active" data-mech="specter">
+          <div class="mech-icon">🛸</div>
+          <h4>SPECTER</h4>
+          <div class="mech-trait">+25% Speed Boost</div>
+          <p>High-agility skirmisher. Starts with 2 spinning Orbital Plasma Orbs.</p>
+        </div>
+
+        <div class="mech-card" data-mech="vanguard">
+          <div class="mech-icon">🛡️</div>
+          <h4>VANGUARD</h4>
+          <div class="mech-trait">+50 Max HP & Armor</div>
+          <p>Heavy combat titan. Starts with Level 2 twin plasma cannons.</p>
+        </div>
+
+        <div class="mech-card" data-mech="stormweaver">
+          <div class="mech-icon">⚡</div>
+          <h4>STORMWEAVER</h4>
+          <div class="mech-trait">Lightning Tech</div>
+          <p>Technomancer chassis. Starts with Chain Lightning and faster cooldowns.</p>
+        </div>
+      </div>
+
+      <div class="modal-actions" style="margin-top: 24px;">
+        <button class="play-btn" id="btn-launch-mech">Deploy Mech</button>
+        <button class="control-btn" id="btn-cancel-mech">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Cyber Armory (Shop) Modal -->
+  <div class="modal-overlay" id="modal-armory">
+    <div class="modal-box" style="max-width: 680px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <h2 class="modal-title gold" style="margin: 0;">🛍️ CYBER ARMORY</h2>
+        <div class="credits-badge" style="font-size: 1.1rem;">💎 <span id="shop-credits-display">150</span> NC</div>
+      </div>
+      <p class="modal-subtitle">Earn Neon Credits by destroying drones, collecting stars, and smashing bricks!</p>
+
+      <!-- Shop Tabs -->
+      <div class="shop-tabs">
+        <button class="shop-tab active" id="tab-trails">Particle Trails</button>
+        <button class="shop-tab" id="tab-themes">Cabinet Themes</button>
+      </div>
+
+      <!-- Trails List -->
+      <div class="shop-items-grid" id="shop-trails-list">
+        <!-- Injected dynamically -->
+      </div>
+
+      <!-- Themes List -->
+      <div class="shop-items-grid" id="shop-themes-list" style="display: none;">
+        <!-- Injected dynamically -->
+      </div>
+
+      <div class="modal-actions" style="margin-top: 20px;">
+        <button class="play-btn" id="btn-close-armory">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Audio Settings Modal -->
+  <div class="modal-overlay" id="modal-audio">
+    <div class="modal-box" style="max-width: 480px;">
+      <h2 class="modal-title gold">🎵 SYNTH AUDIO CONSOLE</h2>
+      <p class="modal-subtitle">Procedural Web Audio synthesizer customization</p>
+
+      <div class="audio-controls-box">
+        <div class="slider-row">
+          <label>Music Volume (<span id="val-bgm">35%</span>)</label>
+          <input type="range" id="slider-bgm" min="0" max="100" value="35">
+        </div>
+
+        <div class="slider-row">
+          <label>SFX Volume (<span id="val-sfx">60%</span>)</label>
+          <input type="range" id="slider-sfx" min="0" max="100" value="60">
+        </div>
+
+        <div class="slider-row" style="margin-top: 14px;">
+          <label>Synthwave BGM Track:</label>
+          <div class="track-buttons">
+            <button class="track-btn active" data-track="synthwave">Sunset</button>
+            <button class="track-btn" data-track="darksynth">Darksynth</button>
+            <button class="track-btn" data-track="chiptune">Chiptune</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-actions" style="margin-top: 24px;">
+        <button class="play-btn" id="btn-close-audio">Save & Close</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Level Up Upgrade Modal (Cyber Survivors) -->
   <div class="modal-overlay" id="modal-upgrade">
     <div class="modal-box">
       <h2 class="modal-title gold">⚡ UPGRADE AVAILABLE! ⚡</h2>
       <p class="modal-subtitle">Choose a combat enhancement to install:</p>
-      <div class="upgrade-cards-container" id="upgrade-cards">
-        <!-- Rendered dynamically -->
-      </div>
+      <div class="upgrade-cards-container" id="upgrade-cards"></div>
     </div>
   </div>
 
@@ -155,9 +278,7 @@
     <div class="modal-box">
       <h2 class="modal-title red" id="go-title">SYSTEM OFFLINE</h2>
       <p class="modal-subtitle" id="go-subtitle">Mission Ended</p>
-      <div class="modal-stats" id="go-stats">
-        <!-- Rendered dynamically -->
-      </div>
+      <div class="modal-stats" id="go-stats"></div>
       <div class="modal-actions">
         <button class="play-btn" id="btn-restart-game">🔄 Play Again</button>
         <button class="control-btn" id="btn-go-hub">🏠 Return to Hub</button>
@@ -177,21 +298,19 @@
     </div>
   </div>
 
-  <!-- Trophy / Achievements Modal -->
+  <!-- Trophy Modal -->
   <div class="modal-overlay" id="modal-achievements">
     <div class="modal-box" style="max-width: 600px;">
       <h2 class="modal-title gold">🏆 TROPHY ROOM</h2>
-      <p class="modal-subtitle">Unlock achievements across all three arcade games</p>
-      <div class="achievements-grid" id="achievements-list">
-        <!-- Rendered dynamically -->
-      </div>
+      <p class="modal-subtitle">Unlock achievements to earn bonus Neon Credits!</p>
+      <div class="achievements-grid" id="achievements-list"></div>
       <div class="modal-actions">
         <button class="play-btn" id="btn-close-achievements">Close</button>
       </div>
     </div>
   </div>
 
-  <!-- Live Toast Notification Container -->
+  <!-- Toast Container -->
   <div class="toast-container" id="toast-container"></div>
 
   <!-- Main Application Script -->
