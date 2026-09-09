@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>NeonPulse Arcade | Cyber Retro Web Games</title>
+  <link rel="stylesheet" href="./src/style.css">
+</head>
+<body>
+  <!-- CRT Scanlines Overlay -->
+  <div class="crt-overlay" id="crt-overlay"></div>
+
+  <!-- Header & Toolbar -->
+  <header>
+    <div class="logo-container" id="btn-home-logo">
+      <div class="logo-badge">🕹️</div>
+      <div class="logo-text">NeonPulse</div>
+    </div>
+    <div class="header-controls">
+      <button class="control-btn" id="btn-toggle-sound" title="Toggle Sound & Music">
+        <span id="sound-icon">🔊</span> Sound: ON
+      </button>
+      <button class="control-btn" id="btn-toggle-crt" title="Toggle Retro CRT Scanlines">
+        📺 CRT: ON
+      </button>
+      <button class="control-btn" id="btn-open-achievements" title="View Trophy Room">
+        🏆 Trophies
+      </button>
+    </div>
+  </header>
+
+  <!-- Main View Area -->
+  <main>
+    <!-- LOBBY VIEW -->
+    <div id="lobby-view">
+      <div class="hero-banner">
+        <h1 class="hero-title">NeonPulse Arcade</h1>
+        <p class="hero-subtitle">Step into a hyper-kinetic retro cyberpunk world. Three juicy games, procedural synth soundtrack, zero loading time.</p>
+      </div>
+
+      <div class="games-grid">
+        <!-- Game 1: Cyber Survivors -->
+        <div class="game-card">
+          <div>
+            <div class="card-badge badge-rogue">Bullet-Heaven Roguelite</div>
+            <div class="card-icon">🛸</div>
+            <h2 class="card-title">Cyber Survivors</h2>
+            <p class="card-desc">Fight off relentless swarms of neon combat drones! Collect XP gems, unlock orbital laser shields, chain lightning, and defeat colossal dreadnought bosses.</p>
+          </div>
+          <div>
+            <div class="card-meta">
+              <span>Best Score</span>
+              <span class="high-score-tag" id="best-score-survivors">0 PTS</span>
+            </div>
+            <button class="play-btn" id="btn-play-survivors">
+              <span>▶</span> Play Mission
+            </button>
+          </div>
+        </div>
+
+        <!-- Game 2: Neon Dash -->
+        <div class="game-card">
+          <div>
+            <div class="card-badge badge-runner">Gravity Rhythm Runner</div>
+            <div class="card-icon">🚀</div>
+            <h2 class="card-title">Neon Dash</h2>
+            <p class="card-desc">Shatter the laws of physics at breakneck speeds! Tap or click to invert gravity between floor and ceiling, dodge razor-sharp spikes, and grab speed orbs.</p>
+          </div>
+          <div>
+            <div class="card-meta">
+              <span>Best Distance</span>
+              <span class="high-score-tag" id="best-score-dash">0 M</span>
+            </div>
+            <button class="play-btn pink" id="btn-play-dash">
+              <span>▶</span> Run Matrix
+            </button>
+          </div>
+        </div>
+
+        <!-- Game 3: Quantum Breaker -->
+        <div class="game-card">
+          <div>
+            <div class="card-badge badge-arcade">Hyper Brick Breaker</div>
+            <div class="card-icon">💥</div>
+            <h2 class="card-title">Quantum Breaker</h2>
+            <p class="card-desc">Hyper-kinetic brick breaker packed with explosive combos! Catch multi-ball orbs, fire twin laser cannons, build massive combos, and shatter neon barriers.</p>
+          </div>
+          <div>
+            <div class="card-meta">
+              <span>Best Score</span>
+              <span class="high-score-tag" id="best-score-breaker">0 PTS</span>
+            </div>
+            <button class="play-btn yellow" id="btn-play-breaker">
+              <span>▶</span> Smash Bricks
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- GAMEPLAY VIEW -->
+    <div id="game-view">
+      <!-- In-Game HUD -->
+      <div class="game-hud">
+        <div class="hud-group">
+          <button class="control-btn" id="btn-back-to-hub">← Hub</button>
+          <div class="hud-item" id="hud-game-name">Cyber Survivors</div>
+        </div>
+        <div class="hud-group">
+          <!-- Dynamic HUD stats -->
+          <div class="hud-item">SCORE: <span class="hud-score" id="hud-score">0</span></div>
+          <div class="hud-item" id="hud-secondary-stat">LVL: <span id="hud-level">1</span></div>
+          <div class="hud-item" id="hud-hp-container">
+            HP:
+            <div class="hud-hp-bar">
+              <div class="hud-hp-fill" id="hud-hp-fill"></div>
+            </div>
+          </div>
+          <button class="control-btn" id="btn-pause-game">⏸</button>
+        </div>
+      </div>
+
+      <!-- Canvas Viewport -->
+      <div class="canvas-container">
+        <canvas id="game-canvas" width="800" height="600"></canvas>
+      </div>
+
+      <!-- Keybindings & Instruction Guide -->
+      <div class="instructions-panel" id="game-instructions">
+        <!-- Injected dynamically per game -->
+      </div>
+
+      <!-- Mobile Touch Controls Overlay -->
+      <div class="mobile-controls" id="mobile-controls">
+        <button class="touch-btn" id="touch-action-a">⚡</button>
+        <button class="touch-btn" id="touch-action-b">▲</button>
+      </div>
+    </div>
+  </main>
+
+  <!-- Level Up Upgrade Modal (Cyber Survivors) -->
+  <div class="modal-overlay" id="modal-upgrade">
+    <div class="modal-box">
+      <h2 class="modal-title gold">⚡ UPGRADE AVAILABLE! ⚡</h2>
+      <p class="modal-subtitle">Choose a combat enhancement to install:</p>
+      <div class="upgrade-cards-container" id="upgrade-cards">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Game Over Modal -->
+  <div class="modal-overlay" id="modal-game-over">
+    <div class="modal-box">
+      <h2 class="modal-title red" id="go-title">SYSTEM OFFLINE</h2>
+      <p class="modal-subtitle" id="go-subtitle">Mission Ended</p>
+      <div class="modal-stats" id="go-stats">
+        <!-- Rendered dynamically -->
+      </div>
+      <div class="modal-actions">
+        <button class="play-btn" id="btn-restart-game">🔄 Play Again</button>
+        <button class="control-btn" id="btn-go-hub">🏠 Return to Hub</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pause Modal -->
+  <div class="modal-overlay" id="modal-pause">
+    <div class="modal-box">
+      <h2 class="modal-title">GAME PAUSED</h2>
+      <p class="modal-subtitle">Take a breather, Operative</p>
+      <div class="modal-actions">
+        <button class="play-btn" id="btn-resume-game">▶ Resume</button>
+        <button class="control-btn" id="btn-pause-hub">🏠 Exit to Hub</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Trophy / Achievements Modal -->
+  <div class="modal-overlay" id="modal-achievements">
+    <div class="modal-box" style="max-width: 600px;">
+      <h2 class="modal-title gold">🏆 TROPHY ROOM</h2>
+      <p class="modal-subtitle">Unlock achievements across all three arcade games</p>
+      <div class="achievements-grid" id="achievements-list">
+        <!-- Rendered dynamically -->
+      </div>
+      <div class="modal-actions">
+        <button class="play-btn" id="btn-close-achievements">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Live Toast Notification Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- Main Application Script -->
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>
