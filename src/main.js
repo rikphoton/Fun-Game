@@ -516,29 +516,244 @@ class ArcadeApp {
       }
     }, { passive: false });
 
-    // Mobile Action Buttons
+    // ==========================================================================
+    // Tactile Mobile Arcade Deck Controls (D-Pad & Actions)
+    // ==========================================================================
+    const dpadButtons = [
+      { id: 'btn-touch-up', code: 'ArrowUp', altCode: 'KeyW', dir: 'up' },
+      { id: 'btn-touch-down', code: 'ArrowDown', altCode: 'KeyS', dir: 'down' },
+      { id: 'btn-touch-left', code: 'ArrowLeft', altCode: 'KeyA', dir: 'left', steer: -1 },
+      { id: 'btn-touch-right', code: 'ArrowRight', altCode: 'KeyD', dir: 'right', steer: 1 }
+    ];
+
+    const pressDirection = (btnDef) => {
+      sound.init();
+      if (navigator.vibrate) navigator.vibrate(8);
+      const el = document.getElementById(btnDef.id);
+      if (el) el.classList.add('pressed');
+
+      if (!this.activeGame) return;
+
+      if (this.activeGame.keys) {
+        this.activeGame.keys[btnDef.code] = true;
+        this.activeGame.keys[btnDef.altCode] = true;
+      }
+      if (this.activeGame.handleKeyDown) {
+        this.activeGame.handleKeyDown(btnDef.code);
+      }
+      if (this.activeGame.handlePlayerTurn) {
+        this.activeGame.handlePlayerTurn(btnDef.code);
+      }
+      if (btnDef.steer !== undefined && this.activeGame.touchSteer !== undefined) {
+        this.activeGame.touchSteer = btnDef.steer;
+      }
+    };
+
+    const releaseDirection = (btnDef) => {
+      const el = document.getElementById(btnDef.id);
+      if (el) el.classList.remove('pressed');
+
+      if (!this.activeGame) return;
+
+      if (this.activeGame.keys) {
+        this.activeGame.keys[btnDef.code] = false;
+        this.activeGame.keys[btnDef.altCode] = false;
+      }
+      if (this.activeGame.handleKeyUp) {
+        this.activeGame.handleKeyUp(btnDef.code);
+      }
+      if (btnDef.steer !== undefined && this.activeGame.touchSteer !== undefined) {
+        if (btnDef.steer === -1 && this.activeGame.keys && this.activeGame.keys['ArrowRight']) {
+          this.activeGame.touchSteer = 1;
+        } else if (btnDef.steer === 1 && this.activeGame.keys && this.activeGame.keys['ArrowLeft']) {
+          this.activeGame.touchSteer = -1;
+        } else {
+          this.activeGame.touchSteer = 0;
+        }
+      }
+    };
+
+    dpadButtons.forEach(btnDef => {
+      const el = document.getElementById(btnDef.id);
+      if (!el) return;
+
+      el.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        pressDirection(btnDef);
+      }, { passive: false });
+
+      el.addEventListener('pointerup', (e) => {
+        e.preventDefault();
+        releaseDirection(btnDef);
+      }, { passive: false });
+
+      el.addEventListener('pointercancel', (e) => {
+        e.preventDefault();
+        releaseDirection(btnDef);
+      }, { passive: false });
+
+      el.addEventListener('pointerleave', () => {
+        releaseDirection(btnDef);
+      });
+    });
+
+    // Support thumb sliding across the D-Pad
+    const dpadCluster = document.getElementById('deck-dpad');
+    if (dpadCluster) {
+      let activeDpadPointerId = null;
+      let lastActiveBtn = null;
+
+      dpadCluster.addEventListener('pointerdown', (e) => {
+        activeDpadPointerId = e.pointerId;
+      });
+
+      dpadCluster.addEventListener('pointermove', (e) => {
+        if (activeDpadPointerId === null || e.pointerId !== activeDpadPointerId) return;
+        const target = document.elementFromPoint(e.clientX, e.clientY);
+        const btnEl = target ? target.closest('.dpad-btn') : null;
+
+        if (btnEl !== lastActiveBtn) {
+          if (lastActiveBtn) {
+            const prevDef = dpadButtons.find(b => b.id === lastActiveBtn.id);
+            if (prevDef) releaseDirection(prevDef);
+          }
+          if (btnEl) {
+            const newDef = dpadButtons.find(b => b.id === btnEl.id);
+            if (newDef) pressDirection(newDef);
+          }
+          lastActiveBtn = btnEl;
+        }
+      });
+
+      const clearDpadSlide = (e) => {
+        if (e.pointerId === activeDpadPointerId) {
+          if (lastActiveBtn) {
+            const def = dpadButtons.find(b => b.id === lastActiveBtn.id);
+            if (def) releaseDirection(def);
+            lastActiveBtn = null;
+          }
+          activeDpadPointerId = null;
+          dpadButtons.forEach(releaseDirection);
+        }
+      };
+
+      dpadCluster.addEventListener('pointerup', clearDpadSlide);
+      dpadCluster.addEventListener('pointercancel', clearDpadSlide);
+    }
+
+    // Primary Action Button (🅰️)
     const btnTouchA = document.getElementById('touch-action-a');
+    if (btnTouchA) {
+      const triggerActionA = (press) => {
+        if (press) {
+          sound.init();
+          if (navigator.vibrate) navigator.vibrate(12);
+          btnTouchA.classList.add('pressed');
+          if (!this.activeGame) return;
+
+          if (this.activeGame.keys) {
+            this.activeGame.keys['Space'] = true;
+          }
+          if (this.activeGame.handleAction) this.activeGame.handleAction();
+          if (this.activeGame.fireLaser) this.activeGame.fireLaser();
+          if (this.activeGame.jump) this.activeGame.jump();
+          if (this.activeGame.triggerPhaseJump) this.activeGame.triggerPhaseJump();
+          if (this.activeGame.setTouchAction) this.activeGame.setTouchAction('nitro', true);
+          if (this.activeGame.triggerSuperAbility && this.activeGameKey === 'cyberSurvivors') {
+            this.activeGame.triggerSuperAbility();
+          }
+        } else {
+          btnTouchA.classList.remove('pressed');
+          if (!this.activeGame) return;
+          if (this.activeGame.keys) {
+            this.activeGame.keys['Space'] = false;
+          }
+          if (this.activeGame.setTouchAction) this.activeGame.setTouchAction('nitro', false);
+        }
+      };
+
+      btnTouchA.addEventListener('pointerdown', (e) => { e.preventDefault(); triggerActionA(true); }, { passive: false });
+      btnTouchA.addEventListener('pointerup', (e) => { e.preventDefault(); triggerActionA(false); }, { passive: false });
+      btnTouchA.addEventListener('pointercancel', (e) => { e.preventDefault(); triggerActionA(false); }, { passive: false });
+    }
+
+    // Sub Action / Nitro / Drift / Air Dash Button (⚡)
+    const btnTouchNitro = document.getElementById('btn-touch-nitro');
+    if (btnTouchNitro) {
+      const triggerActionNitro = (press) => {
+        if (press) {
+          sound.init();
+          if (navigator.vibrate) navigator.vibrate(10);
+          btnTouchNitro.classList.add('pressed');
+          if (!this.activeGame) return;
+
+          if (this.activeGame.keys) {
+            this.activeGame.keys['ShiftLeft'] = true;
+          }
+          if (this.activeGame.setTouchAction) {
+            this.activeGame.setTouchAction('drift', true);
+            this.activeGame.setTouchAction('nitro', true);
+          }
+          if (this.activeGame.handleAction && this.activeGameKey === 'neonDash') {
+            this.activeGame.handleAction();
+          }
+          if (this.activeGame.triggerPhaseJump) this.activeGame.triggerPhaseJump();
+        } else {
+          btnTouchNitro.classList.remove('pressed');
+          if (!this.activeGame) return;
+          if (this.activeGame.keys) {
+            this.activeGame.keys['ShiftLeft'] = false;
+          }
+          if (this.activeGame.setTouchAction) {
+            this.activeGame.setTouchAction('drift', false);
+            this.activeGame.setTouchAction('nitro', false);
+          }
+        }
+      };
+
+      btnTouchNitro.addEventListener('pointerdown', (e) => { e.preventDefault(); triggerActionNitro(true); }, { passive: false });
+      btnTouchNitro.addEventListener('pointerup', (e) => { e.preventDefault(); triggerActionNitro(false); }, { passive: false });
+      btnTouchNitro.addEventListener('pointercancel', (e) => { e.preventDefault(); triggerActionNitro(false); }, { passive: false });
+    }
+
+    // Super Action / EMP / Bomb Button (💣)
     const btnTouchSuper = document.getElementById('touch-super-btn');
+    if (btnTouchSuper) {
+      const triggerActionSuper = (press) => {
+        if (press) {
+          sound.init();
+          if (navigator.vibrate) navigator.vibrate(20);
+          btnTouchSuper.classList.add('pressed');
+          if (!this.activeGame) return;
 
-    btnTouchA.addEventListener('touchstart', (e) => {
-      e.preventDefault();
-      if (this.activeGame && this.activeGame.handleAction) this.activeGame.handleAction();
-      if (this.activeGame && this.activeGame.fireLaser) this.activeGame.fireLaser();
-      if (this.activeGame && this.activeGame.jump) this.activeGame.jump();
-    });
+          if (this.activeGame.keys) {
+            this.activeGame.keys['KeyE'] = true;
+          }
+          if (this.activeGame.triggerSuperAbility) {
+            this.activeGame.triggerSuperAbility();
+          }
+          if (this.activeGame.triggerBomb) {
+            this.activeGame.triggerBomb();
+          }
+          if (this.activeGame.triggerEmp) {
+            this.activeGame.triggerEmp();
+          }
+          if (this.activeGame.triggerPhaseJump) {
+            this.activeGame.triggerPhaseJump();
+          }
+        } else {
+          btnTouchSuper.classList.remove('pressed');
+          if (!this.activeGame) return;
+          if (this.activeGame.keys) {
+            this.activeGame.keys['KeyE'] = false;
+          }
+        }
+      };
 
-    btnTouchSuper.addEventListener('touchstart', (e) => {
-      e.preventDefault();
-      if (this.activeGame && this.activeGame.triggerSuperAbility) {
-        this.activeGame.triggerSuperAbility();
-      }
-      if (this.activeGame && this.activeGame.triggerBomb) {
-        this.activeGame.triggerBomb();
-      }
-      if (this.activeGame && this.activeGame.triggerEmp) {
-        this.activeGame.triggerEmp();
-      }
-    });
+      btnTouchSuper.addEventListener('pointerdown', (e) => { e.preventDefault(); triggerActionSuper(true); }, { passive: false });
+      btnTouchSuper.addEventListener('pointerup', (e) => { e.preventDefault(); triggerActionSuper(false); }, { passive: false });
+      btnTouchSuper.addEventListener('pointercancel', (e) => { e.preventDefault(); triggerActionSuper(false); }, { passive: false });
+    }
 
     // Leaderboard Modal Controls
     if (this.btnOpenLeaderboard) {
@@ -912,6 +1127,7 @@ class ArcadeApp {
     this.isPaused = false;
     this.lastTime = performance.now();
 
+    document.body.classList.add('in-game');
     this.lobbyView.style.display = 'none';
     this.gameView.style.display = 'flex';
     this.modalGameOver.style.display = 'none';
@@ -919,23 +1135,40 @@ class ArcadeApp {
     this.modalUpgrade.style.display = 'none';
     this.particles.clear();
 
+    const lblPrimary = document.getElementById('lbl-touch-primary');
+    const lblSub = document.getElementById('lbl-touch-sub');
+    const lblSuper = document.getElementById('lbl-touch-super');
+    const hintText = document.getElementById('deck-hint-text');
+
     if (gameKey === 'cyberSurvivors') {
       this.hudGameName.textContent = `Cyber Survivors (${mechClass.toUpperCase()})`;
       this.hudHpContainer.style.display = 'flex';
       this.hudSuperContainer.style.display = 'flex';
       this.instructionsEl.innerHTML = `Move: <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or Mouse Drag | Super EMP: <kbd>SPACE</kbd> | Auto-Fire`;
+      if (lblPrimary) lblPrimary.textContent = 'SUPER EMP';
+      if (lblSub) lblSub.textContent = 'BOOST';
+      if (lblSuper) lblSuper.textContent = 'NOVA';
+      if (hintText) hintText.textContent = '🕹️ D-PAD: MOVE | 💣 EMP NOVA';
       this.activeGame.init(mechClass);
     } else if (gameKey === 'neonDash') {
       this.hudGameName.textContent = 'Neon Dash';
       this.hudHpContainer.style.display = 'none';
       this.hudSuperContainer.style.display = 'none';
       this.instructionsEl.innerHTML = `Flip Gravity: <kbd>SPACE</kbd> or Click | Air-Dash: Tap while airborne | Dodge Spikes`;
+      if (lblPrimary) lblPrimary.textContent = 'JUMP / FLIP';
+      if (lblSub) lblSub.textContent = 'AIR DASH';
+      if (lblSuper) lblSuper.textContent = 'BURST';
+      if (hintText) hintText.textContent = '🕹️ TAP 🅰️ TO FLIP GRAVITY';
       this.activeGame.init();
     } else if (gameKey === 'quantumBreaker') {
       this.hudGameName.textContent = 'Quantum Breaker';
       this.hudHpContainer.style.display = 'none';
       this.hudSuperContainer.style.display = 'none';
       this.instructionsEl.innerHTML = `Paddle: Mouse or <kbd>A</kbd><kbd>D</kbd> | Fire Lasers: <kbd>SPACE</kbd> or Click | Catch Power-ups`;
+      if (lblPrimary) lblPrimary.textContent = 'LAUNCH / FIRE';
+      if (lblSub) lblSub.textContent = 'LASER';
+      if (lblSuper) lblSuper.textContent = 'BOMB';
+      if (hintText) hintText.textContent = '🕹️ ◀ ▶ STEER | 🅰️ FIRE LASER';
       this.activeGame.init();
     } else if (gameKey === 'astroPulse') {
       this.hudGameName.textContent = 'Astro Pulse';
@@ -943,6 +1176,10 @@ class ArcadeApp {
       this.hudSuperContainer.style.display = 'flex';
       this.hudSuperText.textContent = 'BOMB';
       this.instructionsEl.innerHTML = `Move: Mouse / <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> | Smart Bomb: <kbd>SPACE</kbd> | Auto-Fire`;
+      if (lblPrimary) lblPrimary.textContent = 'FIRE';
+      if (lblSub) lblSub.textContent = 'THRUST';
+      if (lblSuper) lblSuper.textContent = 'SMART BOMB';
+      if (hintText) hintText.textContent = '🕹️ D-PAD: FLY | 💣 SMART BOMB';
       this.activeGame.init();
     } else if (gameKey === 'neonDrift') {
       this.hudGameName.textContent = 'Neon Drift';
@@ -950,6 +1187,10 @@ class ArcadeApp {
       this.hudSuperContainer.style.display = 'flex';
       this.hudSuperText.textContent = 'NITRO';
       this.instructionsEl.innerHTML = `Steer: <kbd>A</kbd><kbd>D</kbd> or Mouse | Nitro: <kbd>W</kbd> / <kbd>SPACE</kbd> | Drift: <kbd>S</kbd> / <kbd>SHIFT</kbd>`;
+      if (lblPrimary) lblPrimary.textContent = 'NITRO';
+      if (lblSub) lblSub.textContent = 'DRIFT';
+      if (lblSuper) lblSuper.textContent = 'BOOST';
+      if (hintText) hintText.textContent = '🕹️ ◀ ▶ STEER | ⚡ DRIFT | 🅰️ NITRO';
       this.activeGame.start();
     } else if (gameKey === 'hexaTron') {
       this.hudGameName.textContent = 'Hexa-Tron';
@@ -957,11 +1198,16 @@ class ArcadeApp {
       this.hudSuperContainer.style.display = 'flex';
       this.hudSuperText.textContent = 'NITRO';
       this.instructionsEl.innerHTML = `Steer: <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or Arrows / Gamepad | Jump: <kbd>SPACE</kbd> / (A) | Nitro: <kbd>SHIFT</kbd> / (RT) | EMP: <kbd>E</kbd> / (X)`;
+      if (lblPrimary) lblPrimary.textContent = 'PHASE JUMP';
+      if (lblSub) lblSub.textContent = 'NITRO';
+      if (lblSuper) lblSuper.textContent = 'EMP BLAST';
+      if (hintText) hintText.textContent = '🕹️ D-PAD: TURN | 🅰️ PHASE JUMP';
       this.activeGame.init();
     }
   }
 
   returnToHub() {
+    document.body.classList.remove('in-game');
     if (this.activeGame) {
       this.activeGame.isRunning = false;
       this.activeGame = null;

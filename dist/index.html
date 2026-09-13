@@ -2,10 +2,10 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>NeonPulse Arcade | Cyber Retro Web Games</title>
-  <script type="module" crossorigin src="./assets/index-70fpiLGZ.js"></script>
-  <link rel="stylesheet" crossorigin href="./assets/index-DNXdm3QH.css">
+  <script type="module" crossorigin src="./assets/index-DUdEdCXO.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-BWTvchZA.css">
 </head>
 <body class="theme-cyberpunk">
   <!-- CRT Scanlines Overlay -->
@@ -224,10 +224,41 @@
       <!-- Keybindings & Instruction Guide -->
       <div class="instructions-panel" id="game-instructions"></div>
 
-      <!-- Mobile Touch Controls Overlay -->
-      <div class="mobile-controls" id="mobile-controls">
-        <button class="touch-btn" id="touch-action-a" title="Action / Air Dash">⚡</button>
-        <button class="touch-btn" id="touch-super-btn" title="Super Nova EMP / Bomb">💣</button>
+      <!-- Cyberpunk Mobile Arcade Deck (Ergonomic Phone Vertical Controls) -->
+      <div class="mobile-arcade-deck" id="mobile-arcade-deck">
+        <!-- Left Thumb: Directional D-Pad Cluster -->
+        <div class="deck-cluster deck-left" id="deck-dpad">
+          <button class="deck-btn dpad-btn dpad-up" id="btn-touch-up" data-code="ArrowUp" aria-label="Up">▲</button>
+          <div class="dpad-horizontal">
+            <button class="deck-btn dpad-btn dpad-left" id="btn-touch-left" data-code="ArrowLeft" aria-label="Left">◀</button>
+            <div class="dpad-center-hub"></div>
+            <button class="deck-btn dpad-btn dpad-right" id="btn-touch-right" data-code="ArrowRight" aria-label="Right">▶</button>
+          </div>
+          <button class="deck-btn dpad-btn dpad-down" id="btn-touch-down" data-code="ArrowDown" aria-label="Down">▼</button>
+        </div>
+
+        <!-- Center: Quick Status / Hints / Feedback -->
+        <div class="deck-center-status">
+          <div class="deck-hint-badge" id="deck-hint-text">🕹️ TOUCH ARCADEDECK</div>
+        </div>
+
+        <!-- Right Thumb: Action Cluster -->
+        <div class="deck-cluster deck-right" id="deck-actions">
+          <div class="deck-action-row">
+            <button class="deck-btn action-btn action-sub" id="btn-touch-nitro" data-code="ShiftLeft" aria-label="Nitro / Boost / Drift">
+              <span class="btn-icon">⚡</span>
+              <span class="btn-subtext" id="lbl-touch-sub">NITRO</span>
+            </button>
+            <button class="deck-btn action-btn action-super" id="touch-super-btn" data-code="KeyE" aria-label="Super Nova EMP / Bomb">
+              <span class="btn-icon">💣</span>
+              <span class="btn-subtext" id="lbl-touch-super">EMP</span>
+            </button>
+          </div>
+          <button class="deck-btn action-btn action-primary" id="touch-action-a" data-code="Space" aria-label="Primary Action / Jump / Fire">
+            <span class="btn-icon">🅰️</span>
+            <span class="btn-subtext" id="lbl-touch-primary">ACTION</span>
+          </button>
+        </div>
       </div>
     </div>
   </main>
