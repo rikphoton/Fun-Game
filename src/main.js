@@ -412,6 +412,40 @@ class ArcadeApp {
       this.returnToHub();
     });
 
+    // Fullscreen Controls (Header & In-Game HUD)
+    const toggleFullscreen = () => {
+      sound.init();
+      if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+        const root = document.documentElement;
+        if (root.requestFullscreen) {
+          root.requestFullscreen().catch(() => {});
+        } else if (root.webkitRequestFullscreen) {
+          root.webkitRequestFullscreen();
+        }
+      } else {
+        if (document.exitFullscreen) {
+          document.exitFullscreen().catch(() => {});
+        } else if (document.webkitExitFullscreen) {
+          document.webkitExitFullscreen();
+        }
+      }
+    };
+
+    const btnHeaderFs = document.getElementById('btn-toggle-fullscreen');
+    if (btnHeaderFs) btnHeaderFs.addEventListener('click', toggleFullscreen);
+
+    const btnIngameFs = document.getElementById('btn-ingame-fullscreen');
+    if (btnIngameFs) btnIngameFs.addEventListener('click', toggleFullscreen);
+
+    const updateFsIcons = () => {
+      const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
+      if (btnHeaderFs) btnHeaderFs.textContent = isFs ? '✕' : '⛶';
+      if (btnIngameFs) btnIngameFs.textContent = isFs ? '✕' : '⛶';
+    };
+
+    document.addEventListener('fullscreenchange', updateFsIcons);
+    document.addEventListener('webkitfullscreenchange', updateFsIcons);
+
     // Super Ability Button Click (HUD)
     this.btnSuperAbility.addEventListener('click', () => {
       if (this.activeGame && this.activeGame.triggerSuperAbility) {
@@ -498,6 +532,9 @@ class ArcadeApp {
       const pos = getCanvasPos(e);
       if (this.activeGame && this.activeGame.handlePointerDown) {
         this.activeGame.handlePointerDown(pos.x, pos.y);
+      }
+      if (this.activeGameKey === 'neonDash' && this.activeGame && this.activeGame.handleAction) {
+        this.activeGame.handleAction();
       }
     }, { passive: false });
 
@@ -1134,6 +1171,16 @@ class ArcadeApp {
     this.modalPause.style.display = 'none';
     this.modalUpgrade.style.display = 'none';
     this.particles.clear();
+
+    // Auto-enter native fullscreen on mobile for true immersive arcade view
+    if (window.innerWidth <= 860 && !document.fullscreenElement && !document.webkitFullscreenElement) {
+      const root = document.documentElement;
+      if (root.requestFullscreen) {
+        root.requestFullscreen().catch(() => {});
+      } else if (root.webkitRequestFullscreen) {
+        root.webkitRequestFullscreen();
+      }
+    }
 
     const lblPrimary = document.getElementById('lbl-touch-primary');
     const lblSub = document.getElementById('lbl-touch-sub');

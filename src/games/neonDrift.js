@@ -96,7 +96,8 @@ export class NeonDriftGame {
     };
 
     this.onPointerMove = (e) => {
-      if (!this.isRunning || e.buttons === 0) return;
+      if (!this.isRunning) return;
+      if (e.pointerType !== 'touch' && e.buttons === 0) return;
       this.updateTouchPosition(e);
     };
 

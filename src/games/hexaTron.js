@@ -58,8 +58,13 @@ export class HexaTronGame {
     window.addEventListener('keyup', this.onKeyUp);
 
     // Touch Controls: swipe / tap quadrants
+    let touchStartX = 0;
+    let touchStartY = 0;
     this.canvas.addEventListener('pointerdown', (e) => {
       if (!this.isRunning) return;
+      touchStartX = e.clientX;
+      touchStartY = e.clientY;
+
       const rect = this.canvas.getBoundingClientRect();
       const scaleX = this.canvas.width / rect.width;
       const scaleY = this.canvas.height / rect.height;
@@ -77,6 +82,22 @@ export class HexaTronGame {
       } else {
         if (dy > 0 && this.player.dir !== 'up') this.player.nextDir = 'down';
         else if (dy < 0 && this.player.dir !== 'down') this.player.nextDir = 'up';
+      }
+    });
+
+    this.canvas.addEventListener('pointerup', (e) => {
+      if (!this.isRunning || !this.player || !this.player.alive) return;
+      const dx = e.clientX - touchStartX;
+      const dy = e.clientY - touchStartY;
+      const minSwipe = 25;
+      if (Math.abs(dx) > minSwipe || Math.abs(dy) > minSwipe) {
+        if (Math.abs(dx) > Math.abs(dy)) {
+          if (dx > 0 && this.player.dir !== 'left') this.player.nextDir = 'right';
+          else if (dx < 0 && this.player.dir !== 'right') this.player.nextDir = 'left';
+        } else {
+          if (dy > 0 && this.player.dir !== 'up') this.player.nextDir = 'down';
+          else if (dy < 0 && this.player.dir !== 'down') this.player.nextDir = 'up';
+        }
       }
     });
   }

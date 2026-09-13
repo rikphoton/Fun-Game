@@ -873,33 +873,40 @@ canvas {
     flex-direction: column;
     justify-content: flex-start;
     align-items: center;
-    padding: env(safe-area-inset-top, 4px) 6px env(safe-area-inset-bottom, 6px) 6px;
-    box-sizing: border-box;
+    padding: 0;
+    margin: 0;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    background: #000;
     overflow: hidden;
     touch-action: none;
-    gap: 4px;
+    gap: 0;
   }
 
-  /* Compact Non-Wrapping Mobile HUD (Images 1 & 2 fix) */
+  /* Edge-to-Edge Compact Mobile HUD with Fullscreen & Pause */
   body.in-game .game-hud {
-    width: 100%;
-    max-width: 100%;
-    border-radius: 10px 10px 0 0;
-    padding: 5px 8px;
+    width: 100vw;
+    max-width: 100vw;
+    border-radius: 0;
+    border: none;
+    border-bottom: 1px solid rgba(0, 243, 255, 0.25);
+    padding: env(safe-area-inset-top, 6px) 12px 6px 12px;
+    background: rgba(8, 12, 28, 0.95);
     margin: 0;
     flex-shrink: 0;
     box-sizing: border-box;
-    font-size: 0.78rem;
+    font-size: 0.8rem;
     justify-content: space-between;
     gap: 4px;
   }
 
   body.in-game #hud-game-name {
-    display: none !important; /* Hide title on phone portrait so HUD fits 100% on one line */
+    display: none !important; /* Free space so HUD never wraps */
   }
 
   body.in-game .hud-group {
-    gap: 5px;
+    gap: 6px;
   }
 
   body.in-game .hud-item {
@@ -918,7 +925,7 @@ canvas {
   }
 
   body.in-game .super-btn {
-    width: 58px;
+    width: 56px;
     height: 18px;
   }
 
@@ -931,54 +938,62 @@ canvas {
     font-size: 0.74rem;
   }
 
-  /* Integrated Arcade Cabinet Canvas */
+  /* Full Screen Edge-to-Edge Canvas */
   body.in-game .canvas-container {
     flex: 0 0 auto;
-    width: 100%;
+    width: 100vw;
     max-width: 100vw;
-    max-height: 48dvh;
+    max-height: 50dvh;
     aspect-ratio: 4 / 3;
-    border-radius: 0 0 12px 12px;
-    box-shadow: 0 0 20px rgba(0, 243, 255, 0.25);
-    background: #010307;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    background: #000;
     overflow: hidden;
     display: flex;
     align-items: center;
     justify-content: center;
     margin: 0;
+    padding: 0;
   }
 
   body.in-game canvas {
-    width: 100%;
+    width: 100vw;
+    max-width: 100vw;
     height: auto;
-    max-height: 48dvh;
+    max-height: 50dvh;
     aspect-ratio: 4 / 3;
     object-fit: contain;
     touch-action: none;
+    display: block;
   }
 
   body.in-game .instructions-panel {
     display: none !important;
   }
 
-  /* Ergonomic Dual-Thumb Deck (Images 1 & 2 fix) */
+  /* True Full Screen Handheld Touch Deck */
   body.in-game .mobile-arcade-deck {
     display: flex !important;
     flex: 1 1 auto;
-    width: 100%;
-    max-height: none;
-    margin-top: 4px;
-    border-radius: 14px;
-    padding: 6px 8px 8px 8px;
-    justify-content: space-between;
+    width: 100vw;
+    max-width: 100vw;
+    margin: 0;
+    border-radius: 0;
+    border: none;
+    border-top: 1px solid rgba(0, 243, 255, 0.25);
+    box-shadow: none;
+    padding: 8px 12px env(safe-area-inset-bottom, 12px) 12px;
+    justify-content: space-around;
     box-sizing: border-box;
     overflow: hidden;
+    background: linear-gradient(180deg, rgba(14, 18, 36, 0.94) 0%, rgba(4, 6, 16, 1) 100%);
   }
 
   body.in-game .deck-hint-bar {
-    font-size: 0.68rem;
-    padding: 3px 6px;
-    margin-bottom: 4px;
+    font-size: 0.72rem;
+    padding: 4px 8px;
+    margin-bottom: 6px;
   }
 
   body.in-game .deck-controls-row {
@@ -986,7 +1001,31 @@ canvas {
     justify-content: space-between;
     align-items: center;
     width: 100%;
-    padding: 0 2px;
+    padding: 0 4px;
+    box-sizing: border-box;
+  }
+
+  body.in-game .dpad-btn {
+    width: 52px;
+    height: 52px;
+    font-size: 1.35rem;
+    border-radius: 12px;
+  }
+
+  body.in-game .dpad-center-hub {
+    width: 32px;
+    height: 32px;
+  }
+
+  body.in-game .action-primary {
+    width: 120px;
+    height: 54px;
+  }
+
+  body.in-game .action-sub,
+  body.in-game .action-super {
+    width: 56px;
+    height: 50px;
   }
 }
 

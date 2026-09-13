@@ -179,7 +179,8 @@ export class QuantumBreakerGame {
     this.pointerX = x;
   }
 
-  handlePointerDown() {
+  handlePointerDown(x) {
+    if (x !== undefined) this.pointerX = x;
     if (this.paddle.hasLaser) {
       this.fireLaser();
     }
