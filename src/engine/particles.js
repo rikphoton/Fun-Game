@@ -121,6 +121,28 @@ export class ParticleSystem {
     }
   }
 
+  spawn(x, y, vx = 0, vy = 0, color = '#00f0ff', size = 3, life = 0.4) {
+    if (this.particles.length >= this.maxParticles) {
+      this.particles.shift();
+    }
+    this.particles.push({
+      x,
+      y,
+      vx,
+      vy,
+      size,
+      maxLife: life,
+      life,
+      color,
+      shape: 'circle',
+      gravity: 0
+    });
+  }
+
+  explode(x, y, color = '#ff007f', count = 20) {
+    this.burst(x, y, count, { color, minSpeed: 60, maxSpeed: 250, minSize: 2, maxSize: 5, life: 0.5 });
+  }
+
   addShockwave(x, y, color = '#00f3ff', maxRadius = 70, duration = 0.25) {
     if (this.shockwaves.length > 5) this.shockwaves.shift();
     this.shockwaves.push({

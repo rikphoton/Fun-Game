@@ -58,6 +58,12 @@ export class NeonDriftGame {
     // Floating Messages (e.g. NEAR MISS +150)
     this.floatingTexts = [];
 
+    // Performance Optimization Caches
+    this.renderEntities = [];
+    this.fxParticleTimer = 0;
+    this.hudTimer = 0;
+    this.skyGrad = null;
+
     // Controls
     this.keys = {};
     this.touchSteer = 0;
@@ -164,33 +170,39 @@ export class NeonDriftGame {
 
     let targetSpeed = this.baseSpeed + Math.min(60, this.distance / 100);
 
+    this.fxParticleTimer -= dt;
+
     if (wantsNitro && this.nitro > 0) {
       this.isBoosting = true;
       targetSpeed = this.maxNitroSpeed;
       this.nitro = Math.max(0, this.nitro - dt * 28);
       this.particles.shake(2);
 
-      // Nitro exhaust flames
-      const trail = storage.getEquipped('trail') || 'cyan';
-      const flameColor = trail === 'pink' ? '#ff007f' : trail === 'gold' ? '#ffd700' : '#00f0ff';
-      this.particles.spawn(
-        400 + this.playerX * 280 - 18,
-        this.playerY + 28,
-        (Math.random() - 0.5) * 40,
-        150 + Math.random() * 80,
-        flameColor,
-        Math.random() * 5 + 4,
-        0.3
-      );
-      this.particles.spawn(
-        400 + this.playerX * 280 + 18,
-        this.playerY + 28,
-        (Math.random() - 0.5) * 40,
-        150 + Math.random() * 80,
-        flameColor,
-        Math.random() * 5 + 4,
-        0.3
-      );
+      // Nitro exhaust flames (throttled to ~25 emissions/sec)
+      if (this.fxParticleTimer <= 0) {
+        this.fxParticleTimer = 0.04;
+        const trail = storage.getEquipped('trail') || 'cyan';
+        const flameColor = trail === 'pink' ? '#ff007f' : trail === 'gold' ? '#ffd700' : '#00f0ff';
+        const carPx = 400 + this.playerX * 280;
+        this.particles.spawn(
+          carPx - 18,
+          this.playerY + 28,
+          (Math.random() - 0.5) * 30,
+          140 + Math.random() * 60,
+          flameColor,
+          Math.random() * 4 + 3,
+          0.25
+        );
+        this.particles.spawn(
+          carPx + 18,
+          this.playerY + 28,
+          (Math.random() - 0.5) * 30,
+          140 + Math.random() * 60,
+          flameColor,
+          Math.random() * 4 + 3,
+          0.25
+        );
+      }
     } else {
       this.isBoosting = false;
       if (this.nitro < this.maxNitro) {
@@ -237,25 +249,28 @@ export class NeonDriftGame {
       this.driftMultiplier = Math.min(4.0, this.driftMultiplier + dt * 0.8);
       this.score += Math.floor(dt * 80 * this.driftMultiplier);
 
-      const carPx = 400 + this.playerX * 280;
-      this.particles.spawn(
-        carPx - 22,
-        this.playerY + 22,
-        (Math.random() - 0.5) * 60,
-        (Math.random() - 0.5) * 30,
-        'rgba(255, 255, 255, 0.4)',
-        Math.random() * 6 + 3,
-        0.4
-      );
-      this.particles.spawn(
-        carPx + 22,
-        this.playerY + 22,
-        (Math.random() - 0.5) * 60,
-        (Math.random() - 0.5) * 30,
-        'rgba(255, 255, 255, 0.4)',
-        Math.random() * 6 + 3,
-        0.4
-      );
+      if (this.fxParticleTimer <= 0) {
+        this.fxParticleTimer = 0.05;
+        const carPx = 400 + this.playerX * 280;
+        this.particles.spawn(
+          carPx - 22,
+          this.playerY + 22,
+          (Math.random() - 0.5) * 50,
+          (Math.random() - 0.5) * 20,
+          'rgba(255, 255, 255, 0.35)',
+          Math.random() * 5 + 3,
+          0.35
+        );
+        this.particles.spawn(
+          carPx + 22,
+          this.playerY + 22,
+          (Math.random() - 0.5) * 50,
+          (Math.random() - 0.5) * 20,
+          'rgba(255, 255, 255, 0.35)',
+          Math.random() * 5 + 3,
+          0.35
+        );
+      }
     } else {
       this.driftMultiplier = Math.max(1.0, this.driftMultiplier - dt * 2);
     }
@@ -354,7 +369,12 @@ export class NeonDriftGame {
       storage.unlockAchievement('speed_demon');
     }
 
-    this.updateHUD();
+    // Throttled HUD updates to prevent DOM reflow thrashing (12.5 updates/sec)
+    this.hudTimer -= dt;
+    if (this.hudTimer <= 0) {
+      this.hudTimer = 0.08;
+      this.updateHUD();
+    }
   }
 
   spawnTrafficCar() {
@@ -374,7 +394,8 @@ export class NeonDriftGame {
       color: chosen.color,
       type: chosen.name,
       passed: false,
-      nearMissTriggered: false
+      nearMissTriggered: false,
+      isCar: true
     });
   }
 
@@ -387,7 +408,8 @@ export class NeonDriftGame {
       lane,
       z: 800,
       type: isNitro ? 'nitro' : 'credits',
-      icon: isNitro ? '⚡' : '💎'
+      icon: isNitro ? '⚡' : '💎',
+      isPickup: true
     });
   }
 
@@ -515,35 +537,40 @@ export class NeonDriftGame {
   drawHorizon(ctx, w, h) {
     const horizY = this.horizonY;
 
-    // Dark sky gradient
-    const skyGrad = ctx.createLinearGradient(0, 0, 0, horizY);
-    skyGrad.addColorStop(0, '#04040d');
-    skyGrad.addColorStop(0.7, '#160829');
-    skyGrad.addColorStop(1, '#3d0c4e');
-    ctx.fillStyle = skyGrad;
+    // Reuse sky gradient
+    if (!this.skyGrad) {
+      this.skyGrad = ctx.createLinearGradient(0, 0, 0, horizY);
+      this.skyGrad.addColorStop(0, '#04040d');
+      this.skyGrad.addColorStop(0.7, '#160829');
+      this.skyGrad.addColorStop(1, '#3d0c4e');
+    }
+    ctx.fillStyle = this.skyGrad;
     ctx.fillRect(0, 0, w, horizY);
 
     // Retro Neon Synth Sun
-    const sunX = w / 2 + this.roadCurvature * 60;
+    const sunX = w * 0.5 + this.roadCurvature * 60;
     const sunY = horizY - 30;
     const sunR = 75;
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(sunX, sunY, sunR, Math.PI, 0, false);
+    ctx.clip();
 
     const sunGrad = ctx.createRadialGradient(sunX, sunY, 10, sunX, sunY, sunR);
     sunGrad.addColorStop(0, '#fffa80');
     sunGrad.addColorStop(0.4, '#ff007f');
     sunGrad.addColorStop(1, 'rgba(255, 0, 128, 0)');
     ctx.fillStyle = sunGrad;
-    ctx.beginPath();
-    ctx.arc(sunX, sunY, sunR, Math.PI, 0, false);
-    ctx.fill();
+    ctx.fillRect(sunX - sunR, sunY - sunR, sunR * 2, sunR * 2);
 
     // Sun horizontal blind stripes
     ctx.fillStyle = '#160829';
     for (let i = 0; i < 6; i++) {
       const stripeY = sunY - 45 + i * 9;
-      const stripeH = 2 + i * 0.8;
-      ctx.fillRect(sunX - sunR, stripeY, sunR * 2, stripeH);
+      ctx.fillRect(sunX - sunR, stripeY, sunR * 2, 2 + i * 0.8);
     }
+    ctx.restore();
 
     // Tokyo 2099 Cyber Skyline Silhouettes
     ctx.fillStyle = '#0d0b1f';
@@ -559,7 +586,7 @@ export class NeonDriftGame {
       ctx.fillStyle = '#0d0b1f';
     }
 
-    // Horizon glowing boundary line
+    // Horizon boundary line
     ctx.strokeStyle = '#00f0ff';
     ctx.lineWidth = 2;
     ctx.beginPath();
@@ -571,88 +598,74 @@ export class NeonDriftGame {
   drawRoad(ctx, w, h) {
     const horizY = this.horizonY;
     const roadH = h - horizY;
-    const slices = 80;
+    const slices = 36; // Optimized from 80 for silky smooth 60 FPS
 
-    for (let i = slices; i >= 0; i--) {
-      const p1 = i / slices;
-      const p2 = (i + 1) / slices;
+    // Single background fill for ground instead of 80 full-screen strip draws
+    ctx.fillStyle = '#080916';
+    ctx.fillRect(0, horizY, w, roadH);
 
-      const y1 = horizY + Math.pow(p1, 2.2) * roadH;
-      const y2 = horizY + Math.pow(p2, 2.2) * roadH;
+    const halfW = w * 0.5;
+    const curveMult = this.roadCurvature * 180;
+    const trackPos = this.trackPosition;
 
-      // Perspective widths
-      const roadW1 = 50 + Math.pow(p1, 2.2) * 680;
-      const roadW2 = 50 + Math.pow(p2, 2.2) * 680;
+    let prevY = horizY;
+    let prevW = 50;
+    let prevCurveX = halfW + curveMult;
 
-      // Center offsets based on road curvature
-      const curveX1 = (w / 2) + Math.pow(1 - p1, 1.8) * this.roadCurvature * 180;
-      const curveX2 = (w / 2) + Math.pow(1 - p2, 1.8) * this.roadCurvature * 180;
+    for (let i = 0; i <= slices; i++) {
+      const p = (i + 1) / (slices + 1);
+      const pPow = Math.pow(p, 2.2);
+      const y = horizY + pPow * roadH;
+      const roadW = 50 + pPow * 680;
+      const curveX = halfW + Math.pow(1 - p, 1.8) * curveMult;
 
-      // Segment stripe color (alternating every 4 track units)
-      const isAlt = Math.floor((this.trackPosition + i * 2) / 4) % 2 === 0;
+      const isAlt = Math.floor((trackPos + i * 2) / 4) % 2 === 0;
 
-      // Ground / Grass on shoulders
-      ctx.fillStyle = isAlt ? '#0b0c1c' : '#080916';
-      ctx.fillRect(0, y1, w, y2 - y1 + 1);
-
-      // Cyber Road Asphalt
+      // Road Asphalt
       ctx.fillStyle = isAlt ? '#16192e' : '#111324';
       ctx.beginPath();
-      ctx.moveTo(curveX1 - roadW1 / 2, y1);
-      ctx.lineTo(curveX1 + roadW1 / 2, y1);
-      ctx.lineTo(curveX2 + roadW2 / 2, y2);
-      ctx.lineTo(curveX2 - roadW2 / 2, y2);
-      ctx.closePath();
+      ctx.moveTo(prevCurveX - prevW * 0.5, prevY);
+      ctx.lineTo(prevCurveX + prevW * 0.5, prevY);
+      ctx.lineTo(curveX + roadW * 0.5, y);
+      ctx.lineTo(curveX - roadW * 0.5, y);
       ctx.fill();
 
       // Glowing Neon Curbs (Cyan & Magenta)
-      const curbW1 = roadW1 * 0.05;
-      const curbW2 = roadW2 * 0.05;
+      const curbW1 = prevW * 0.05;
+      const curbW2 = roadW * 0.05;
 
       // Left curb
       ctx.fillStyle = isAlt ? '#00f0ff' : '#ff007f';
       ctx.beginPath();
-      ctx.moveTo(curveX1 - roadW1 / 2, y1);
-      ctx.lineTo(curveX1 - roadW1 / 2 + curbW1, y1);
-      ctx.lineTo(curveX2 - roadW2 / 2 + curbW2, y2);
-      ctx.lineTo(curveX2 - roadW2 / 2, y2);
-      ctx.closePath();
+      ctx.moveTo(prevCurveX - prevW * 0.5, prevY);
+      ctx.lineTo(prevCurveX - prevW * 0.5 + curbW1, prevY);
+      ctx.lineTo(curveX - roadW * 0.5 + curbW2, y);
+      ctx.lineTo(curveX - roadW * 0.5, y);
       ctx.fill();
 
       // Right curb
       ctx.fillStyle = isAlt ? '#ff007f' : '#00f0ff';
       ctx.beginPath();
-      ctx.moveTo(curveX1 + roadW1 / 2 - curbW1, y1);
-      ctx.lineTo(curveX1 + roadW1 / 2, y1);
-      ctx.lineTo(curveX2 + roadW2 / 2, y2);
-      ctx.lineTo(curveX2 + roadW2 / 2 - curbW2, y2);
-      ctx.closePath();
+      ctx.moveTo(prevCurveX + prevW * 0.5 - curbW1, prevY);
+      ctx.lineTo(prevCurveX + prevW * 0.5, prevY);
+      ctx.lineTo(curveX + roadW * 0.5, y);
+      ctx.lineTo(curveX + roadW * 0.5 - curbW2, y);
       ctx.fill();
 
       // Lane divider dashes
       if (isAlt) {
         ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-        const laneOffset1 = roadW1 * 0.28;
-        const laneOffset2 = roadW2 * 0.28;
-        const dashW1 = Math.max(1.5, roadW1 * 0.012);
-        const dashW2 = Math.max(1.5, roadW2 * 0.012);
+        const off2 = roadW * 0.28;
+        const dw2 = Math.max(1.5, roadW * 0.012);
+        const dashH = y - prevY;
 
-        // Left divider
-        ctx.beginPath();
-        ctx.moveTo(curveX1 - laneOffset1 - dashW1 / 2, y1);
-        ctx.lineTo(curveX1 - laneOffset1 + dashW1 / 2, y1);
-        ctx.lineTo(curveX2 - laneOffset2 + dashW2 / 2, y2);
-        ctx.lineTo(curveX2 - laneOffset2 - dashW2 / 2, y2);
-        ctx.fill();
-
-        // Right divider
-        ctx.beginPath();
-        ctx.moveTo(curveX1 + laneOffset1 - dashW1 / 2, y1);
-        ctx.lineTo(curveX1 + laneOffset1 + dashW1 / 2, y1);
-        ctx.lineTo(curveX2 + laneOffset2 + dashW2 / 2, y2);
-        ctx.lineTo(curveX2 + laneOffset2 - dashW2 / 2, y2);
-        ctx.fill();
+        ctx.fillRect(curveX - off2 - dw2 * 0.5, prevY, dw2, dashH);
+        ctx.fillRect(curveX + off2 - dw2 * 0.5, prevY, dw2, dashH);
       }
+
+      prevY = y;
+      prevW = roadW;
+      prevCurveX = curveX;
     }
   }
 
@@ -667,7 +680,7 @@ export class NeonDriftGame {
     const y = horizY + Math.pow(normP, 2.2) * roadH;
 
     const roadW = 50 + Math.pow(normP, 2.2) * 680;
-    const curveX = (w / 2) + Math.pow(1 - normP, 1.8) * this.roadCurvature * 180;
+    const curveX = (w * 0.5) + Math.pow(1 - normP, 1.8) * this.roadCurvature * 180;
     const x = curveX + lane * (roadW * 0.42);
     const scale = Math.pow(normP, 1.8);
 
@@ -675,19 +688,25 @@ export class NeonDriftGame {
   }
 
   drawWorldEntities(ctx, w, h) {
-    // Combine traffic and pickups, sort back-to-front by z
-    const entities = [
-      ...this.traffic.map(t => ({ ...t, isCar: true })),
-      ...this.pickups.map(p => ({ ...p, isPickup: true }))
-    ].sort((a, b) => b.z - a.z);
+    // Reuse renderEntities array without creating garbage
+    this.renderEntities.length = 0;
+    for (let i = 0; i < this.traffic.length; i++) {
+      const t = this.traffic[i];
+      if (t.z > 0 && t.z <= 800) this.renderEntities.push(t);
+    }
+    for (let i = 0; i < this.pickups.length; i++) {
+      const p = this.pickups[i];
+      if (p.z > 0 && p.z <= 800) this.renderEntities.push(p);
+    }
+    this.renderEntities.sort((a, b) => b.z - a.z);
 
-    for (const ent of entities) {
-      if (ent.z <= 0 || ent.z > 800) continue;
+    for (let i = 0; i < this.renderEntities.length; i++) {
+      const ent = this.renderEntities[i];
       const proj = this.projectZ(ent.z, ent.lane);
 
       if (ent.isCar) {
         this.drawTrafficCar(ctx, proj.x, proj.y, proj.scale, ent);
-      } else if (ent.isPickup) {
+      } else {
         this.drawPickup(ctx, proj.x, proj.y, proj.scale, ent);
       }
     }
@@ -702,7 +721,7 @@ export class NeonDriftGame {
     ctx.translate(x, y);
 
     // Car shadow
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
     ctx.beginPath();
     ctx.ellipse(0, carH * 0.45, carW * 0.55, carH * 0.25, 0, 0, Math.PI * 2);
     ctx.fill();
@@ -734,13 +753,16 @@ export class NeonDriftGame {
     ctx.save();
     ctx.translate(x, y);
 
+    // Zero-overhead glow ring (avoids expensive shadowBlur)
+    ctx.fillStyle = p.type === 'nitro' ? 'rgba(0, 240, 255, 0.25)' : 'rgba(255, 215, 0, 0.25)';
+    ctx.beginPath();
+    ctx.arc(0, 0, size * 0.7, 0, Math.PI * 2);
+    ctx.fill();
+
     const glowColor = p.type === 'nitro' ? '#00f0ff' : '#ffd700';
     ctx.fillStyle = glowColor;
-    ctx.shadowColor = glowColor;
-    ctx.shadowBlur = 10 * scale;
-
     ctx.beginPath();
-    ctx.arc(0, 0, size * 0.5, 0, Math.PI * 2);
+    ctx.arc(0, 0, size * 0.45, 0, Math.PI * 2);
     ctx.fill();
 
     ctx.font = `${Math.max(8, Math.floor(18 * scale))}px monospace`;
@@ -763,7 +785,7 @@ export class NeonDriftGame {
     ctx.rotate(this.steerAngle);
 
     // Car Shadow
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
     ctx.beginPath();
     ctx.ellipse(0, h * 0.45, w * 0.6, h * 0.28, 0, 0, Math.PI * 2);
     ctx.fill();
@@ -801,10 +823,10 @@ export class NeonDriftGame {
     ctx.roundRect(-w * 0.32, -h * 0.38, w * 0.64, h * 0.5, 4);
     ctx.fill();
 
-    // Neon Cyber Rear Light Bar
+    // Neon Cyber Rear Light Bar (zero-overhead layered glow)
+    ctx.fillStyle = 'rgba(255, 0, 85, 0.35)';
+    ctx.fillRect(-w * 0.44, h * 0.16, w * 0.88, 9);
     ctx.fillStyle = '#ff0055';
-    ctx.shadowColor = '#ff0055';
-    ctx.shadowBlur = 12;
     ctx.fillRect(-w * 0.4, h * 0.2, w * 0.8, 5);
 
     // Twin Exhaust Ports
@@ -821,10 +843,11 @@ export class NeonDriftGame {
     ctx.font = 'bold 18px "Outfit", sans-serif';
 
     for (const ft of this.floatingTexts) {
-      ctx.fillStyle = ft.color;
-      ctx.shadowColor = ft.color;
-      ctx.shadowBlur = 10;
       ctx.globalAlpha = Math.max(0, ft.life / 0.85);
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 3;
+      ctx.strokeText(ft.text, ft.x, ft.y);
+      ctx.fillStyle = ft.color;
       ctx.fillText(ft.text, ft.x, ft.y);
     }
     ctx.restore();
@@ -834,16 +857,16 @@ export class NeonDriftGame {
     ctx.save();
     ctx.strokeStyle = 'rgba(0, 240, 255, 0.4)';
     ctx.lineWidth = 2;
+    ctx.beginPath();
 
-    for (let i = 0; i < 16; i++) {
+    for (let i = 0; i < 12; i++) {
       const sx = Math.random() * w;
       const sy = this.horizonY + Math.random() * (h - this.horizonY);
-      const len = 30 + Math.random() * 60;
-      ctx.beginPath();
+      const len = 30 + Math.random() * 50;
       ctx.moveTo(sx, sy);
-      ctx.lineTo(sx + (sx - w / 2) * 0.15, sy + len);
-      ctx.stroke();
+      ctx.lineTo(sx + (sx - w * 0.5) * 0.15, sy + len);
     }
+    ctx.stroke();
     ctx.restore();
   }
 }
