@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>NeonPulse Arcade | Cyber Retro Web Games</title>
-  <script type="module" crossorigin src="./assets/index-Dd8xGqFg.js"></script>
-  <link rel="stylesheet" crossorigin href="./assets/index-D6SvwmH_.css">
+  <script type="module" crossorigin src="./assets/index-CX-y8v7B.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-DNXdm3QH.css">
 </head>
 <body class="theme-cyberpunk">
   <!-- CRT Scanlines Overlay -->
@@ -44,8 +44,12 @@
         📺 CRT: ON
       </button>
 
+      <button class="control-btn" id="btn-open-leaderboards" title="Global Online Hall of Fame">
+        🏆 Hall of Fame
+      </button>
+
       <button class="control-btn" id="btn-open-achievements" title="View Trophy Room">
-        🏆 Trophies
+        🎖️ Trophies
       </button>
 
       <button class="control-btn" id="btn-toggle-fullscreen" title="Toggle Fullscreen">
@@ -60,7 +64,7 @@
     <div id="lobby-view">
       <div class="hero-banner">
         <h1 class="hero-title">NeonPulse Arcade</h1>
-        <p class="hero-subtitle">Step into a hyper-kinetic retro cyberpunk world. Five juicy games, tech tree progression, daily quests, and procedural synthwave audio.</p>
+        <p class="hero-subtitle">Step into a hyper-kinetic retro cyberpunk world. Six adrenaline-fueled arcade games, tech tree progression, global leaderboards, and procedural synthwave audio.</p>
       </div>
 
       <div class="games-grid">
@@ -77,8 +81,8 @@
               <span>Best Score</span>
               <span class="high-score-tag" id="best-score-survivors">0 PTS</span>
             </div>
-            <button class="play-btn" id="btn-play-survivors">
-              <span>▶</span> Select Mech & Play
+            <button class="play-btn cyan" id="btn-play-survivors">
+              <span>▶</span> Launch Mech
             </button>
           </div>
         </div>
@@ -140,7 +144,7 @@
           </div>
         </div>
 
-        <!-- Game 5: Neon Drift (NEW!) -->
+        <!-- Game 5: Neon Drift -->
         <div class="game-card">
           <div>
             <div class="card-badge badge-racer" style="background: rgba(255, 0, 128, 0.15); border-color: #ff007f; color: #ff007f;">Cyber Highway Racer</div>
@@ -155,6 +159,25 @@
             </div>
             <button class="play-btn" id="btn-play-drift" style="background: linear-gradient(135deg, #ff007f, #ff71ce); border-color: #ff71ce;">
               <span>▶</span> Hit the Highway
+            </button>
+          </div>
+        </div>
+
+        <!-- Game 6: Hexa-Tron (Lightcycle Arena) -->
+        <div class="game-card">
+          <div>
+            <div class="card-badge badge-tron" style="background: rgba(0, 255, 234, 0.15); border-color: #00ffea; color: #00ffea;">Cyber Lightcycle Arena</div>
+            <div class="card-icon">⚡</div>
+            <h2 class="card-title">Hexa-Tron</h2>
+            <p class="card-desc">High-speed lightcycle arena combat! Draw deadly glowing light ribbons, outmaneuver 3 ruthless AI cycles, execute aerial phase jumps, ignite nitro boosts, and drop EMP trail-clearers.</p>
+          </div>
+          <div>
+            <div class="card-meta">
+              <span>Best Score</span>
+              <span class="high-score-tag" id="best-score-tron">0 PTS</span>
+            </div>
+            <button class="play-btn" id="btn-play-tron" style="background: linear-gradient(135deg, #00f0ff, #0077ff); border-color: #00f0ff;">
+              <span>▶</span> Enter The Grid
             </button>
           </div>
         </div>
@@ -386,6 +409,72 @@
       <div class="achievements-grid" id="achievements-list"></div>
       <div class="modal-actions">
         <button class="play-btn" id="btn-close-achievements">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Online Arcade Leaderboard Modal -->
+  <div class="modal-overlay" id="modal-leaderboard">
+    <div class="modal-box" style="max-width: 680px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+        <h2 class="modal-title cyan" style="margin: 0;">🌐 GLOBAL ARCADE LEADERBOARDS</h2>
+        <span class="status-indicator" style="font-size: 0.75rem; color: #39ff14;">● ONLINE SYNC ACTIVE</span>
+      </div>
+      <p class="modal-subtitle">Top 10 Operatives across all arcade sectors. Earn your initials in the Hall of Fame!</p>
+      
+      <!-- Game Selection Tabs -->
+      <div class="lb-tabs" id="lb-tabs">
+        <button class="lb-tab active" data-game="cyberSurvivors">Survivors</button>
+        <button class="lb-tab" data-game="neonDash">Neon Dash</button>
+        <button class="lb-tab" data-game="quantumBreaker">Breaker</button>
+        <button class="lb-tab" data-game="astroPulse">Astro Pulse</button>
+        <button class="lb-tab" data-game="neonDrift">Neon Drift</button>
+        <button class="lb-tab" data-game="hexaTron">Hexa-Tron</button>
+      </div>
+
+      <!-- Leaderboard Table -->
+      <div class="lb-table-container">
+        <table class="lb-table">
+          <thead>
+            <tr>
+              <th>RANK</th>
+              <th>OPERATIVE</th>
+              <th>SCORE</th>
+              <th>DETAILS</th>
+              <th>DATE</th>
+            </tr>
+          </thead>
+          <tbody id="lb-table-body">
+            <!-- Dynamic rows -->
+          </tbody>
+        </table>
+      </div>
+
+      <div class="modal-actions" style="margin-top: 18px;">
+        <button class="control-btn" id="btn-refresh-leaderboard">🔄 Refresh</button>
+        <button class="play-btn" id="btn-close-leaderboard">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Arcade Initials Entry Modal (When High Score achieved) -->
+  <div class="modal-overlay" id="modal-initials-entry">
+    <div class="modal-box" style="max-width: 480px; text-align: center;">
+      <h2 class="modal-title gold">🏆 NEW HIGH SCORE! 🏆</h2>
+      <p class="modal-subtitle">You ranked in the Top 10! Enter your 3-letter operative callsign:</p>
+      
+      <div class="initials-input-container">
+        <input type="text" maxlength="1" class="initial-box" id="initial-1" value="R" autofocus />
+        <input type="text" maxlength="1" class="initial-box" id="initial-2" value="I" />
+        <input type="text" maxlength="1" class="initial-box" id="initial-3" value="K" />
+      </div>
+
+      <div class="initials-rank-info" id="initials-rank-info">
+        RANK: #1 • SCORE: 12,450
+      </div>
+
+      <div class="modal-actions" style="justify-content: center; margin-top: 20px;">
+        <button class="play-btn gold" id="btn-submit-initials">💾 SUBMIT SCORE</button>
       </div>
     </div>
   </div>

@@ -3,13 +3,16 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
+  "main": "electron/main.cjs",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "desktop": "vite build && electron .",
     "share": "npx localtunnel --port 3000"
   },
   "devDependencies": {
+    "electron": "^33.2.0",
     "vite": "^6.0.0"
   }
 }

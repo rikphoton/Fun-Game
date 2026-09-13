@@ -7,6 +7,9 @@ import { NeonDashGame } from './games/neonDash.js';
 import { QuantumBreakerGame } from './games/quantumBreaker.js';
 import { AstroPulseGame } from './games/astroPulse.js';
 import { NeonDriftGame } from './games/neonDrift.js';
+import { HexaTronGame } from './games/hexaTron.js';
+import { leaderboard } from './engine/leaderboard.js';
+import { gamepad } from './engine/gamepad.js';
 
 class ArcadeApp {
   constructor() {
@@ -114,6 +117,23 @@ class ArcadeApp {
     this.achievementsList = document.getElementById('achievements-list');
     this.btnCloseAchievements = document.getElementById('btn-close-achievements');
     this.toastContainer = document.getElementById('toast-container');
+
+    // Leaderboard & Initials Elements
+    this.btnOpenLeaderboard = document.getElementById('btn-open-leaderboards');
+    this.modalLeaderboard = document.getElementById('modal-leaderboard');
+    this.lbTableBody = document.getElementById('lb-table-body');
+    this.btnCloseLeaderboard = document.getElementById('btn-close-leaderboard');
+    this.btnRefreshLeaderboard = document.getElementById('btn-refresh-leaderboard');
+    this.lbTabs = document.getElementById('lb-tabs');
+    this.activeLbGame = 'cyberSurvivors';
+
+    this.modalInitials = document.getElementById('modal-initials-entry');
+    this.initial1 = document.getElementById('initial-1');
+    this.initial2 = document.getElementById('initial-2');
+    this.initial3 = document.getElementById('initial-3');
+    this.initialsRankInfo = document.getElementById('initials-rank-info');
+    this.btnSubmitInitials = document.getElementById('btn-submit-initials');
+    this.pendingScoreData = null;
   }
 
   initGames() {
@@ -178,6 +198,22 @@ class ArcadeApp {
             this.hudHpFill.style.width = `${Math.max(0, (hp / maxHp) * 100)}%`;
           }
         }
+      }),
+
+      hexaTron: new HexaTronGame(this.canvas, this.particles, {
+        onGameOver: (data) => this.handleGameOver(data),
+        onScoreUpdate: (score, rivalsLeft, round, nitroPct, jumps, emps) => {
+          this.hudScore.textContent = score;
+          this.hudSecondary.innerHTML = `ROUND: <span>${round}</span> | RIVALS: <span>${rivalsLeft}/3</span> | JUMP: <span>${jumps}</span> | EMP: <span>${emps}</span>`;
+          if (this.hudSuperFill) {
+            this.hudSuperFill.style.width = `${nitroPct}%`;
+            this.hudSuperText.textContent = nitroPct >= 100 ? 'NITRO MAX!' : `NITRO: ${nitroPct}%`;
+            this.btnSuperAbility.classList.toggle('ready', nitroPct >= 30);
+          }
+          if (this.hudHpFill) {
+            this.hudHpFill.style.width = '100%';
+          }
+        }
       })
     };
   }
@@ -188,18 +224,21 @@ class ArcadeApp {
     const bScore = storage.getHighScore('quantumBreaker');
     const aScore = storage.getHighScore('astroPulse');
     const rScore = storage.getHighScore('neonDrift');
+    const tScore = storage.getHighScore('hexaTron');
 
     const sEl = document.getElementById('best-score-survivors');
     const dEl = document.getElementById('best-score-dash');
     const bEl = document.getElementById('best-score-breaker');
     const aEl = document.getElementById('best-score-shmup');
     const rEl = document.getElementById('best-score-drift');
+    const tEl = document.getElementById('best-score-tron');
 
     if (sEl) sEl.textContent = `${sScore.toLocaleString()} PTS`;
     if (dEl) dEl.textContent = `${dScore.toLocaleString()} M`;
     if (bEl) bEl.textContent = `${bScore.toLocaleString()} PTS`;
     if (aEl) aEl.textContent = `${aScore.toLocaleString()} PTS`;
     if (rEl) rEl.textContent = `${rScore.toLocaleString()} PTS`;
+    if (tEl) tEl.textContent = `${tScore.toLocaleString()} PTS`;
   }
 
   updateCreditsDisplay() {
@@ -360,6 +399,8 @@ class ArcadeApp {
     document.getElementById('btn-play-shmup').addEventListener('click', () => this.launchGame('astroPulse'));
     const btnPlayDrift = document.getElementById('btn-play-drift');
     if (btnPlayDrift) btnPlayDrift.addEventListener('click', () => this.launchGame('neonDrift'));
+    const btnPlayTron = document.getElementById('btn-play-tron');
+    if (btnPlayTron) btnPlayTron.addEventListener('click', () => this.launchGame('hexaTron'));
 
     // Navigation & Pause
     this.btnHomeLogo.addEventListener('click', () => this.returnToHub());
@@ -483,6 +524,7 @@ class ArcadeApp {
       e.preventDefault();
       if (this.activeGame && this.activeGame.handleAction) this.activeGame.handleAction();
       if (this.activeGame && this.activeGame.fireLaser) this.activeGame.fireLaser();
+      if (this.activeGame && this.activeGame.jump) this.activeGame.jump();
     });
 
     btnTouchSuper.addEventListener('touchstart', (e) => {
@@ -493,7 +535,161 @@ class ArcadeApp {
       if (this.activeGame && this.activeGame.triggerBomb) {
         this.activeGame.triggerBomb();
       }
+      if (this.activeGame && this.activeGame.triggerEmp) {
+        this.activeGame.triggerEmp();
+      }
     });
+
+    // Leaderboard Modal Controls
+    if (this.btnOpenLeaderboard) {
+      this.btnOpenLeaderboard.addEventListener('click', () => {
+        sound.init();
+        this.renderLeaderboard(this.activeLbGame);
+        this.modalLeaderboard.style.display = 'flex';
+      });
+    }
+
+    if (this.btnCloseLeaderboard) {
+      this.btnCloseLeaderboard.addEventListener('click', () => {
+        this.modalLeaderboard.style.display = 'none';
+      });
+    }
+
+    if (this.btnRefreshLeaderboard) {
+      this.btnRefreshLeaderboard.addEventListener('click', () => {
+        this.renderLeaderboard(this.activeLbGame);
+      });
+    }
+
+    if (this.lbTabs) {
+      this.lbTabs.querySelectorAll('.lb-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+          this.lbTabs.querySelectorAll('.lb-tab').forEach(t => t.classList.remove('active'));
+          tab.classList.add('active');
+          this.activeLbGame = tab.dataset.game;
+          this.renderLeaderboard(this.activeLbGame);
+        });
+      });
+    }
+
+    // Arcade 3-Letter Initials Entry Navigation
+    const advanceInitials = (current, next) => {
+      if (current.value.length >= 1 && next) {
+        next.focus();
+        next.select();
+      }
+    };
+
+    if (this.initial1 && this.initial2 && this.initial3) {
+      this.initial1.addEventListener('input', () => advanceInitials(this.initial1, this.initial2));
+      this.initial2.addEventListener('input', () => advanceInitials(this.initial2, this.initial3));
+      this.initial3.addEventListener('input', () => {
+        if (this.initial3.value.length >= 1) {
+          this.btnSubmitInitials.focus();
+        }
+      });
+
+      [this.initial1, this.initial2, this.initial3].forEach((input, idx, arr) => {
+        input.addEventListener('keydown', (e) => {
+          if (e.key === 'Backspace' && !input.value && idx > 0) {
+            arr[idx - 1].focus();
+          } else if (e.key === 'Enter') {
+            this.submitInitialsScore();
+          }
+        });
+      });
+    }
+
+    if (this.btnSubmitInitials) {
+      this.btnSubmitInitials.addEventListener('click', () => this.submitInitialsScore());
+    }
+
+    // Gamepad Connection Status Hook
+    gamepad.onStatusChange = (connected, name) => {
+      if (connected) {
+        this.showToast('🎮', 'GAMEPAD CONNECTED', `${name} ready for action!`);
+      } else {
+        this.showToast('🔌', 'GAMEPAD DISCONNECTED', 'Switched back to keyboard/mouse');
+      }
+    };
+  }
+
+  // --- ONLINE LEADERBOARDS & ARCADE INITIALS ---
+
+  renderLeaderboard(gameKey = 'cyberSurvivors') {
+    if (!this.lbTableBody) return;
+    const scores = leaderboard.getScores(gameKey);
+    this.lbTableBody.innerHTML = '';
+
+    scores.forEach((entry) => {
+      const tr = document.createElement('tr');
+      if (entry.isUser) tr.style.background = 'rgba(0, 240, 255, 0.12)';
+
+      let rankClass = 'rank-other';
+      if (entry.rank === 1) rankClass = 'rank-1';
+      else if (entry.rank === 2) rankClass = 'rank-2';
+      else if (entry.rank === 3) rankClass = 'rank-3';
+
+      let scoreLabel = entry.score.toLocaleString();
+      if (gameKey === 'neonDash') scoreLabel += ' M';
+      else scoreLabel += ' PTS';
+
+      tr.innerHTML = `
+        <td><span class="lb-rank ${rankClass}">${entry.rank}</span></td>
+        <td><span class="lb-tag">${entry.tag}</span>${entry.isUser ? ' <span style="font-size:0.7rem;color:var(--neon-green);">● YOU</span>' : ''}</td>
+        <td><span class="lb-score">${scoreLabel}</span></td>
+        <td style="color:var(--text-muted);font-size:0.8rem;">VERIFIED</td>
+        <td style="color:var(--text-muted);font-size:0.8rem;">${entry.date || '2026-09-13'}</td>
+      `;
+      this.lbTableBody.appendChild(tr);
+    });
+  }
+
+  submitInitialsScore() {
+    if (!this.pendingScoreData) {
+      this.modalInitials.style.display = 'none';
+      return;
+    }
+
+    const t1 = (this.initial1.value || 'R').toUpperCase();
+    const t2 = (this.initial2.value || 'I').toUpperCase();
+    const t3 = (this.initial3.value || 'K').toUpperCase();
+    const tag = `${t1}${t2}${t3}`;
+
+    const rank = leaderboard.addScore(
+      this.pendingScoreData.gameKey,
+      tag,
+      this.pendingScoreData.score
+    );
+
+    this.modalInitials.style.display = 'none';
+    this.pendingScoreData = null;
+
+    sound.playVictory();
+    this.showToast('🏆', 'HALL OF FAME', `${tag} secured Rank #${rank}!`);
+    this.activeLbGame = this.activeGameKey;
+    this.renderLeaderboard(this.activeLbGame);
+    this.modalLeaderboard.style.display = 'flex';
+  }
+
+  showToast(icon, title, text) {
+    const toast = document.createElement('div');
+    toast.className = 'achievement-toast';
+    toast.innerHTML = `
+      <div class="toast-icon">${icon}</div>
+      <div class="toast-text">
+        <h5>${title}</h5>
+        <p>${text}</p>
+      </div>
+    `;
+    this.toastContainer.appendChild(toast);
+
+    setTimeout(() => {
+      toast.style.opacity = '0';
+      toast.style.transform = 'translateX(60px)';
+      toast.style.transition = 'all 0.4s ease';
+      setTimeout(() => toast.remove(), 400);
+    }, 3800);
   }
 
   // --- CYBER LAB TECH TREE RENDERER ---
@@ -755,6 +951,13 @@ class ArcadeApp {
       this.hudSuperText.textContent = 'NITRO';
       this.instructionsEl.innerHTML = `Steer: <kbd>A</kbd><kbd>D</kbd> or Mouse | Nitro: <kbd>W</kbd> / <kbd>SPACE</kbd> | Drift: <kbd>S</kbd> / <kbd>SHIFT</kbd>`;
       this.activeGame.start();
+    } else if (gameKey === 'hexaTron') {
+      this.hudGameName.textContent = 'Hexa-Tron';
+      this.hudHpContainer.style.display = 'none';
+      this.hudSuperContainer.style.display = 'flex';
+      this.hudSuperText.textContent = 'NITRO';
+      this.instructionsEl.innerHTML = `Steer: <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or Arrows / Gamepad | Jump: <kbd>SPACE</kbd> / (A) | Nitro: <kbd>SHIFT</kbd> / (RT) | EMP: <kbd>E</kbd> / (X)`;
+      this.activeGame.init();
     }
   }
 
@@ -769,6 +972,7 @@ class ArcadeApp {
     this.modalPause.style.display = 'none';
     this.modalGameOver.style.display = 'none';
     this.modalUpgrade.style.display = 'none';
+    this.modalInitials.style.display = 'none';
     this.updateLobbyScores();
     this.updateCreditsDisplay();
   }
@@ -831,6 +1035,13 @@ class ArcadeApp {
         <div class="stat-row"><span>CREDITS EARNED:</span><span class="stat-val">💎 ${data.credits} NC</span></div>
       `;
       storage.updateQuestProgress('quest_drift', data.score);
+    } else if (this.activeGameKey === 'hexaTron') {
+      statsHtml += `
+        <div class="stat-row"><span>RIVALS DESTROYED:</span><span class="stat-val">${data.kills || 0}</span></div>
+        <div class="stat-row"><span>ROUNDS SURVIVED:</span><span class="stat-val">${data.round || 1}</span></div>
+        <div class="stat-row"><span>CREDITS EARNED:</span><span class="stat-val">💎 ${data.credits || 0} NC</span></div>
+      `;
+      storage.updateQuestProgress('quest_tron', data.kills || 0);
     } else if (data.distance !== undefined) {
       statsHtml += `
         <div class="stat-row"><span>DISTANCE RUN:</span><span class="stat-val">${data.distance}m</span></div>
@@ -850,6 +1061,27 @@ class ArcadeApp {
     this.updateCreditsDisplay();
 
     if (data.isRecord) sound.announce('New Record!');
+
+    // Check for Top-10 Leaderboard High Score qualification
+    if (data.score > 0 && leaderboard.isHighScore(this.activeGameKey, data.score)) {
+      const rank = leaderboard.getRankForScore(this.activeGameKey, data.score);
+      this.pendingScoreData = {
+        gameKey: this.activeGameKey,
+        score: data.score
+      };
+      if (this.initialsRankInfo) {
+        this.initialsRankInfo.textContent = `RANK: #${rank} • SCORE: ${data.score.toLocaleString()}`;
+      }
+      setTimeout(() => {
+        if (this.modalInitials) {
+          this.modalInitials.style.display = 'flex';
+          if (this.initial1) {
+            this.initial1.focus();
+            this.initial1.select();
+          }
+        }
+      }, 700);
+    }
   }
 
   openAchievementsModal() {
@@ -895,12 +1127,67 @@ class ArcadeApp {
     }, 3800);
   }
 
+  handleGamepadInput() {
+    if (!gamepad.isConnected || !this.activeGame) return;
+
+    if (gamepad.isJustPressed('pause')) {
+      this.togglePause();
+      return;
+    }
+
+    if (this.isPaused) return;
+
+    const state = gamepad.state;
+
+    // Directional keys dispatch
+    if (this.activeGame.keys !== undefined) {
+      if (state.left) this.activeGame.keys['ArrowLeft'] = true;
+      if (state.right) this.activeGame.keys['ArrowRight'] = true;
+      if (state.up) this.activeGame.keys['ArrowUp'] = true;
+      if (state.down) this.activeGame.keys['ArrowDown'] = true;
+    }
+
+    // In Hexa-Tron: steering turns on direction press
+    if (this.activeGameKey === 'hexaTron') {
+      if (gamepad.isJustPressed('left')) this.activeGame.handleKeyDown('ArrowLeft');
+      if (gamepad.isJustPressed('right')) this.activeGame.handleKeyDown('ArrowRight');
+      if (gamepad.isJustPressed('up')) this.activeGame.handleKeyDown('ArrowUp');
+      if (gamepad.isJustPressed('down')) this.activeGame.handleKeyDown('ArrowDown');
+    }
+
+    // Action A (Space / Jump / Gravity / Fire)
+    if (gamepad.isJustPressed('action')) {
+      if (this.activeGame.handleKeyDown) this.activeGame.handleKeyDown('Space');
+      if (this.activeGame.handleAction) this.activeGame.handleAction();
+      if (this.activeGame.jump) this.activeGame.jump();
+      if (this.activeGame.fireLaser) this.activeGame.fireLaser();
+    }
+
+    // Super / EMP / Bomb (Button B or X)
+    if (gamepad.isJustPressed('super')) {
+      if (this.activeGame.triggerSuperAbility) this.activeGame.triggerSuperAbility();
+      if (this.activeGame.triggerBomb) this.activeGame.triggerBomb();
+      if (this.activeGame.triggerEmp) this.activeGame.triggerEmp();
+    }
+
+    // Nitro Boost (Button Y or RT)
+    if (state.nitro) {
+      if (this.activeGame.keys) this.activeGame.keys['ShiftLeft'] = true;
+      if (this.activeGame.triggerNitro) this.activeGame.triggerNitro();
+    }
+  }
+
   loop(currentTime) {
     const rawDt = (currentTime - this.lastTime) / 1000;
     const dt = Math.min(0.05, Math.max(0.001, rawDt));
     this.lastTime = currentTime;
 
+    // Poll Gamepad every frame
+    gamepad.poll();
+
     if (this.activeGame && this.activeGame.isRunning) {
+      this.handleGamepadInput();
+
       if (!this.isPaused && !this.activeGame.isPaused) {
         this.activeGame.update(dt);
         this.particles.update(dt);

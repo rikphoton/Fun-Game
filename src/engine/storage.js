@@ -8,7 +8,8 @@ const INITIAL_DATA = {
     neonDash: 0,
     quantumBreaker: 0,
     astroPulse: 0,
-    neonDrift: 0
+    neonDrift: 0,
+    hexaTron: 0
   },
   stats: {
     gamesPlayed: 0,
@@ -19,7 +20,8 @@ const INITIAL_DATA = {
     bricksBroken: 0,
     maxCombo: 0,
     shmupBossesKilled: 0,
-    driftDistance: 0
+    driftDistance: 0,
+    tronRivalKills: 0
   },
   neonCredits: 200,
   inventory: {
@@ -42,7 +44,8 @@ const INITIAL_DATA = {
     { id: 'quest_dash', title: 'Sub-Light Sprint', desc: 'Run 400m in Neon Dash', current: 0, target: 400, reward: 75, claimed: false, icon: '🚀' },
     { id: 'quest_breaker', title: 'Demolition Wave', desc: 'Shatter 30 Bricks in Quantum Breaker', current: 0, target: 30, reward: 75, claimed: false, icon: '💥' },
     { id: 'quest_shmup', title: 'Star Fleet Ace', desc: 'Score 1,000 Points in Astro Pulse', current: 0, target: 1000, reward: 100, claimed: false, icon: '🌠' },
-    { id: 'quest_drift', title: 'Highway Phantom', desc: 'Score 1,500 Points in Neon Drift', current: 0, target: 1500, reward: 100, claimed: false, icon: '🏎️' }
+    { id: 'quest_drift', title: 'Highway Phantom', desc: 'Score 1,500 Points in Neon Drift', current: 0, target: 1500, reward: 100, claimed: false, icon: '🏎️' },
+    { id: 'quest_tron', title: 'Grid Gladiator', desc: 'Eliminate 4 Rivals in Hexa-Tron', current: 0, target: 4, reward: 100, claimed: false, icon: '🏍️' }
   ],
   achievements: {
     first_game: { id: 'first_game', title: 'Arcade Initiate', desc: 'Play your first game', unlocked: false, icon: '🎮' },
@@ -54,6 +57,7 @@ const INITIAL_DATA = {
     star_ace: { id: 'star_ace', title: 'Star Fleet Ace', desc: 'Destroy the Mothership in Astro Pulse', unlocked: false, icon: '🌠' },
     speed_demon: { id: 'speed_demon', title: 'Speed Demon', desc: 'Reach 250 km/h in Neon Drift', unlocked: false, icon: '🏎️' },
     highway_legend: { id: 'highway_legend', title: 'Highway Legend', desc: 'Travel 3,000 meters in Neon Drift', unlocked: false, icon: '🛣️' },
+    grid_master: { id: 'grid_master', title: 'Grid Master', desc: 'Survive as the Last Operative Standing in Hexa-Tron', unlocked: false, icon: '🏍️' },
     dreadnought_slayer: { id: 'dreadnought_slayer', title: 'Dreadnought Slayer', desc: 'Destroy the Mega Dreadnought in Cyber Survivors', unlocked: false, icon: '👾' },
     multiball_mayhem: { id: 'multiball_mayhem', title: 'Multi-Ball Mayhem', desc: 'Command 6 or more balls at once in Quantum Breaker', unlocked: false, icon: '💥' },
     tech_master: { id: 'tech_master', title: 'Cyber Engineer', desc: 'Upgrade any tech in the Cyber Lab', unlocked: false, icon: '🧬' },
