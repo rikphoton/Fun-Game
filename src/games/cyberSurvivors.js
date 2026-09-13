@@ -85,6 +85,14 @@ export class CyberSurvivorsGame {
       lightningTimer: 0,
       lightningCooldown: 2.5,
 
+      frostLevel: 0,
+      frostTimer: 0,
+      frostCooldown: 3.5,
+
+      railgunLevel: 0,
+      railgunTimer: 0,
+      railgunCooldown: 2.2,
+
       shieldActive: false,
       shieldLevel: 0,
       shieldTimer: 0,
@@ -97,6 +105,7 @@ export class CyberSurvivorsGame {
     this.bullets = [];
     this.gems = [];
     this.pickups = [];
+    this.railgunBeams = [];
 
     this.spawnTimer = 0;
     this.spawnInterval = 1.0;
@@ -174,6 +183,13 @@ export class CyberSurvivorsGame {
 
     this.gameTime += dt;
     this.score = Math.floor(this.gameTime * 25 + this.kills * 40);
+
+    for (let i = this.railgunBeams.length - 1; i >= 0; i--) {
+      this.railgunBeams[i].life -= dt;
+      if (this.railgunBeams[i].life <= 0) {
+        this.railgunBeams.splice(i, 1);
+      }
+    }
 
     // Report super charge %
     this.callbacks.onScoreUpdate(
@@ -432,6 +448,82 @@ export class CyberSurvivorsGame {
         this.castChainLightning();
       }
     }
+
+    if (this.player.frostLevel > 0) {
+      this.player.frostTimer += dt;
+      if (this.player.frostTimer >= this.player.frostCooldown) {
+        this.player.frostTimer = 0;
+        this.castFrostNova();
+      }
+    }
+
+    if (this.player.railgunLevel > 0) {
+      this.player.railgunTimer += dt;
+      if (this.player.railgunTimer >= this.player.railgunCooldown) {
+        this.player.railgunTimer = 0;
+        this.fireRailgun();
+      }
+    }
+  }
+
+  castFrostNova() {
+    const frostRadius = 130 + this.player.frostLevel * 30;
+    const damage = 35 + this.player.frostLevel * 22;
+
+    this.particles.addShockwave(this.player.x, this.player.y, '#00f0ff', frostRadius, 0.35);
+    sound.playPowerup();
+
+    for (let i = this.enemies.length - 1; i >= 0; i--) {
+      const e = this.enemies[i];
+      const dx = e.x - this.player.x;
+      const dy = e.y - this.player.y;
+      if (dx * dx + dy * dy < frostRadius * frostRadius) {
+        e.frozenTimer = 3.2; // Freeze enemies in solid ice!
+        this.hitEnemy(e, i, damage);
+        this.particles.burst(e.x, e.y, 6, { color: '#00f0ff', minSpeed: 20, maxSpeed: 60, life: 0.25 });
+      }
+    }
+  }
+
+  fireRailgun() {
+    if (this.enemies.length === 0) return;
+
+    let target = this.enemies[0];
+    for (let i = 1; i < this.enemies.length; i++) {
+      if (this.enemies[i].hp > target.hp) target = this.enemies[i];
+    }
+
+    const angle = Math.atan2(target.y - this.player.y, target.x - this.player.x);
+    const endX = this.player.x + Math.cos(angle) * 900;
+    const endY = this.player.y + Math.sin(angle) * 900;
+
+    this.railgunBeams.push({
+      x1: this.player.x,
+      y1: this.player.y,
+      x2: endX,
+      y2: endY,
+      life: 0.18,
+      maxLife: 0.18
+    });
+
+    const damage = 95 + this.player.railgunLevel * 50;
+
+    for (let i = this.enemies.length - 1; i >= 0; i--) {
+      const e = this.enemies[i];
+      const px = e.x - this.player.x;
+      const py = e.y - this.player.y;
+      const proj = px * Math.cos(angle) + py * Math.sin(angle);
+      if (proj > 0) {
+        const perpDist = Math.abs(-px * Math.sin(angle) + py * Math.cos(angle));
+        if (perpDist < e.radius + 18) {
+          this.hitEnemy(e, i, damage);
+          this.particles.burst(e.x, e.y, 8, { color: '#ff007f', minSpeed: 40, maxSpeed: 120, life: 0.2 });
+        }
+      }
+    }
+
+    this.particles.shake(5, 0.16);
+    sound.playLaser('heavy');
   }
 
   fireBlaster() {
@@ -563,20 +655,39 @@ export class CyberSurvivorsGame {
   }
 
   spawnBoss() {
+    // Mega Dreadnought with escort drones
     this.enemies.push({
       x: this.width / 2,
-      y: -50,
+      y: -60,
       type: 'boss',
       isBoss: true,
-      hp: 1000,
-      maxHp: 1000,
-      speed: 40,
-      radius: 32,
+      name: 'Mega Dreadnought',
+      hp: 2500,
+      maxHp: 2500,
+      speed: 38,
+      radius: 42,
       color: '#ff003c',
-      damage: 30,
+      damage: 35,
       shootTimer: 0,
       frozenTimer: 0
     });
+
+    // Spawn 4 escort drones
+    for (let i = 0; i < 4; i++) {
+      const ang = (i * Math.PI) / 2;
+      this.enemies.push({
+        x: this.width / 2 + Math.cos(ang) * 60,
+        y: -60 + Math.sin(ang) * 60,
+        type: 'rusher',
+        hp: 40,
+        maxHp: 40,
+        speed: 130,
+        radius: 9,
+        color: '#ffe600',
+        damage: 15,
+        frozenTimer: 0
+      });
+    }
   }
 
   hitEnemy(enemy, index, damage) {
@@ -592,7 +703,7 @@ export class CyberSurvivorsGame {
       storage.recordEnemiesKilled(1);
 
       // Charge super meter
-      this.superCharge = Math.min(this.superMax, this.superCharge + (enemy.isBoss ? 45 : (enemy.type === 'brute' ? 8 : 3)));
+      this.superCharge = Math.min(this.superMax, this.superCharge + (enemy.isBoss ? 50 : (enemy.type === 'brute' ? 8 : 3)));
       if (this.superCharge >= this.superMax && !this.superReady) {
         this.superReady = true;
         this.particles.addFloatingText('SUPER READY! [SPACE]', this.player.x, this.player.y - 30, {
@@ -601,38 +712,47 @@ export class CyberSurvivorsGame {
         });
       }
 
-      this.particles.burst(enemy.x, enemy.y, enemy.isBoss ? 24 : 8, {
+      this.particles.burst(enemy.x, enemy.y, enemy.isBoss ? 32 : 8, {
         color: enemy.color,
         minSpeed: 40,
-        maxSpeed: enemy.isBoss ? 260 : 140,
-        life: 0.35
+        maxSpeed: enemy.isBoss ? 280 : 140,
+        life: 0.4
       });
 
-      sound.playExplosion(enemy.isBoss ? 2.0 : 0.6);
+      sound.playExplosion(enemy.isBoss ? 2.2 : 0.6);
       if (enemy.isBoss) {
-        this.particles.shake(10, 0.4);
-        this.particles.addFloatingText('BOSS DESTROYED! +1000', this.width / 2, 200, { color: '#00ffcc', size: 24 });
-        this.score += 1000;
-        storage.addCredits(50); // Bonus credits for boss
+        this.particles.shake(14, 0.5);
+        this.particles.addFloatingText('DREADNOUGHT ANNIHILATED! +2500', this.width / 2, 200, { color: '#00ffcc', size: 26 });
+        this.score += 2500;
+        storage.addCredits(150); // Massive credit bonus
+        storage.unlockAchievement('dreadnought_slayer');
+        sound.announce('Mega Dreadnought Destroyed!');
       }
 
       // Drop Gem
-      if (this.gems.length < 80) {
+      if (this.gems.length < 90) {
         this.gems.push({
           x: enemy.x,
           y: enemy.y,
-          radius: enemy.isBoss ? 8 : 5,
-          value: enemy.isBoss ? 45 : (enemy.type === 'brute' ? 5 : 2),
+          radius: enemy.isBoss ? 10 : 5,
+          value: enemy.isBoss ? 80 : (enemy.type === 'brute' ? 5 : 2),
           color: enemy.isBoss ? '#ffe600' : (enemy.type === 'brute' ? '#a200ff' : '#00ffcc')
         });
       }
 
-      if (Math.random() < 0.04 && this.pickups.length < 4) {
+      // Pickups: Health, Bomb, or Magnet!
+      if (Math.random() < 0.08 && this.pickups.length < 5) {
+        const roll = Math.random();
+        let pType = 'health';
+        if (roll < 0.4) pType = 'health';
+        else if (roll < 0.7) pType = 'bomb';
+        else pType = 'magnet';
+
         this.pickups.push({
           x: enemy.x,
           y: enemy.y,
-          type: Math.random() < 0.6 ? 'health' : 'bomb',
-          radius: 9
+          type: pType,
+          radius: 10
         });
       }
 
@@ -668,6 +788,14 @@ export class CyberSurvivorsGame {
           this.hitEnemy(this.enemies[i], i, 0);
         }
       }
+    } else if (p.type === 'magnet') {
+      sound.playPowerup();
+      this.particles.addShockwave(this.player.x, this.player.y, '#00f0ff', 400, 0.4);
+      this.particles.addFloatingText('GEM MAGNET! 🧲', this.player.x, this.player.y - 25, { color: '#00f0ff', size: 20 });
+      for (const g of this.gems) {
+        g.x = this.player.x;
+        g.y = this.player.y;
+      }
     }
   }
 
@@ -693,6 +821,8 @@ export class CyberSurvivorsGame {
   presentUpgradeChoices() {
     const allUpgrades = [
       { id: 'blaster', title: 'Laser Volley', desc: 'Add +1 laser bolt & increase firing speed', icon: '⚡' },
+      { id: 'frost', title: 'Frost Nova', desc: 'Periodic sub-zero blast that freezes & shatters drones', icon: '❄️' },
+      { id: 'railgun', title: 'Plasma Railgun', desc: 'Devastating piercing laser beam that cuts through all lines', icon: '☄️' },
       { id: 'orbs', title: 'Orbital Plasma', desc: 'Add spinning plasma shield orb around player', icon: '🪐' },
       { id: 'lightning', title: 'Chain Lightning', desc: 'Call down storm arcs that fry groups of drones', icon: '🌩️' },
       { id: 'shield', title: 'Energy Barrier', desc: 'Absorbs 40 damage and auto-recharges over time', icon: '🛡️' },
@@ -717,6 +847,12 @@ export class CyberSurvivorsGame {
     if (id === 'blaster') {
       this.player.blasterLevel++;
       this.player.blasterCooldown = Math.max(0.16, this.player.blasterCooldown * 0.88);
+    } else if (id === 'frost') {
+      this.player.frostLevel = (this.player.frostLevel || 0) + 1;
+      this.player.frostCooldown = Math.max(1.8, 3.5 - this.player.frostLevel * 0.4);
+    } else if (id === 'railgun') {
+      this.player.railgunLevel = (this.player.railgunLevel || 0) + 1;
+      this.player.railgunCooldown = Math.max(1.2, 2.4 - this.player.railgunLevel * 0.3);
     } else if (id === 'orbs') {
       this.player.orbsCount = Math.min(6, this.player.orbsCount + 1);
     } else if (id === 'lightning') {
@@ -817,15 +953,16 @@ export class CyberSurvivorsGame {
     // 3. Pickups
     for (let i = 0; i < this.pickups.length; i++) {
       const p = this.pickups[i];
-      ctx.fillStyle = p.type === 'health' ? '#00ff88' : '#ffe600';
+      ctx.fillStyle = p.type === 'health' ? '#00ff88' : (p.type === 'bomb' ? '#ffe600' : '#00f0ff');
       ctx.beginPath();
       ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
       ctx.fill();
       ctx.fillStyle = '#000';
-      ctx.font = 'bold 10px sans-serif';
+      ctx.font = 'bold 11px sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(p.type === 'health' ? '+' : '💣', p.x, p.y);
+      const icon = p.type === 'health' ? '+' : (p.type === 'bomb' ? '💣' : '🧲');
+      ctx.fillText(icon, p.x, p.y);
     }
 
     // 4. Bullets
@@ -837,6 +974,27 @@ export class CyberSurvivorsGame {
       ctx.fill();
     }
 
+    // Railgun Laser Beams
+    for (let i = 0; i < this.railgunBeams.length; i++) {
+      const b = this.railgunBeams[i];
+      const alpha = Math.max(0, b.life / b.maxLife);
+      ctx.save();
+      ctx.strokeStyle = `rgba(0, 240, 255, ${alpha})`;
+      ctx.lineWidth = 6 * alpha;
+      ctx.beginPath();
+      ctx.moveTo(b.x1, b.y1);
+      ctx.lineTo(b.x2, b.y2);
+      ctx.stroke();
+
+      ctx.strokeStyle = `rgba(255, 255, 255, ${alpha})`;
+      ctx.lineWidth = 2 * alpha;
+      ctx.beginPath();
+      ctx.moveTo(b.x1, b.y1);
+      ctx.lineTo(b.x2, b.y2);
+      ctx.stroke();
+      ctx.restore();
+    }
+
     // 5. Enemies
     for (let i = 0; i < this.enemies.length; i++) {
       const e = this.enemies[i];
@@ -846,16 +1004,31 @@ export class CyberSurvivorsGame {
         ctx.beginPath();
         ctx.arc(e.x, e.y, e.radius, 0, Math.PI * 2);
         ctx.fill();
-        ctx.strokeStyle = '#fff';
-        ctx.lineWidth = 2;
+        ctx.strokeStyle = '#ffd700';
+        ctx.lineWidth = 3;
         ctx.stroke();
 
-        const barWidth = 120;
+        // Pulsing core
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(e.x, e.y, e.radius * 0.35 + Math.sin(Date.now() / 120) * 2, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Boss Health Bar & Title
+        const barWidth = 140;
         const hpPercent = Math.max(0, e.hp / e.maxHp);
-        ctx.fillStyle = 'rgba(0,0,0,0.6)';
-        ctx.fillRect(e.x - barWidth / 2, e.y - e.radius - 14, barWidth, 5);
+        ctx.fillStyle = 'rgba(0,0,0,0.75)';
+        ctx.fillRect(e.x - barWidth / 2, e.y - e.radius - 20, barWidth, 7);
         ctx.fillStyle = '#ff003c';
-        ctx.fillRect(e.x - barWidth / 2, e.y - e.radius - 14, barWidth * hpPercent, 5);
+        ctx.fillRect(e.x - barWidth / 2, e.y - e.radius - 20, barWidth * hpPercent, 7);
+        ctx.strokeStyle = '#ffd700';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(e.x - barWidth / 2, e.y - e.radius - 20, barWidth, 7);
+
+        ctx.fillStyle = '#ffd700';
+        ctx.font = 'bold 10px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('MEGA DREADNOUGHT', e.x, e.y - e.radius - 24);
       } else if (e.type === 'brute') {
         ctx.fillRect(e.x - e.radius, e.y - e.radius, e.radius * 2, e.radius * 2);
       } else {

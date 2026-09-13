@@ -1,4 +1,4 @@
-/* NeonPulse Arcade Stylesheet - Mega Evolution */
+/* NeonPulse Arcade Stylesheet - Ultra Arcade Edition */
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800;900&family=Share+Tech+Mono&display=swap');
 
 :root {
@@ -92,7 +92,7 @@ header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px 32px;
+  padding: 16px 28px;
   background: rgba(10, 14, 28, 0.85);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid rgba(0, 243, 255, 0.2);
@@ -123,7 +123,8 @@ header {
 .header-controls {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .credits-badge {
@@ -152,10 +153,10 @@ header {
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.15);
   color: var(--text-main);
-  padding: 7px 12px;
+  padding: 7px 11px;
   border-radius: 8px;
   font-family: var(--font-display);
-  font-size: 0.88rem;
+  font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
   display: flex;
@@ -184,7 +185,7 @@ main {
 
 #lobby-view {
   width: 100%;
-  max-width: 1200px;
+  max-width: 1280px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -210,15 +211,15 @@ main {
 .hero-subtitle {
   font-size: 1.15rem;
   color: var(--text-muted);
-  max-width: 680px;
+  max-width: 720px;
   margin: 0 auto;
 }
 
-/* Games Grid */
+/* Games Grid - 4 Cards Layout */
 .games-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: 28px;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 24px;
   width: 100%;
 }
 
@@ -226,7 +227,7 @@ main {
   background: var(--bg-card);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 16px;
-  padding: 28px;
+  padding: 26px 24px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -262,11 +263,11 @@ main {
 .card-badge {
   align-self: flex-start;
   padding: 4px 10px;
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: 800;
   text-transform: uppercase;
   border-radius: 6px;
-  margin-bottom: 16px;
+  margin-bottom: 14px;
   letter-spacing: 1px;
 }
 
@@ -288,23 +289,29 @@ main {
   border: 1px solid rgba(255, 230, 0, 0.4);
 }
 
+.badge-shmup {
+  background: rgba(168, 85, 247, 0.2);
+  color: var(--neon-purple);
+  border: 1px solid rgba(168, 85, 247, 0.4);
+}
+
 .card-icon {
-  font-size: 3.2rem;
-  margin-bottom: 12px;
+  font-size: 3rem;
+  margin-bottom: 10px;
 }
 
 .card-title {
-  font-size: 1.7rem;
+  font-size: 1.6rem;
   font-weight: 800;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
   color: #fff;
 }
 
 .card-desc {
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   color: var(--text-muted);
-  line-height: 1.5;
-  margin-bottom: 20px;
+  line-height: 1.45;
+  margin-bottom: 18px;
   flex: 1;
 }
 
@@ -312,9 +319,9 @@ main {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding-top: 16px;
+  padding-top: 14px;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
-  margin-bottom: 20px;
+  margin-bottom: 18px;
 }
 
 .high-score-tag {
@@ -327,11 +334,11 @@ main {
   background: linear-gradient(135deg, var(--neon-cyan), #00aaff);
   border: none;
   color: #050811;
-  font-size: 1rem;
+  font-size: 0.95rem;
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 1.2px;
-  padding: 13px 22px;
+  padding: 12px 20px;
   border-radius: 10px;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -353,9 +360,26 @@ main {
   box-shadow: 0 4px 20px rgba(255, 0, 123, 0.35);
 }
 
+.play-btn.pink:hover {
+  background: linear-gradient(135deg, #fff, var(--neon-pink));
+}
+
 .play-btn.yellow {
   background: linear-gradient(135deg, var(--neon-yellow), #ff9900);
   box-shadow: 0 4px 20px rgba(255, 230, 0, 0.35);
+}
+
+.play-btn.yellow:hover {
+  background: linear-gradient(135deg, #fff, var(--neon-yellow));
+}
+
+.play-btn.purple {
+  background: linear-gradient(135deg, #a855f7, #6366f1);
+  box-shadow: 0 4px 20px rgba(168, 85, 247, 0.35);
+}
+
+.play-btn.purple:hover {
+  background: linear-gradient(135deg, #fff, #a855f7);
 }
 
 /* GAMEPLAY VIEW */
@@ -390,7 +414,7 @@ main {
 
 .hud-item {
   font-family: var(--font-mono);
-  font-size: 1rem;
+  font-size: 0.95rem;
   font-weight: 700;
   display: flex;
   align-items: center;
@@ -399,10 +423,9 @@ main {
 
 .hud-score {
   color: var(--neon-yellow);
-  font-size: 1.2rem;
+  font-size: 1.15rem;
 }
 
-/* Super Nova EMP HUD Button */
 .super-btn {
   position: relative;
   background: rgba(255, 255, 255, 0.08);
@@ -484,7 +507,6 @@ canvas {
   cursor: crosshair;
 }
 
-/* Mobile Controls */
 .mobile-controls {
   display: none;
   width: 100%;
@@ -543,7 +565,7 @@ canvas {
   border-radius: 20px;
   width: 100%;
   max-width: 500px;
-  padding: 30px;
+  padding: 28px;
   box-shadow: 0 0 40px rgba(0, 243, 255, 0.25);
   text-align: center;
   animation: popIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
@@ -594,7 +616,161 @@ canvas {
   justify-content: center;
 }
 
-/* Mech Class Chooser */
+/* CYBER LAB TECH TREE */
+.lab-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+}
+
+.lab-card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 16px;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.lab-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.lab-card-title {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.lab-level-badge {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  background: rgba(0, 243, 255, 0.15);
+  color: var(--neon-cyan);
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-weight: 700;
+}
+
+.lab-card-desc {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  margin-bottom: 14px;
+  line-height: 1.35;
+}
+
+.lab-upgrade-btn {
+  background: var(--neon-yellow);
+  color: #000;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 0.85rem;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: all 0.2s ease;
+}
+
+.lab-upgrade-btn:hover {
+  background: #fff;
+  transform: scale(1.02);
+}
+
+.lab-upgrade-btn.maxed {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--neon-green);
+  cursor: default;
+  justify-content: center;
+}
+
+/* DAILY QUESTS & BOUNTIES */
+.quests-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+.quest-card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 14px 18px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  text-align: left;
+}
+
+.quest-card.ready {
+  border-color: rgba(255, 230, 0, 0.4);
+  background: rgba(255, 230, 0, 0.05);
+}
+
+.quest-card.claimed {
+  opacity: 0.5;
+  filter: grayscale(0.8);
+}
+
+.quest-info h4 {
+  font-size: 1rem;
+  color: #fff;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.quest-info p {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.quest-progress-track {
+  width: 220px;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.quest-progress-bar {
+  height: 100%;
+  background: var(--neon-cyan);
+  transition: width 0.3s ease;
+}
+
+.quest-claim-btn {
+  background: var(--neon-yellow);
+  color: #000;
+  border: none;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 0.85rem;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.quest-claim-btn:hover {
+  background: #fff;
+  transform: scale(1.05);
+}
+
+/* Mech Chooser */
 .mechs-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -629,7 +805,7 @@ canvas {
 .mech-trait { font-size: 0.75rem; color: var(--neon-yellow); font-weight: 700; text-transform: uppercase; margin-bottom: 8px; }
 .mech-card p { font-size: 0.8rem; color: var(--text-muted); line-height: 1.3; }
 
-/* Cyber Armory (Shop) */
+/* Cyber Armory */
 .shop-tabs {
   display: flex;
   gap: 10px;
@@ -738,7 +914,7 @@ canvas {
   cursor: default;
 }
 
-/* Audio Console Box */
+/* Audio Console */
 .audio-controls-box {
   background: rgba(255, 255, 255, 0.04);
   border-radius: 12px;

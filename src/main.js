@@ -1,10 +1,12 @@
-// NeonPulse Arcade Main Orchestrator - Mega Evolution Edition
+// NeonPulse Arcade Main Orchestrator - Ultra Arcade Edition
 import { sound } from './engine/audio.js';
 import { ParticleSystem } from './engine/particles.js';
 import { storage } from './engine/storage.js';
 import { CyberSurvivorsGame } from './games/cyberSurvivors.js';
 import { NeonDashGame } from './games/neonDash.js';
 import { QuantumBreakerGame } from './games/quantumBreaker.js';
+import { AstroPulseGame } from './games/astroPulse.js';
+import { NeonDriftGame } from './games/neonDrift.js';
 
 class ArcadeApp {
   constructor() {
@@ -25,11 +27,11 @@ class ArcadeApp {
     this.updateLobbyScores();
     this.updateCreditsDisplay();
 
-    // Setup Storage Listeners
+    // Storage Event Listeners
     storage.onAchievementUnlock = (ach) => this.showAchievementToast(ach);
     storage.onCreditsChange = () => this.updateCreditsDisplay();
+    storage.onQuestUpdate = () => this.renderQuests();
 
-    // Start Main Render Loop
     requestAnimationFrame((t) => this.loop(t));
   }
 
@@ -39,6 +41,8 @@ class ArcadeApp {
 
     // Header Controls
     this.headerCredits = document.getElementById('header-credits');
+    this.btnOpenQuests = document.getElementById('btn-open-quests');
+    this.btnOpenLab = document.getElementById('btn-open-lab');
     this.btnOpenArmory = document.getElementById('btn-open-armory');
     this.btnOpenArmoryBadge = document.getElementById('btn-open-armory-badge');
     this.btnOpenAudio = document.getElementById('btn-open-audio');
@@ -62,6 +66,16 @@ class ArcadeApp {
     this.instructionsEl = document.getElementById('game-instructions');
 
     // Modals
+    this.modalLab = document.getElementById('modal-lab');
+    this.labCreditsDisplay = document.getElementById('lab-credits-display');
+    this.labUpgradesList = document.getElementById('lab-upgrades-list');
+    this.btnCloseLab = document.getElementById('btn-close-lab');
+
+    this.modalQuests = document.getElementById('modal-quests');
+    this.questCreditsDisplay = document.getElementById('quest-credits-display');
+    this.questsList = document.getElementById('quests-list');
+    this.btnCloseQuests = document.getElementById('btn-close-quests');
+
     this.modalMechSelect = document.getElementById('modal-mech-select');
     this.btnLaunchMech = document.getElementById('btn-launch-mech');
     this.btnCancelMech = document.getElementById('btn-cancel-mech');
@@ -79,6 +93,7 @@ class ArcadeApp {
     this.sliderSfx = document.getElementById('slider-sfx');
     this.valBgm = document.getElementById('val-bgm');
     this.valSfx = document.getElementById('val-sfx');
+    this.checkAnnouncer = document.getElementById('check-announcer');
     this.btnCloseAudio = document.getElementById('btn-close-audio');
 
     this.modalUpgrade = document.getElementById('modal-upgrade');
@@ -124,6 +139,7 @@ class ArcadeApp {
         onGameOver: (data) => this.handleGameOver(data),
         onScoreUpdate: (score, distance, stars, multiplier) => {
           this.hudScore.textContent = score;
+          storage.recordDistance(distance);
           const multiText = multiplier > 1 ? ` | <span style="color:#ffe600;font-weight:900;">${multiplier}x STREAK</span>` : '';
           this.hudSecondary.innerHTML = `DIST: <span>${distance}m</span> | ⭐ <span>${stars}</span>${multiText}`;
         }
@@ -135,6 +151,33 @@ class ArcadeApp {
           this.hudScore.textContent = score;
           this.hudSecondary.innerHTML = `LIVES: <span>${'❤️'.repeat(Math.max(0, lives))}</span> | STAGE: <span>${stage}/5</span> | COMBO: <span>${combo}x</span>`;
         }
+      }),
+
+      astroPulse: new AstroPulseGame(this.canvas, this.particles, {
+        onGameOver: (data) => this.handleGameOver(data),
+        onScoreUpdate: (score, weaponLvl, hp, maxHp) => {
+          this.hudScore.textContent = score;
+          this.hudSecondary.innerHTML = `GUN: <span>TIER ${weaponLvl}</span>`;
+          if (this.hudHpFill) {
+            this.hudHpFill.style.width = `${Math.max(0, (hp / maxHp) * 100)}%`;
+          }
+        }
+      }),
+
+      neonDrift: new NeonDriftGame(this.canvas, this.particles, {
+        onGameOver: (data) => this.handleGameOver(data),
+        onScoreUpdate: (score, distance, speed, nitroPercent, hp, maxHp) => {
+          this.hudScore.textContent = score;
+          this.hudSecondary.innerHTML = `SPEED: <span>${speed} KM/H</span> | DIST: <span>${distance}M</span>`;
+          if (this.hudSuperFill) {
+            this.hudSuperFill.style.width = `${nitroPercent}%`;
+            this.hudSuperText.textContent = nitroPercent >= 100 ? 'NITRO MAX!' : `NITRO: ${nitroPercent}%`;
+            this.btnSuperAbility.classList.toggle('ready', nitroPercent >= 50);
+          }
+          if (this.hudHpFill) {
+            this.hudHpFill.style.width = `${Math.max(0, (hp / maxHp) * 100)}%`;
+          }
+        }
       })
     };
   }
@@ -143,16 +186,28 @@ class ArcadeApp {
     const sScore = storage.getHighScore('cyberSurvivors');
     const dScore = storage.getHighScore('neonDash');
     const bScore = storage.getHighScore('quantumBreaker');
+    const aScore = storage.getHighScore('astroPulse');
+    const rScore = storage.getHighScore('neonDrift');
 
-    document.getElementById('best-score-survivors').textContent = `${sScore.toLocaleString()} PTS`;
-    document.getElementById('best-score-dash').textContent = `${dScore.toLocaleString()} M`;
-    document.getElementById('best-score-breaker').textContent = `${bScore.toLocaleString()} PTS`;
+    const sEl = document.getElementById('best-score-survivors');
+    const dEl = document.getElementById('best-score-dash');
+    const bEl = document.getElementById('best-score-breaker');
+    const aEl = document.getElementById('best-score-shmup');
+    const rEl = document.getElementById('best-score-drift');
+
+    if (sEl) sEl.textContent = `${sScore.toLocaleString()} PTS`;
+    if (dEl) dEl.textContent = `${dScore.toLocaleString()} M`;
+    if (bEl) bEl.textContent = `${bScore.toLocaleString()} PTS`;
+    if (aEl) aEl.textContent = `${aScore.toLocaleString()} PTS`;
+    if (rEl) rEl.textContent = `${rScore.toLocaleString()} PTS`;
   }
 
   updateCreditsDisplay() {
     const credits = storage.getCredits();
     if (this.headerCredits) this.headerCredits.textContent = credits.toLocaleString();
     if (this.shopCreditsDisplay) this.shopCreditsDisplay.textContent = credits.toLocaleString();
+    if (this.labCreditsDisplay) this.labCreditsDisplay.textContent = credits.toLocaleString();
+    if (this.questCreditsDisplay) this.questCreditsDisplay.textContent = credits.toLocaleString();
   }
 
   applyCabinetTheme(theme) {
@@ -172,6 +227,26 @@ class ArcadeApp {
       }
     });
 
+    // Cyber Lab Modal
+    this.btnOpenLab.addEventListener('click', () => {
+      sound.init();
+      this.renderCyberLab();
+      this.modalLab.style.display = 'flex';
+    });
+    this.btnCloseLab.addEventListener('click', () => {
+      this.modalLab.style.display = 'none';
+    });
+
+    // Daily Quests Modal
+    this.btnOpenQuests.addEventListener('click', () => {
+      sound.init();
+      this.renderQuests();
+      this.modalQuests.style.display = 'flex';
+    });
+    this.btnCloseQuests.addEventListener('click', () => {
+      this.modalQuests.style.display = 'none';
+    });
+
     // Audio Modal
     this.btnOpenAudio.addEventListener('click', () => {
       sound.init();
@@ -179,6 +254,7 @@ class ArcadeApp {
       this.sliderSfx.value = sound.sfxVolume * 100;
       this.valBgm.textContent = `${Math.round(sound.bgmVolume * 100)}%`;
       this.valSfx.textContent = `${Math.round(sound.sfxVolume * 100)}%`;
+      this.checkAnnouncer.checked = storage.getSetting('announcerEnabled') !== false;
       this.modalAudio.style.display = 'flex';
     });
 
@@ -200,7 +276,11 @@ class ArcadeApp {
       storage.setSetting('sfxVolume', val);
     });
 
-    // Track buttons
+    this.checkAnnouncer.addEventListener('change', (e) => {
+      storage.setSetting('announcerEnabled', e.target.checked);
+      if (e.target.checked) sound.announce('Announcer Active');
+    });
+
     document.querySelectorAll('.track-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         document.querySelectorAll('.track-btn').forEach(b => b.classList.remove('active'));
@@ -277,6 +357,9 @@ class ArcadeApp {
     // Play Buttons for other games
     document.getElementById('btn-play-dash').addEventListener('click', () => this.launchGame('neonDash'));
     document.getElementById('btn-play-breaker').addEventListener('click', () => this.launchGame('quantumBreaker'));
+    document.getElementById('btn-play-shmup').addEventListener('click', () => this.launchGame('astroPulse'));
+    const btnPlayDrift = document.getElementById('btn-play-drift');
+    if (btnPlayDrift) btnPlayDrift.addEventListener('click', () => this.launchGame('neonDrift'));
 
     // Navigation & Pause
     this.btnHomeLogo.addEventListener('click', () => this.returnToHub());
@@ -292,6 +375,9 @@ class ArcadeApp {
     this.btnSuperAbility.addEventListener('click', () => {
       if (this.activeGame && this.activeGame.triggerSuperAbility) {
         this.activeGame.triggerSuperAbility();
+      }
+      if (this.activeGame && this.activeGame.triggerBomb) {
+        this.activeGame.triggerBomb();
       }
     });
 
@@ -365,7 +451,6 @@ class ArcadeApp {
       }
     });
 
-    // Touch events
     this.canvas.addEventListener('touchstart', (e) => {
       e.preventDefault();
       sound.init();
@@ -405,13 +490,118 @@ class ArcadeApp {
       if (this.activeGame && this.activeGame.triggerSuperAbility) {
         this.activeGame.triggerSuperAbility();
       }
+      if (this.activeGame && this.activeGame.triggerBomb) {
+        this.activeGame.triggerBomb();
+      }
     });
   }
+
+  // --- CYBER LAB TECH TREE RENDERER ---
+
+  renderCyberLab() {
+    this.updateCreditsDisplay();
+    const labItems = [
+      { id: 'hull', name: 'Hull Plating', desc: '+20 Max HP in Cyber Survivors & Astro Pulse', costs: [75, 150, 300], icon: '🛡️' },
+      { id: 'thrusters', name: 'Sub-Light Thrusters', desc: '+10% Speed boost across all games', costs: [75, 150, 300], icon: '🚀' },
+      { id: 'shield', name: 'Quantum Safeguard', desc: 'Start with an Energy Shield barrier in Breaker & Astro', costs: [100, 200, 400], icon: '⚡' },
+      { id: 'siphon', name: 'Credit Siphon', desc: '+25% Bonus Neon Credits earned from all games', costs: [120, 240, 500], icon: '💎' }
+    ];
+
+    this.labUpgradesList.innerHTML = '';
+
+    for (const item of labItems) {
+      const currentLevel = storage.getLabLevel(item.id);
+      const isMax = currentLevel >= 3;
+      const nextCost = isMax ? 0 : item.costs[currentLevel];
+
+      const card = document.createElement('div');
+      card.className = 'lab-card';
+      card.innerHTML = `
+        <div>
+          <div class="lab-card-header">
+            <span class="lab-card-title">${item.icon} ${item.name}</span>
+            <span class="lab-level-badge">${isMax ? 'MAX TIER' : `TIER ${currentLevel}/3`}</span>
+          </div>
+          <div class="lab-card-desc">${item.desc}</div>
+        </div>
+        <div>
+          <button class="lab-upgrade-btn ${isMax ? 'maxed' : ''}">
+            ${isMax ? 'COMPLETED' : `<span>UPGRADE</span><span>💎 ${nextCost} NC</span>`}
+          </button>
+        </div>
+      `;
+
+      if (!isMax) {
+        const btn = card.querySelector('.lab-upgrade-btn');
+        btn.addEventListener('click', () => {
+          if (storage.upgradeLab(item.id, nextCost)) {
+            sound.playVictory();
+            sound.announce('Tech Upgraded!');
+            this.renderCyberLab();
+          } else {
+            sound.playHit();
+            alert('Not enough Neon Credits! Play games or complete bounties to earn more.');
+          }
+        });
+      }
+
+      this.labUpgradesList.appendChild(card);
+    }
+  }
+
+  // --- DAILY QUESTS & BOUNTIES RENDERER ---
+
+  renderQuests() {
+    this.updateCreditsDisplay();
+    const quests = storage.data.quests;
+    this.questsList.innerHTML = '';
+
+    for (const q of quests) {
+      const isComplete = q.current >= q.target;
+      const pct = Math.min(100, Math.floor((q.current / q.target) * 100));
+
+      const card = document.createElement('div');
+      card.className = `quest-card ${isComplete && !q.claimed ? 'ready' : ''} ${q.claimed ? 'claimed' : ''}`;
+      card.innerHTML = `
+        <div class="quest-info">
+          <h4>${q.icon} ${q.title} ${isComplete ? (q.claimed ? '✅' : '🌟') : ''}</h4>
+          <p>${q.desc}</p>
+          <div class="quest-progress-track">
+            <div class="quest-progress-bar" style="width: ${pct}%;"></div>
+          </div>
+          <span style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted);">${q.current} / ${q.target}</span>
+        </div>
+        <div>
+          ${q.claimed 
+            ? `<span style="font-family: var(--font-mono); color: var(--neon-green); font-size: 0.9rem; font-weight:700;">CLAIMED</span>`
+            : `<button class="quest-claim-btn" ${!isComplete ? 'disabled style="opacity:0.4;cursor:not-allowed;"' : ''}>
+                CLAIM 💎 ${q.reward}
+              </button>`
+          }
+        </div>
+      `;
+
+      if (isComplete && !q.claimed) {
+        const btn = card.querySelector('.quest-claim-btn');
+        btn.addEventListener('click', () => {
+          const reward = storage.claimQuest(q.id);
+          if (reward > 0) {
+            sound.playVictory();
+            sound.announce('Bounty Claimed!');
+            this.renderQuests();
+          }
+        });
+      }
+
+      this.questsList.appendChild(card);
+    }
+  }
+
+  // --- CYBER ARMORY CATALOG ---
 
   renderArmory() {
     this.updateCreditsDisplay();
 
-    // 1. Trails Catalog
     const trails = [
       { id: 'cyan', name: 'Electric Cyan', desc: 'Sleek standard pulsing cyber trail', cost: 0, color: '#00f3ff' },
       { id: 'neon_pink', name: 'Hot Pink Neon', desc: 'Vibrant cyberpunk magenta thruster glow', cost: 50, color: '#ff007b' },
@@ -457,7 +647,7 @@ class ArcadeApp {
             this.renderArmory();
           } else {
             sound.playHit();
-            alert('Not enough Neon Credits! Destroy more drones or complete stages to earn more.');
+            alert('Not enough Neon Credits!');
           }
         }
       });
@@ -465,7 +655,6 @@ class ArcadeApp {
       this.shopTrailsList.appendChild(card);
     }
 
-    // 2. Themes Catalog
     const themes = [
       { id: 'cyberpunk', name: 'Cyberpunk 2077', desc: 'Classic electric cyan & neon pink aesthetic', cost: 0 },
       { id: 'vaporwave', name: '1984 Vaporwave', desc: 'Dreamy retro magenta, purple & sunset cyan', cost: 75 },
@@ -511,7 +700,7 @@ class ArcadeApp {
             this.renderArmory();
           } else {
             sound.playHit();
-            alert('Not enough Neon Credits! Play games to earn credits.');
+            alert('Not enough Neon Credits!');
           }
         }
       });
@@ -538,7 +727,7 @@ class ArcadeApp {
       this.hudGameName.textContent = `Cyber Survivors (${mechClass.toUpperCase()})`;
       this.hudHpContainer.style.display = 'flex';
       this.hudSuperContainer.style.display = 'flex';
-      this.instructionsEl.innerHTML = `Move: <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or Mouse Drag | Super Nova EMP: <kbd>SPACE</kbd> | Auto-Fire`;
+      this.instructionsEl.innerHTML = `Move: <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or Mouse Drag | Super EMP: <kbd>SPACE</kbd> | Auto-Fire`;
       this.activeGame.init(mechClass);
     } else if (gameKey === 'neonDash') {
       this.hudGameName.textContent = 'Neon Dash';
@@ -552,6 +741,20 @@ class ArcadeApp {
       this.hudSuperContainer.style.display = 'none';
       this.instructionsEl.innerHTML = `Paddle: Mouse or <kbd>A</kbd><kbd>D</kbd> | Fire Lasers: <kbd>SPACE</kbd> or Click | Catch Power-ups`;
       this.activeGame.init();
+    } else if (gameKey === 'astroPulse') {
+      this.hudGameName.textContent = 'Astro Pulse';
+      this.hudHpContainer.style.display = 'flex';
+      this.hudSuperContainer.style.display = 'flex';
+      this.hudSuperText.textContent = 'BOMB';
+      this.instructionsEl.innerHTML = `Move: Mouse / <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> | Smart Bomb: <kbd>SPACE</kbd> | Auto-Fire`;
+      this.activeGame.init();
+    } else if (gameKey === 'neonDrift') {
+      this.hudGameName.textContent = 'Neon Drift';
+      this.hudHpContainer.style.display = 'flex';
+      this.hudSuperContainer.style.display = 'flex';
+      this.hudSuperText.textContent = 'NITRO';
+      this.instructionsEl.innerHTML = `Steer: <kbd>A</kbd><kbd>D</kbd> or Mouse | Nitro: <kbd>W</kbd> / <kbd>SPACE</kbd> | Drift: <kbd>S</kbd> / <kbd>SHIFT</kbd>`;
+      this.activeGame.start();
     }
   }
 
@@ -616,12 +819,18 @@ class ArcadeApp {
       </div>
     `;
 
-    if (data.kills !== undefined) {
+    if (data.time !== undefined && data.kills !== undefined) {
       statsHtml += `
         <div class="stat-row"><span>SURVIVAL TIME:</span><span class="stat-val">${data.time}s</span></div>
-        <div class="stat-row"><span>DRONES DESTROYED:</span><span class="stat-val">${data.kills}</span></div>
-        <div class="stat-row"><span>FINAL LEVEL:</span><span class="stat-val">${data.level}</span></div>
+        <div class="stat-row"><span>ENEMIES DESTROYED:</span><span class="stat-val">${data.kills}</span></div>
       `;
+      if (data.level) statsHtml += `<div class="stat-row"><span>FINAL LEVEL:</span><span class="stat-val">${data.level}</span></div>`;
+    } else if (data.distance !== undefined && this.activeGameKey === 'neonDrift') {
+      statsHtml += `
+        <div class="stat-row"><span>HIGHWAY DISTANCE:</span><span class="stat-val">${data.distance}m</span></div>
+        <div class="stat-row"><span>CREDITS EARNED:</span><span class="stat-val">💎 ${data.credits} NC</span></div>
+      `;
+      storage.updateQuestProgress('quest_drift', data.score);
     } else if (data.distance !== undefined) {
       statsHtml += `
         <div class="stat-row"><span>DISTANCE RUN:</span><span class="stat-val">${data.distance}m</span></div>
@@ -639,6 +848,8 @@ class ArcadeApp {
     this.modalGameOver.style.display = 'flex';
     this.updateLobbyScores();
     this.updateCreditsDisplay();
+
+    if (data.isRecord) sound.announce('New Record!');
   }
 
   openAchievementsModal() {
@@ -664,6 +875,7 @@ class ArcadeApp {
 
   showAchievementToast(ach) {
     sound.playVictory();
+    sound.announce('Achievement Unlocked!');
     const toast = document.createElement('div');
     toast.className = 'achievement-toast';
     toast.innerHTML = `

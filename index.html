@@ -20,14 +20,22 @@
     <div class="header-controls">
       <!-- Neon Credits Counter -->
       <div class="credits-badge" id="btn-open-armory-badge" title="Neon Credits (Earned by playing)">
-        💎 <span id="header-credits">150</span> NC
+        💎 <span id="header-credits">200</span> NC
       </div>
+
+      <button class="control-btn" id="btn-open-quests" title="Daily Bounties & Missions">
+        🎯 Quests
+      </button>
+
+      <button class="control-btn" id="btn-open-lab" title="Cyber Lab Tech Tree Upgrades">
+        🧬 Cyber Lab
+      </button>
 
       <button class="control-btn" id="btn-open-armory" title="Cyber Armory & Cosmetics">
         🛍️ Armory
       </button>
 
-      <button class="control-btn" id="btn-open-audio" title="Audio Settings & Music Tracks">
+      <button class="control-btn" id="btn-open-audio" title="Audio Settings & Announcer">
         🎵 Audio
       </button>
 
@@ -51,7 +59,7 @@
     <div id="lobby-view">
       <div class="hero-banner">
         <h1 class="hero-title">NeonPulse Arcade</h1>
-        <p class="hero-subtitle">Step into a hyper-kinetic retro cyberpunk world. Three juicy games, procedural synth soundtrack, hero classes, and unlockable armory.</p>
+        <p class="hero-subtitle">Step into a hyper-kinetic retro cyberpunk world. Five juicy games, tech tree progression, daily quests, and procedural synthwave audio.</p>
       </div>
 
       <div class="games-grid">
@@ -111,6 +119,44 @@
             </button>
           </div>
         </div>
+
+        <!-- Game 4: Astro Pulse -->
+        <div class="game-card">
+          <div>
+            <div class="card-badge badge-shmup">Vertical Cyber Shmup</div>
+            <div class="card-icon">🌠</div>
+            <h2 class="card-title">Astro Pulse</h2>
+            <p class="card-desc">High-speed arcade vertical shooter! Fly through hyperspace starfields, collect 5-way spread lasers and seeking micro-missiles, and defeat the Mothership.</p>
+          </div>
+          <div>
+            <div class="card-meta">
+              <span>Best Score</span>
+              <span class="high-score-tag" id="best-score-shmup">0 PTS</span>
+            </div>
+            <button class="play-btn purple" id="btn-play-shmup">
+              <span>▶</span> Launch Starfighter
+            </button>
+          </div>
+        </div>
+
+        <!-- Game 5: Neon Drift (NEW!) -->
+        <div class="game-card">
+          <div>
+            <div class="card-badge badge-racer" style="background: rgba(255, 0, 128, 0.15); border-color: #ff007f; color: #ff007f;">Cyber Highway Racer</div>
+            <div class="card-icon">🏎️</div>
+            <h2 class="card-title">Neon Drift</h2>
+            <p class="card-desc">Pseudo-3D highway outrun racer! Ignite twin nitro afterburners, drift around Tokyo 2099 corners, weave through cyber traffic, and rack up near-miss multipliers.</p>
+          </div>
+          <div>
+            <div class="card-meta">
+              <span>Best Score</span>
+              <span class="high-score-tag" id="best-score-drift">0 PTS</span>
+            </div>
+            <button class="play-btn" id="btn-play-drift" style="background: linear-gradient(135deg, #ff007f, #ff71ce); border-color: #ff71ce;">
+              <span>▶</span> Hit the Highway
+            </button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -123,11 +169,10 @@
           <div class="hud-item" id="hud-game-name">Cyber Survivors</div>
         </div>
         <div class="hud-group">
-          <!-- Dynamic HUD stats -->
           <div class="hud-item">SCORE: <span class="hud-score" id="hud-score">0</span></div>
           <div class="hud-item" id="hud-secondary-stat">LVL: <span id="hud-level">1</span></div>
           
-          <!-- Super EMP Nova Gauge (Cyber Survivors) -->
+          <!-- Super EMP Nova Gauge -->
           <div class="hud-item" id="hud-super-container">
             SUPER:
             <button class="super-btn" id="btn-super-ability" title="Press SPACE or Click to trigger Super Nova">
@@ -158,12 +203,50 @@
       <!-- Mobile Touch Controls Overlay -->
       <div class="mobile-controls" id="mobile-controls">
         <button class="touch-btn" id="touch-action-a" title="Action / Air Dash">⚡</button>
-        <button class="touch-btn" id="touch-super-btn" title="Super Nova EMP">💣</button>
+        <button class="touch-btn" id="touch-super-btn" title="Super Nova EMP / Bomb">💣</button>
       </div>
     </div>
   </main>
 
-  <!-- Mech Class Chooser Modal (Cyber Survivors) -->
+  <!-- Cyber Lab (Tech Tree) Modal -->
+  <div class="modal-overlay" id="modal-lab">
+    <div class="modal-box" style="max-width: 680px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+        <h2 class="modal-title gold" style="margin: 0;">🧬 CYBER LAB TECH TREE</h2>
+        <div class="credits-badge" style="font-size: 1.1rem;">💎 <span id="lab-credits-display">200</span> NC</div>
+      </div>
+      <p class="modal-subtitle">Permanent roguelite enhancements applied across all arcade games</p>
+
+      <div class="lab-grid" id="lab-upgrades-list">
+        <!-- Injected dynamically -->
+      </div>
+
+      <div class="modal-actions" style="margin-top: 22px;">
+        <button class="play-btn" id="btn-close-lab">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Daily Quests Modal -->
+  <div class="modal-overlay" id="modal-quests">
+    <div class="modal-box" style="max-width: 620px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+        <h2 class="modal-title gold" style="margin: 0;">🎯 DAILY BOUNTIES</h2>
+        <div class="credits-badge" style="font-size: 1.1rem;">💎 <span id="quest-credits-display">200</span> NC</div>
+      </div>
+      <p class="modal-subtitle">Complete daily missions to earn bounty rewards</p>
+
+      <div class="quests-grid" id="quests-list">
+        <!-- Injected dynamically -->
+      </div>
+
+      <div class="modal-actions" style="margin-top: 20px;">
+        <button class="play-btn" id="btn-close-quests">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mech Class Chooser Modal -->
   <div class="modal-overlay" id="modal-mech-select">
     <div class="modal-box" style="max-width: 650px;">
       <h2 class="modal-title gold">SELECT YOUR COMBAT MECH</h2>
@@ -204,25 +287,17 @@
     <div class="modal-box" style="max-width: 680px;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
         <h2 class="modal-title gold" style="margin: 0;">🛍️ CYBER ARMORY</h2>
-        <div class="credits-badge" style="font-size: 1.1rem;">💎 <span id="shop-credits-display">150</span> NC</div>
+        <div class="credits-badge" style="font-size: 1.1rem;">💎 <span id="shop-credits-display">200</span> NC</div>
       </div>
       <p class="modal-subtitle">Earn Neon Credits by destroying drones, collecting stars, and smashing bricks!</p>
 
-      <!-- Shop Tabs -->
       <div class="shop-tabs">
         <button class="shop-tab active" id="tab-trails">Particle Trails</button>
         <button class="shop-tab" id="tab-themes">Cabinet Themes</button>
       </div>
 
-      <!-- Trails List -->
-      <div class="shop-items-grid" id="shop-trails-list">
-        <!-- Injected dynamically -->
-      </div>
-
-      <!-- Themes List -->
-      <div class="shop-items-grid" id="shop-themes-list" style="display: none;">
-        <!-- Injected dynamically -->
-      </div>
+      <div class="shop-items-grid" id="shop-trails-list"></div>
+      <div class="shop-items-grid" id="shop-themes-list" style="display: none;"></div>
 
       <div class="modal-actions" style="margin-top: 20px;">
         <button class="play-btn" id="btn-close-armory">Done</button>
@@ -234,7 +309,7 @@
   <div class="modal-overlay" id="modal-audio">
     <div class="modal-box" style="max-width: 480px;">
       <h2 class="modal-title gold">🎵 SYNTH AUDIO CONSOLE</h2>
-      <p class="modal-subtitle">Procedural Web Audio synthesizer customization</p>
+      <p class="modal-subtitle">Procedural synthesizer and announcer voice settings</p>
 
       <div class="audio-controls-box">
         <div class="slider-row">
@@ -247,13 +322,18 @@
           <input type="range" id="slider-sfx" min="0" max="100" value="60">
         </div>
 
-        <div class="slider-row" style="margin-top: 14px;">
+        <div class="slider-row" style="margin-top: 10px;">
           <label>Synthwave BGM Track:</label>
           <div class="track-buttons">
             <button class="track-btn active" data-track="synthwave">Sunset</button>
             <button class="track-btn" data-track="darksynth">Darksynth</button>
             <button class="track-btn" data-track="chiptune">Chiptune</button>
           </div>
+        </div>
+
+        <div style="margin-top: 14px; display: flex; align-items: center; gap: 10px; cursor: pointer;">
+          <input type="checkbox" id="check-announcer" checked style="width: 18px; height: 18px; accent-color: var(--neon-cyan); cursor: pointer;">
+          <label for="check-announcer" style="margin: 0; cursor: pointer;">Enable Arcade Voice Announcer 🎙️</label>
         </div>
       </div>
 
@@ -263,7 +343,7 @@
     </div>
   </div>
 
-  <!-- Level Up Upgrade Modal (Cyber Survivors) -->
+  <!-- Level Up Upgrade Modal -->
   <div class="modal-overlay" id="modal-upgrade">
     <div class="modal-box">
       <h2 class="modal-title gold">⚡ UPGRADE AVAILABLE! ⚡</h2>

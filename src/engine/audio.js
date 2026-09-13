@@ -1,5 +1,4 @@
-// Multi-Track Procedural Synthesizer & Sound Engine
-// Three procedural music tracks: Synthwave Sunset, Dark Cyberpunk, Chiptune Rush.
+// Multi-Track Procedural Synthesizer & Speech Announcer Engine
 
 class SoundEngine {
   constructor() {
@@ -20,6 +19,7 @@ class SoundEngine {
 
     this.noiseBuffer = null;
     this.lastExplosionTime = 0;
+    this.lastAnnouncementTime = 0;
   }
 
   init() {
@@ -40,7 +40,6 @@ class SoundEngine {
         this.bgmGain.gain.setValueAtTime(this.bgmVolume, this.ctx.currentTime);
         this.bgmGain.connect(this.masterGain);
 
-        // Pre-bake 1.5s noise buffer
         const sampleRate = this.ctx.sampleRate;
         const bufferSize = Math.floor(sampleRate * 1.5);
         this.noiseBuffer = this.ctx.createBuffer(1, bufferSize, sampleRate);
@@ -56,6 +55,31 @@ class SoundEngine {
     if (this.ctx && this.ctx.state === 'suspended') {
       this.ctx.resume();
     }
+  }
+
+  // --- ARCADE VOICE ANNOUNCER ---
+
+  announce(text) {
+    if (this.isMuted) return;
+    try {
+      if (!('speechSynthesis' in window)) return;
+      const now = Date.now();
+      if (now - this.lastAnnouncementTime < 1800) return; // Prevent spam
+      this.lastAnnouncementTime = now;
+
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = 1.15;
+      utterance.pitch = 0.92;
+      utterance.volume = this.sfxVolume;
+
+      // Pick an English voice if available
+      const voices = window.speechSynthesis.getVoices();
+      const enVoice = voices.find(v => v.lang.startsWith('en'));
+      if (enVoice) utterance.voice = enVoice;
+
+      window.speechSynthesis.speak(utterance);
+    } catch (e) {}
   }
 
   setSfxVolume(val) {
@@ -77,10 +101,13 @@ class SoundEngine {
     if (this.masterGain && this.ctx) {
       this.masterGain.gain.setValueAtTime(this.isMuted ? 0 : 1.0, this.ctx.currentTime);
     }
+    if (this.isMuted && 'speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+    }
     return this.isMuted;
   }
 
-  // --- PROCEDURAL SOUND EFFECTS ---
+  // --- PROCEDURAL SFX ---
 
   playLaser(type = 'normal') {
     if (this.isMuted || !this.ctx) return;
@@ -108,11 +135,55 @@ class SoundEngine {
     } catch (e) {}
   }
 
+  playMissile() {
+    if (this.isMuted || !this.ctx) return;
+    try {
+      const now = this.ctx.currentTime;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(260, now);
+      osc.frequency.exponentialRampToValueAtTime(800, now + 0.18);
+
+      gain.gain.setValueAtTime(0.18, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+
+      osc.connect(gain);
+      gain.connect(this.sfxGain);
+
+      osc.start(now);
+      osc.stop(now + 0.18);
+    } catch (e) {}
+  }
+
+  playWarning() {
+    if (this.isMuted || !this.ctx) return;
+    try {
+      const now = this.ctx.currentTime;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(880, now);
+      osc.frequency.setValueAtTime(660, now + 0.12);
+      osc.frequency.setValueAtTime(880, now + 0.24);
+
+      gain.gain.setValueAtTime(0.3, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.38);
+
+      osc.connect(gain);
+      gain.connect(this.sfxGain);
+
+      osc.start(now);
+      osc.stop(now + 0.38);
+    } catch (e) {}
+  }
+
   playSuperNova() {
     if (this.isMuted || !this.ctx) return;
     try {
       const now = this.ctx.currentTime;
-      // Massive rising sweep into bass crash
       const osc = this.ctx.createOscillator();
       const gain = this.ctx.createGain();
       osc.type = 'sawtooth';
@@ -380,7 +451,7 @@ class SoundEngine {
     } catch (e) {}
   }
 
-  // --- MULTI-TRACK PROCEDURAL SYNTHWAVE / DARKSYNTH / CHIPTUNE BGM ---
+  // --- MULTI-TRACK SYNTHWAVE / DARKSYNTH / CHIPTUNE BGM ---
 
   startBgm(track = null) {
     this.init();
@@ -394,23 +465,22 @@ class SoundEngine {
     if (this.currentTrack === 'darksynth') {
       tempo = 134;
       chords = [
-        [146.83, 174.61, 220, 293.66], // Dm
-        [130.81, 164.81, 196, 261.63], // Bb
-        [164.81, 196, 246.94, 329.63], // Gm
-        [110, 138.59, 164.81, 220]     // A
+        [146.83, 174.61, 220, 293.66],
+        [130.81, 164.81, 196, 261.63],
+        [164.81, 196, 246.94, 329.63],
+        [110, 138.59, 164.81, 220]
       ];
       bassNotes = [73.42, 65.41, 82.41, 55];
     } else if (this.currentTrack === 'chiptune') {
       tempo = 142;
       chords = [
-        [261.63, 329.63, 392, 523.25], // C
-        [220, 261.63, 329.63, 440],     // Am
-        [174.61, 220, 261.63, 349.23],  // F
-        [196, 246.94, 293.66, 392]      // G
+        [261.63, 329.63, 392, 523.25],
+        [220, 261.63, 329.63, 440],
+        [174.61, 220, 261.63, 349.23],
+        [196, 246.94, 293.66, 392]
       ];
       bassNotes = [130.81, 110, 87.31, 98];
     } else {
-      // Synthwave Sunset
       tempo = 124;
       chords = [
         [220, 261.63, 329.63, 440],
@@ -431,7 +501,6 @@ class SoundEngine {
       const currentChord = chords[bar];
       const currentBass = bassNotes[bar];
 
-      // 1. Synthwave / Darksynth Bassline
       if (stepInBar % 2 === 0) {
         try {
           const bassOsc = this.ctx.createOscillator();
@@ -456,7 +525,6 @@ class SoundEngine {
         } catch (e) {}
       }
 
-      // 2. Arpeggiator Lead
       if (this.currentTrack === 'chiptune' || stepInBar % 2 === 1 || stepInBar % 4 === 0) {
         try {
           const arpNote = currentChord[stepInBar % currentChord.length];
@@ -476,7 +544,6 @@ class SoundEngine {
         } catch (e) {}
       }
 
-      // 3. Cyber Beat (Kick)
       if (stepInBar % 4 === 0) {
         try {
           const kickOsc = this.ctx.createOscillator();
@@ -493,7 +560,6 @@ class SoundEngine {
         } catch (e) {}
       }
 
-      // 4. Snare
       if ((stepInBar === 4 || stepInBar === 12) && this.noiseBuffer) {
         try {
           const snareSrc = this.ctx.createBufferSource();

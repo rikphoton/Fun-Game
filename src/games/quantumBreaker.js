@@ -469,19 +469,32 @@ export class QuantumBreakerGame {
 
     if (type === 'multiball') {
       const currentCount = this.balls.length;
-      for (let i = 0; i < currentCount && this.balls.length < 8; i++) {
+      for (let i = 0; i < currentCount && this.balls.length < 12; i++) {
         const b = this.balls[i];
         this.balls.push({
           x: b.x,
           y: b.y,
-          vx: b.vx * 0.8 + 100,
+          vx: b.vx * 0.75 + 130,
           vy: b.vy * 0.9,
           radius: b.radius,
-          color: b.color,
+          color: '#00f3ff',
+          speed: b.speed
+        });
+        this.balls.push({
+          x: b.x,
+          y: b.y,
+          vx: b.vx * 0.75 - 130,
+          vy: b.vy * 0.9,
+          radius: b.radius,
+          color: '#ff007f',
           speed: b.speed
         });
       }
-      this.particles.addFloatingText('MULTI-BALL!', this.paddle.x, this.paddle.y - 25, { color: '#00f3ff' });
+      if (this.balls.length >= 6) {
+        storage.unlockAchievement('multiball_mayhem');
+      }
+      this.particles.addFloatingText('MULTI-BALL FRENZY!', this.paddle.x, this.paddle.y - 25, { color: '#00f3ff' });
+      sound.announce('Multi-Ball Frenzy!');
     } else if (type === 'laser') {
       this.paddle.hasLaser = true;
       this.paddle.laserTimer = 10;

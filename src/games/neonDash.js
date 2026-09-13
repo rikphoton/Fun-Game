@@ -26,9 +26,11 @@ export class NeonDashGame {
     this.speed = 360;
     this.starsCollected = 0;
 
-    // Streak Multiplier
+    // Streak Multiplier & Fever
     this.starStreak = 0;
     this.multiplier = 1;
+    this.isFever = false;
+    this.feverTimer = 0;
 
     this.player = {
       x: 140,
@@ -126,11 +128,20 @@ export class NeonDashGame {
     this.distance += this.speed * dt * 0.1;
     this.score = Math.floor(this.distance + this.starsCollected * 50 * this.multiplier);
 
-    // Multiplier calculation based on streak
-    if (this.starStreak >= 9) this.multiplier = 5;
-    else if (this.starStreak >= 5) this.multiplier = 3;
-    else if (this.starStreak >= 3) this.multiplier = 2;
-    else this.multiplier = 1;
+    // Multiplier calculation & Fever state
+    if (this.isFever) {
+      this.feverTimer -= dt;
+      this.multiplier = 5;
+      if (this.feverTimer <= 0) {
+        this.isFever = false;
+        this.particles.addFloatingText('Fever ended', this.player.x, this.player.y - 20, { color: '#94a3b8', size: 14 });
+      }
+    } else {
+      if (this.starStreak >= 9) this.multiplier = 5;
+      else if (this.starStreak >= 5) this.multiplier = 3;
+      else if (this.starStreak >= 3) this.multiplier = 2;
+      else this.multiplier = 1;
+    }
 
     this.callbacks.onScoreUpdate(this.score, Math.floor(this.distance), this.starsCollected, this.multiplier);
 
@@ -228,13 +239,33 @@ export class NeonDashGame {
           pLeft < obs.x + obs.width &&
           ((obs.onCeiling && pTop < obs.y + obs.height) || (!obs.onCeiling && pBottom > obs.y))
         ) {
-          this.gameOver();
-          return;
+          if (this.isFever) {
+            this.particles.shake(6, 0.2);
+            this.particles.burst(obs.x + obs.width / 2, obs.y + obs.height / 2, 14, { color: '#ffe600', life: 0.25 });
+            this.particles.addFloatingText('SMASH! +150', this.player.x, this.player.y - 20, { color: '#ffe600', size: 16 });
+            this.score += 150;
+            sound.playExplosion(0.7);
+            this.obstacles.splice(i, 1);
+            continue;
+          } else {
+            this.gameOver();
+            return;
+          }
         }
       } else if (obs.type === 'laser') {
         if (pRight > obs.x && pLeft < obs.x + obs.width && pBottom > obs.y && pTop < obs.y + obs.height) {
-          this.gameOver();
-          return;
+          if (this.isFever) {
+            this.particles.shake(6, 0.2);
+            this.particles.burst(obs.x + obs.width / 2, obs.y + obs.height / 2, 14, { color: '#00f0ff', life: 0.25 });
+            this.particles.addFloatingText('SHATTER! +150', this.player.x, this.player.y - 20, { color: '#00f0ff', size: 16 });
+            this.score += 150;
+            sound.playExplosion(0.7);
+            this.obstacles.splice(i, 1);
+            continue;
+          } else {
+            this.gameOver();
+            return;
+          }
         }
       }
 
@@ -336,6 +367,14 @@ export class NeonDashGame {
       color: '#ffe600',
       size: 15
     });
+
+    if (this.starStreak >= 5 && !this.isFever) {
+      this.isFever = true;
+      this.feverTimer = 6.0;
+      sound.announce('Hyper Fever Mode!');
+      this.particles.shake(8, 0.3);
+      this.particles.addFloatingText('⚡ HYPER FEVER ACTIVATED! ⚡', this.width / 2, 220, { color: '#ffd700', size: 22 });
+    }
   }
 
   gameOver() {
