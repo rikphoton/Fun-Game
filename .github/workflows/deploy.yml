@@ -39,6 +39,9 @@ jobs:
           ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
         run: npm ci || npm install
 
+      - name: Run Tests
+        run: npm test
+
       - name: Build Production Arcade
         run: npm run build
 

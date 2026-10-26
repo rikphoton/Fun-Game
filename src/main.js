@@ -1,6 +1,7 @@
 // NeonPulse Arcade Main Orchestrator - Ultra Arcade Edition
 import './engine/compat.js'; // must load first: installs canvas roundRect polyfill
 import { fullscreenSupported, isFullscreen, enterFullscreen, toggleFullscreen as toggleFs } from './engine/compat.js';
+import { LOGICAL_WIDTH, LOGICAL_HEIGHT, fitCanvasToDisplay } from './engine/display.js';
 import { sound } from './engine/audio.js';
 import { ParticleSystem } from './engine/particles.js';
 import { storage } from './engine/storage.js';
@@ -24,6 +25,7 @@ class ArcadeApp {
     this.selectedMech = storage.getEquipped('mech') || 'specter';
     this.lastTime = performance.now();
     this.isPaused = false;
+    this.renderScale = 1;
 
     this.initDOMElements();
     this.applyCabinetTheme(storage.getEquipped('theme') || 'cyberpunk');
@@ -31,6 +33,8 @@ class ArcadeApp {
     this.bindEvents();
     this.updateLobbyScores();
     this.updateCreditsDisplay();
+    this.initDisplayScaling();
+    this.initVisibilityHandling();
 
     // Storage Event Listeners
     storage.onAchievementUnlock = (ach) => this.showAchievementToast(ach);
@@ -499,8 +503,8 @@ class ArcadeApp {
     // Pointer Events on Canvas
     const getCanvasPos = (e) => {
       const rect = this.canvas.getBoundingClientRect();
-      const scaleX = this.canvas.width / rect.width;
-      const scaleY = this.canvas.height / rect.height;
+      const scaleX = LOGICAL_WIDTH / rect.width;
+      const scaleY = LOGICAL_HEIGHT / rect.height;
       const clientX = e.touches ? e.touches[0].clientX : e.clientX;
       const clientY = e.touches ? e.touches[0].clientY : e.clientY;
       return {
@@ -1269,6 +1273,54 @@ class ArcadeApp {
     this.updateCreditsDisplay();
   }
 
+  // Keep the canvas backing store matched to how big (and how dense) the screen shows it.
+  initDisplayScaling() {
+    const refit = () => {
+      this.renderScale = fitCanvasToDisplay(this.canvas);
+    };
+    refit();
+    if (typeof ResizeObserver !== 'undefined') {
+      new ResizeObserver(refit).observe(this.canvas);
+    }
+    window.addEventListener('resize', refit);
+    window.addEventListener('orientationchange', refit);
+    // Moving the window between monitors changes devicePixelRatio without resizing the canvas.
+    if (window.matchMedia) {
+      const watchDpr = () => {
+        const mq = window.matchMedia(`(resolution: ${window.devicePixelRatio}dppx)`);
+        const onChange = () => {
+          refit();
+          if (mq.removeEventListener) mq.removeEventListener('change', onChange);
+          watchDpr();
+        };
+        if (mq.addEventListener) mq.addEventListener('change', onChange);
+      };
+      watchDpr();
+    }
+  }
+
+  // Pause when the page is hidden (tab switch, phone locked, app backgrounded) so the player is
+  // not dropped back into live action, and silence audio while away.
+  initVisibilityHandling() {
+    const pauseIfPlaying = () => {
+      const game = this.activeGame;
+      if (game && game.isRunning && !this.isPaused && !game.isPaused) {
+        this.togglePause();
+      }
+    };
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        pauseIfPlaying();
+        sound.suspend();
+      } else {
+        this.lastTime = performance.now();
+        sound.resume();
+      }
+    });
+    window.addEventListener('pagehide', pauseIfPlaying);
+  }
+
   togglePause() {
     if (!this.activeGame || !this.activeGame.isRunning) return;
 
@@ -1486,6 +1538,7 @@ class ArcadeApp {
       }
 
       const shake = this.particles.getShakeOffset();
+      this.ctx.setTransform(this.renderScale, 0, 0, this.renderScale, 0, 0);
       this.ctx.save();
       this.ctx.translate(shake.x, shake.y);
 
@@ -1502,3 +1555,16 @@ class ArcadeApp {
 window.addEventListener('DOMContentLoaded', () => {
   new ArcadeApp();
 });
+
+// Offline support / installability. Production builds served over http(s) only: never in the dev
+// server, and never under file:// (Electron), where service workers are not available.
+if (
+  typeof __PWA_ENABLED__ !== 'undefined' && __PWA_ENABLED__ &&
+  'serviceWorker' in navigator && /^https?:$/.test(location.protocol)
+) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch((err) => {
+      console.warn('Service worker registration failed:', err);
+    });
+  });
+}

@@ -96,6 +96,20 @@ class SoundEngine {
     }
   }
 
+  // Called when the page is hidden / shown again.
+  suspend() {
+    try {
+      if (this.ctx && this.ctx.state === 'running') this.ctx.suspend();
+      if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+    } catch (e) {}
+  }
+
+  resume() {
+    try {
+      if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
+    } catch (e) {}
+  }
+
   toggleMute() {
     this.isMuted = !this.isMuted;
     if (this.masterGain && this.ctx) {

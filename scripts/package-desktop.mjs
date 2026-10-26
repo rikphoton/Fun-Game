@@ -13,6 +13,8 @@ const IGNORE = [
   /^\/\.github(\/|$)/,
   /^\/src(\/|$)/,
   /^\/scripts(\/|$)/,
+  /^\/tests(\/|$)/,
+  /^\/pwa(\/|$)/,
   /^\/dist-desktop(\/|$)/,
   /^\/vite\.config\.js$/,
   /^\/index\.html$/,

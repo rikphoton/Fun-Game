@@ -1,6 +1,7 @@
 // NeonPulse Arcade - Neon Drift: Retro Cyber Highway Racer
 import { sound } from '../engine/audio.js';
 import { storage } from '../engine/storage.js';
+import { LOGICAL_WIDTH, LOGICAL_HEIGHT } from '../engine/display.js';
 
 export class NeonDriftGame {
   constructor(canvas, particles, callbacks) {
@@ -8,6 +9,10 @@ export class NeonDriftGame {
     this.ctx = canvas.getContext('2d');
     this.particles = particles;
     this.callbacks = callbacks;
+
+    // Logical drawing space (the canvas backing store may be larger on hi-DPI screens)
+    this.width = LOGICAL_WIDTH;
+    this.height = LOGICAL_HEIGHT;
 
     this.isRunning = false;
     this.isPaused = false;
@@ -112,10 +117,10 @@ export class NeonDriftGame {
 
   updateTouchPosition(e) {
     const rect = this.canvas.getBoundingClientRect();
-    const scaleX = this.canvas.width / rect.width;
+    const scaleX = this.width / rect.width;
     const clientX = (e.clientX - rect.left) * scaleX;
     // Map clientX (0 to 800) to playerX (-1.0 to 1.0)
-    const norm = (clientX / this.canvas.width) * 2 - 1;
+    const norm = (clientX / this.width) * 2 - 1;
     this.touchSteer = Math.max(-1, Math.min(1, norm));
   }
 
@@ -506,8 +511,8 @@ export class NeonDriftGame {
   }
 
   draw() {
-    const w = this.canvas.width;
-    const h = this.canvas.height;
+    const w = this.width;
+    const h = this.height;
     const ctx = this.ctx;
 
     // 1. Clear background
@@ -671,8 +676,8 @@ export class NeonDriftGame {
   }
 
   projectZ(z, lane) {
-    const w = this.canvas.width;
-    const h = this.canvas.height;
+    const w = this.width;
+    const h = this.height;
     const horizY = this.horizonY;
     const roadH = h - horizY;
 

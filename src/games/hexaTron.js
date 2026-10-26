@@ -66,8 +66,8 @@ export class HexaTronGame {
       touchStartY = e.clientY;
 
       const rect = this.canvas.getBoundingClientRect();
-      const scaleX = this.canvas.width / rect.width;
-      const scaleY = this.canvas.height / rect.height;
+      const scaleX = this.width / rect.width;
+      const scaleY = this.height / rect.height;
       const px = (e.clientX - rect.left) * scaleX;
       const py = (e.clientY - rect.top) * scaleY;
 
