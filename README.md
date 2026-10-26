@@ -3,18 +3,29 @@
 > **Hyper-Kinetic Cyberpunk Web & Desktop Arcade**  
 > Six adrenaline-fueled arcade games, roguelite tech tree progression, procedural Web Audio synthwave soundtracks, local Hall of Fame, full gamepad support, and responsive mobile arcade controls.
 
+🎮 **Play Live in Browser:** **[https://rikphoton.github.io/Fun-Game/](https://rikphoton.github.io/Fun-Game/)**
+
 ---
 
 ## 🚀 Quick Start
 
-### 🌐 Play in the Browser (Web Dev Server)
+### 🌐 Play Online Instantly
+No installation or build setup required — play directly in any desktop or mobile browser:
+👉 **[https://rikphoton.github.io/Fun-Game/](https://rikphoton.github.io/Fun-Game/)**
+
+* **Mobile PWA:** Tap **"Add to Home Screen"** on iOS Safari or Android Chrome for edge-to-edge fullscreen and offline play.
+* **Desktop PWA:** Click the **Install** icon in your browser's address bar (Chrome, Edge, Brave).
+
+---
+
+### 💻 Local Development (Web Dev Server)
 Prerequisites: [Node.js](https://nodejs.org/) (v18+)
 
 ```bash
 # Install dependencies
 npm install
 
-# Start development server
+# Start local development server
 npm run dev
 ```
 
@@ -22,6 +33,17 @@ npm run dev
 * **macOS / Linux shortcut:** `./start-game.sh`
 
 Open [http://localhost:3000](http://localhost:3000) (or the port Vite prints in your console).
+
+---
+
+### 🧪 Run Automated Tests
+
+```bash
+# Run all 45 automated unit tests (using Node's native test runner)
+npm test
+```
+
+Tests run automatically in GitHub Actions CI on every commit before deployment.
 
 ---
 
@@ -79,7 +101,7 @@ npm run package:linux  # Linux x64
 
 ### 📱 Progressive Web App (PWA) & Offline Play
 * **Installable App:** Manifest, custom cyberpunk icons (192px, 512px, maskable), and standalone display mode.
-* **Service Worker Caching:** Offline gameplay and asset precaching on HTTPS / GitHub Pages.
+* **Service Worker Caching:** Full offline gameplay and asset precaching on HTTPS / GitHub Pages.
 
 ### 🎧 Audio & Visual Polish
 * **High-DPI Retina Canvas:** Automatic pixel density scaling (up to 2x) for razor-sharp rendering on Retina/mobile screens.
@@ -105,14 +127,21 @@ npm run package:linux  # Linux x64
 
 ```
 neon-pulse-arcade/
+├── .github/workflows/
+│   └── deploy.yml           # GitHub Actions CI (runs tests & deploys to GitHub Pages)
 ├── electron/
 │   └── main.cjs             # Electron main process (sandboxed, secure file:// loader)
+├── pwa/                     # PWA icons (192px, 512px, maskable, favicon, touch-icon)
 ├── scripts/
-│   └── package-desktop.mjs  # Multi-platform desktop packaging script
+│   ├── package-desktop.mjs  # Multi-platform desktop packaging script
+│   ├── sw-template.js       # Offline service worker template
+│   ├── vite-plugin-classic-script.js # Classic deferred script bundler for file://
+│   └── vite-plugin-pwa-lite.js       # PWA manifest and service worker build plugin
 ├── src/
 │   ├── engine/
 │   │   ├── audio.js         # Procedural synthwave Web Audio synthesizer
 │   │   ├── compat.js        # Canvas roundRect polyfill & fullscreen API fallbacks
+│   │   ├── display.js       # High-DPI Retina backing store scaler
 │   │   ├── gamepad.js       # Gamepad polling, mapping normalizer & rumble
 │   │   ├── leaderboard.js   # Local Hall of Fame storage & high-score logic
 │   │   ├── particles.js     # Particle physics & camera screen-shake engine
@@ -126,6 +155,7 @@ neon-pulse-arcade/
 │   │   └── quantumBreaker.js# Handcrafted brick breaker
 │   ├── main.js              # State manager, UI modals, game loop router
 │   └── style.css            # Cyberpunk aesthetic, responsive layouts & HUD
+├── tests/                   # 45 automated unit tests (node --test)
 ├── build-desktop.sh         # macOS/Linux desktop build helper
 ├── build-exe.bat            # Windows .exe builder helper
 ├── index.html               # Main arcade shell and modals
@@ -141,10 +171,12 @@ neon-pulse-arcade/
 
 ## 🛠️ Technology Stack
 
-* **Rendering:** Vanilla HTML5 2D Canvas (zero heavy external game engine dependencies)
+* **Rendering:** Vanilla HTML5 2D Canvas with High-DPI scaling
 * **Build System:** [Vite 6](https://vitejs.dev/) with classic deferred script bundling for `file://` compatibility
+* **PWA:** Web App Manifest + Service Worker offline asset cache
 * **Desktop Wrapper:** [Electron 36](https://www.electronjs.org/) + `@electron/packager`
 * **Audio:** Web Audio API (Synthesized oscillators, filters, gain nodes) + Web Speech API
+* **Testing:** Node.js native test runner (`node --test`)
 * **Fonts:** Google Fonts (*Outfit*, *Share Tech Mono*)
 
 ---
