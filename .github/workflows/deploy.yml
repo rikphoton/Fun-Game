@@ -34,6 +34,9 @@ jobs:
           cache: 'npm'
 
       - name: Install Dependencies
+        env:
+          # Electron is only needed for the desktop build; skip its large binary download in CI.
+          ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
         run: npm ci || npm install
 
       - name: Build Production Arcade

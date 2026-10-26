@@ -73,6 +73,20 @@ const INITIAL_DATA = {
   }
 };
 
+// Keep saved quest progress by quest id. (The old check required exactly 4 saved quests, but the
+// game defines 6, so progress was thrown away on every page load.) New quests added in later
+// versions are appended with fresh progress, and removed quests are dropped.
+export function mergeQuests(saved) {
+  const defaults = INITIAL_DATA.quests;
+  if (!Array.isArray(saved)) return JSON.parse(JSON.stringify(defaults));
+  return defaults.map((def) => {
+    const old = saved.find((q) => q && q.id === def.id);
+    if (!old) return { ...def };
+    const current = Number.isFinite(old.current) ? Math.max(0, Math.min(def.target, old.current)) : 0;
+    return { ...def, current, claimed: !!old.claimed };
+  });
+}
+
 class StorageManager {
   constructor() {
     this.data = this.load();
@@ -92,7 +106,7 @@ class StorageManager {
           highScores: { ...INITIAL_DATA.highScores, ...(parsed.highScores || {}) },
           stats: { ...INITIAL_DATA.stats, ...(parsed.stats || {}) },
           cyberLab: { ...INITIAL_DATA.cyberLab, ...(parsed.cyberLab || {}) },
-          quests: (parsed.quests && parsed.quests.length === 4) ? parsed.quests : INITIAL_DATA.quests,
+          quests: mergeQuests(parsed.quests),
           inventory: {
             trails: parsed.inventory?.trails || ['cyan'],
             themes: parsed.inventory?.themes || ['cyberpunk']

@@ -1,7 +1,11 @@
-﻿const { app, BrowserWindow } = require('electron');
+﻿const { app, BrowserWindow, shell } = require('electron');
 const path = require('path');
 
 let mainWindow = null;
+
+// In development (`npm run dev` + `electron .` with NEONPULSE_DEV_URL set) load the Vite server,
+// otherwise load the production build from ../dist.
+const DEV_URL = process.env.NEONPULSE_DEV_URL || '';
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -16,14 +20,31 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      webSecurity: false
+      sandbox: true
+      // webSecurity stays at its default (enabled): the production bundle is a classic script,
+      // so it loads from file:// without needing it turned off.
     }
   });
 
-  const distPath = path.join(__dirname, '..', 'dist', 'index.html');
+  if (DEV_URL) {
+    mainWindow.loadURL(DEV_URL);
+  } else {
+    const distPath = path.join(__dirname, '..', 'dist', 'index.html');
+    mainWindow.loadFile(distPath).catch((err) => {
+      console.error('Could not load dist/index.html. Run "npm run build" first.', err);
+    });
+  }
 
-  mainWindow.loadFile(distPath).catch(() => {
-    mainWindow.loadURL('http://localhost:5173');
+  // Never navigate the game window away; open external links in the user's browser.
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    if (/^https?:\/\//i.test(url)) shell.openExternal(url);
+    return { action: 'deny' };
+  });
+  mainWindow.webContents.on('will-navigate', (event, url) => {
+    if (!url.startsWith('file://') && url !== DEV_URL) {
+      event.preventDefault();
+      if (/^https?:\/\//i.test(url)) shell.openExternal(url);
+    }
   });
 
   mainWindow.once('ready-to-show', () => {

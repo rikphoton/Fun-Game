@@ -1,5 +1,6 @@
-// NeonPulse Arcade - Global Online Leaderboard System
+// NeonPulse Arcade - Local Hall of Fame (scores are stored in this browser only)
 import { sound } from './audio.js';
+import { localDateString } from './compat.js';
 
 const STORAGE_KEY_LB = 'neonpulse_leaderboards_v1';
 
@@ -50,7 +51,7 @@ const DEFAULT_BOARDS = {
     { tag: 'MIS', score: 6900,  date: '2026-09-07' },
     { tag: 'STR', score: 5400,  date: '2026-09-06' },
     { tag: 'LAS', score: 4100,  date: '2026-09-05' },
-    { tag: 'WING',score: 3200,  date: '2026-09-04' },
+    { tag: 'WNG', score: 3200,  date: '2026-09-04' },
     { tag: 'TOP', score: 2100,  date: '2026-09-03' }
   ],
   neonDrift: [
@@ -82,7 +83,6 @@ const DEFAULT_BOARDS = {
 class LeaderboardManager {
   constructor() {
     this.boards = this.load();
-    this.remoteSyncUrl = 'https://api.counterapi.dev/v1/neonpulse'; // Public lightweight counter & sync
   }
 
   load() {
@@ -138,7 +138,7 @@ class LeaderboardManager {
 
   addScore(gameKey, tag, score) {
     const cleanTag = (tag || 'PIL').substring(0, 3).toUpperCase();
-    const today = new Date().toISOString().split('T')[0];
+    const today = localDateString();
 
     if (!this.boards[gameKey]) {
       this.boards[gameKey] = [...(DEFAULT_BOARDS[gameKey] || [])];
@@ -156,22 +156,9 @@ class LeaderboardManager {
     this.boards[gameKey] = this.boards[gameKey].slice(0, 10);
 
     this.save();
-    sound.announce('Score Uploaded to Hall of Fame!');
-
-    // Attempt online sync in background (non-blocking)
-    this.syncOnline(gameKey, cleanTag, score).catch(() => {});
+    sound.announce('Score saved to Hall of Fame!');
 
     return this.boards[gameKey].findIndex(e => e === newEntry) + 1;
-  }
-
-  async syncOnline(gameKey, tag, score) {
-    // Optional public cloud sync
-    try {
-      // Light ping to cloud sync tracker
-      await fetch(`${this.remoteSyncUrl}/${gameKey}/up`).catch(() => {});
-    } catch (e) {
-      // Non-blocking fallback
-    }
   }
 }
 

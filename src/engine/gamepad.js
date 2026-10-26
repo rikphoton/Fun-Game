@@ -77,19 +77,45 @@ class GamepadController {
     if (Math.abs(ax) < this.deadzone) ax = 0;
     if (Math.abs(ay) < this.deadzone) ay = 0;
 
-    // D-Pad
-    const dUp = buttons[12] ? buttons[12].pressed : false;
-    const dDown = buttons[13] ? buttons[13].pressed : false;
-    const dLeft = buttons[14] ? buttons[14].pressed : false;
-    const dRight = buttons[15] ? buttons[15].pressed : false;
+    const isStandard = gp.mapping === 'standard';
+    const pressed = (i) => (buttons[i] ? buttons[i].pressed : false);
 
-    // Standard Buttons (Xbox: A=0, B=1, X=2, Y=3, RT=7, Start=9)
-    const btnA = buttons[0] ? buttons[0].pressed : false;
-    const btnB = buttons[1] ? buttons[1].pressed : false;
-    const btnX = buttons[2] ? buttons[2].pressed : false;
-    const btnY = buttons[3] ? buttons[3].pressed : false;
-    const btnRT = buttons[7] ? buttons[7].pressed : false;
-    const btnStart = buttons[9] ? buttons[9].pressed : false;
+    // D-Pad
+    let dUp, dDown, dLeft, dRight;
+    if (isStandard) {
+      dUp = pressed(12);
+      dDown = pressed(13);
+      dLeft = pressed(14);
+      dRight = pressed(15);
+    } else {
+      // Non-standard pads (PlayStation / Switch / generic HID in Firefox & Safari) report the
+      // D-pad as a hat axis (axes[9]) or as a pair of axes (6 & 7) instead of buttons 12-15.
+      const hat = axes.length > 9 ? axes[9] : null;
+      let hUp = false, hDown = false, hLeft = false, hRight = false;
+      if (hat !== null && hat >= -1.01 && hat <= 1.01) {
+        // Hat axis encodes 8 directions in steps of 2/7, starting at "up" = -1
+        const step = Math.round((hat + 1) / (2 / 7));
+        hUp = step === 0 || step === 1 || step === 7;
+        hRight = step >= 1 && step <= 3;
+        hDown = step >= 3 && step <= 5;
+        hLeft = step >= 5 && step <= 7;
+      }
+      const dx = axes.length > 7 ? axes[6] || 0 : 0;
+      const dy = axes.length > 7 ? axes[7] || 0 : 0;
+      dUp = pressed(12) || hUp || dy < -0.5;
+      dDown = pressed(13) || hDown || dy > 0.5;
+      dLeft = pressed(14) || hLeft || dx < -0.5;
+      dRight = pressed(15) || hRight || dx > 0.5;
+    }
+
+    // Face buttons: indices 0-3 (A/B/X/Y or Cross/Circle/Square/Triangle) are the same on
+    // virtually every pad. Shoulder/Start positions differ, so fall back to common layouts.
+    const btnA = pressed(0);
+    const btnB = pressed(1);
+    const btnX = pressed(2);
+    const btnY = pressed(3);
+    const btnRT = isStandard ? pressed(7) : (pressed(7) || pressed(5));
+    const btnStart = isStandard ? pressed(9) : (pressed(9) || pressed(8) || pressed(11));
 
     this.state = {
       up: dUp || ay < -0.4,
@@ -118,12 +144,15 @@ class GamepadController {
 
     if (gp && gp.vibrationActuator) {
       try {
-        gp.vibrationActuator.playEffect('dual-rumble', {
+        // Only Chromium implements vibrationActuator.playEffect; guard against missing method/promise.
+        if (typeof gp.vibrationActuator.playEffect !== 'function') return;
+        const result = gp.vibrationActuator.playEffect('dual-rumble', {
           startDelay: 0,
           duration: durationMs,
           weakMagnitude: Math.min(1.0, Math.max(0, weakMagnitude)),
           strongMagnitude: Math.min(1.0, Math.max(0, strongMagnitude))
-        }).catch(() => {});
+        });
+        if (result && typeof result.catch === 'function') result.catch(() => {});
       } catch (e) {
         // Vibration actuator unsupported on this specific model
       }

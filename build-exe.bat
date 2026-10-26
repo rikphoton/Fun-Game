@@ -3,10 +3,11 @@ title NeonPulse Arcade - Windows Executable Builder
 echo ==============================================
 echo   NeonPulse Arcade - Packaging Portable .exe
 echo ==============================================
-echo [1/2] Building arcade assets...
-call npm run build
-echo [2/2] Packaging Windows application...
-call npx --yes electron-packager . "NeonPulse-Arcade" --platform=win32 --arch=x64 --out=dist-desktop --overwrite --asar
+if not exist node_modules (
+  echo Installing dependencies...
+  call npm install
+)
+call npm run package:win
 echo.
 echo ==============================================
 echo Build Complete! Check folder: dist-desktop\

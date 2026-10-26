@@ -4,14 +4,23 @@
   "version": "1.0.0",
   "type": "module",
   "main": "electron/main.cjs",
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "desktop": "vite build && npx electron .",
+    "desktop": "vite build && electron .",
+    "package": "vite build && node scripts/package-desktop.mjs",
+    "package:win": "vite build && node scripts/package-desktop.mjs win32 x64",
+    "package:mac": "vite build && node scripts/package-desktop.mjs darwin universal",
+    "package:linux": "vite build && node scripts/package-desktop.mjs linux x64",
     "share": "npx localtunnel --port 3000"
   },
   "devDependencies": {
+    "@electron/packager": "^18.3.0",
+    "electron": "^36.0.0",
     "vite": "^6.0.0"
   }
 }

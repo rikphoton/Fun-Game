@@ -1,4 +1,6 @@
 // NeonPulse Arcade Main Orchestrator - Ultra Arcade Edition
+import './engine/compat.js'; // must load first: installs canvas roundRect polyfill
+import { fullscreenSupported, isFullscreen, enterFullscreen, toggleFullscreen as toggleFs } from './engine/compat.js';
 import { sound } from './engine/audio.js';
 import { ParticleSystem } from './engine/particles.js';
 import { storage } from './engine/storage.js';
@@ -257,15 +259,6 @@ class ArcadeApp {
   }
 
   bindEvents() {
-    // Fullscreen Toggle
-    this.btnFullscreen.addEventListener('click', () => {
-      if (!document.fullscreenElement) {
-        document.documentElement.requestFullscreen().catch(() => {});
-      } else {
-        document.exitFullscreen().catch(() => {});
-      }
-    });
-
     // Cyber Lab Modal
     this.btnOpenLab.addEventListener('click', () => {
       sound.init();
@@ -415,30 +408,23 @@ class ArcadeApp {
     // Fullscreen Controls (Header & In-Game HUD)
     const toggleFullscreen = () => {
       sound.init();
-      if (!document.fullscreenElement && !document.webkitFullscreenElement) {
-        const root = document.documentElement;
-        if (root.requestFullscreen) {
-          root.requestFullscreen().catch(() => {});
-        } else if (root.webkitRequestFullscreen) {
-          root.webkitRequestFullscreen();
-        }
-      } else {
-        if (document.exitFullscreen) {
-          document.exitFullscreen().catch(() => {});
-        } else if (document.webkitExitFullscreen) {
-          document.webkitExitFullscreen();
-        }
-      }
+      toggleFs();
     };
 
     const btnHeaderFs = document.getElementById('btn-toggle-fullscreen');
-    if (btnHeaderFs) btnHeaderFs.addEventListener('click', toggleFullscreen);
-
     const btnIngameFs = document.getElementById('btn-ingame-fullscreen');
-    if (btnIngameFs) btnIngameFs.addEventListener('click', toggleFullscreen);
+
+    if (fullscreenSupported()) {
+      if (btnHeaderFs) btnHeaderFs.addEventListener('click', toggleFullscreen);
+      if (btnIngameFs) btnIngameFs.addEventListener('click', toggleFullscreen);
+    } else {
+      // iPhone Safari (and some embedded browsers) cannot fullscreen a page: hide the dead buttons.
+      if (btnHeaderFs) btnHeaderFs.style.display = 'none';
+      if (btnIngameFs) btnIngameFs.style.display = 'none';
+    }
 
     const updateFsIcons = () => {
-      const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
+      const isFs = isFullscreen();
       if (btnHeaderFs) btnHeaderFs.textContent = isFs ? '✕' : '⛶';
       if (btnIngameFs) btnIngameFs.textContent = isFs ? '✕' : '⛶';
     };
@@ -467,7 +453,23 @@ class ArcadeApp {
     });
 
     // Keyboard controls
+    // Keys the games use. While a game is running we stop the browser from scrolling the page
+    // (Space / arrows) or re-clicking the last focused button (Space / Enter).
+    const GAME_KEYS = new Set([
+      'Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight',
+      'KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyE', 'ShiftLeft', 'ShiftRight'
+    ]);
+    const shouldCaptureKey = (e) => {
+      if (!GAME_KEYS.has(e.code)) return false;
+      if (!this.activeGame || !this.activeGame.isRunning || this.isPaused) return false;
+      const t = e.target;
+      const tag = t && t.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (t && t.isContentEditable)) return false;
+      return true;
+    };
+
     window.addEventListener('keydown', (e) => {
+      if (shouldCaptureKey(e)) e.preventDefault();
       if (e.code === 'Escape' || e.code === 'KeyP') {
         if (this.activeGame && this.activeGame.isRunning) {
           this.togglePause();
@@ -480,6 +482,8 @@ class ArcadeApp {
     });
 
     window.addEventListener('keyup', (e) => {
+      // Firefox activates a focused button on Space *keyup*, so block it here too.
+      if (shouldCaptureKey(e)) e.preventDefault();
       if (this.activeGame && this.activeGame.handleKeyUp) {
         this.activeGame.handleKeyUp(e.code);
       }
@@ -866,7 +870,7 @@ class ArcadeApp {
     };
   }
 
-  // --- ONLINE LEADERBOARDS & ARCADE INITIALS ---
+  // --- LOCAL HALL OF FAME & ARCADE INITIALS ---
 
   renderLeaderboard(gameKey = 'cyberSurvivors') {
     if (!this.lbTableBody) return;
@@ -890,7 +894,7 @@ class ArcadeApp {
         <td><span class="lb-rank ${rankClass}">${entry.rank}</span></td>
         <td><span class="lb-tag">${entry.tag}</span>${entry.isUser ? ' <span style="font-size:0.7rem;color:var(--neon-green);">● YOU</span>' : ''}</td>
         <td><span class="lb-score">${scoreLabel}</span></td>
-        <td style="color:var(--text-muted);font-size:0.8rem;">VERIFIED</td>
+        <td style="color:var(--text-muted);font-size:0.8rem;">${entry.isUser ? 'THIS DEVICE' : 'ARCADE'}</td>
         <td style="color:var(--text-muted);font-size:0.8rem;">${entry.date || '2026-09-13'}</td>
       `;
       this.lbTableBody.appendChild(tr);
@@ -988,7 +992,7 @@ class ArcadeApp {
             this.renderCyberLab();
           } else {
             sound.playHit();
-            alert('Not enough Neon Credits! Play games or complete bounties to earn more.');
+            this.showToast('💎', 'NOT ENOUGH CREDITS', 'Play games or complete bounties to earn more.');
           }
         });
       }
@@ -1095,7 +1099,7 @@ class ArcadeApp {
             this.renderArmory();
           } else {
             sound.playHit();
-            alert('Not enough Neon Credits!');
+            this.showToast('💎', 'NOT ENOUGH CREDITS', 'Play games or complete bounties to earn more.');
           }
         }
       });
@@ -1148,7 +1152,7 @@ class ArcadeApp {
             this.renderArmory();
           } else {
             sound.playHit();
-            alert('Not enough Neon Credits!');
+            this.showToast('💎', 'NOT ENOUGH CREDITS', 'Play games or complete bounties to earn more.');
           }
         }
       });
@@ -1173,13 +1177,8 @@ class ArcadeApp {
     this.particles.clear();
 
     // Auto-enter native fullscreen on mobile for true immersive arcade view
-    if (window.innerWidth <= 860 && !document.fullscreenElement && !document.webkitFullscreenElement) {
-      const root = document.documentElement;
-      if (root.requestFullscreen) {
-        root.requestFullscreen().catch(() => {});
-      } else if (root.webkitRequestFullscreen) {
-        root.webkitRequestFullscreen();
-      }
+    if (window.innerWidth <= 860 && fullscreenSupported() && !isFullscreen()) {
+      enterFullscreen();
     }
 
     const lblPrimary = document.getElementById('lbl-touch-primary');
