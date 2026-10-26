@@ -77,7 +77,13 @@ npm run package:linux  # Linux x64
 * **Daily Bounties & Quests:** Rotating daily challenges with substantial credit rewards.
 * **Cyber Armory:** Unlock themes (**Cyberpunk**, **Vaporwave**, **Matrix**), alternate mechs, cosmetic badges, and music tracks.
 
+### 📱 Progressive Web App (PWA) & Offline Play
+* **Installable App:** Manifest, custom cyberpunk icons (192px, 512px, maskable), and standalone display mode.
+* **Service Worker Caching:** Offline gameplay and asset precaching on HTTPS / GitHub Pages.
+
 ### 🎧 Audio & Visual Polish
+* **High-DPI Retina Canvas:** Automatic pixel density scaling (up to 2x) for razor-sharp rendering on Retina/mobile screens.
+* **Auto-Pause & Audio Suspend:** Automatically pauses running games and suspends audio context when switching tabs or backgrounding the browser.
 * **Procedural Web Audio Engine:** Synthesizes music in real-time with zero external audio assets. Includes *Synthwave*, *Darksynth*, and *Chiptune* themes.
 * **Voice Announcer:** Integrated browser text-to-speech commentary for combos, level-ups, and game-over states.
 * **CRT Retro Shader:** Toggleable scanlines, CRT curve overlay, and chromatic glow.
