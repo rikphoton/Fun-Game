@@ -39,7 +39,7 @@ Open [http://localhost:3000](http://localhost:3000) (or the port Vite prints in 
 ### 🧪 Run Automated Tests
 
 ```bash
-# Run all 82 automated unit tests (using Node's native test runner)
+# Run all 93 automated unit tests (using Node's native test runner)
 npm test
 ```
 
@@ -121,9 +121,13 @@ npm run package:linux  # Linux x64
   * **Tactile D-Pad & Action Cluster:** Responsive directional cluster for *Hexa-Tron*, *Astro Pulse*, *Neon Drift*, and *Neon Dash*.
 * **Canvas Touch Steering:** Direct drag/slide on the canvas for fluid mobile interaction.
 
-### 🏆 Hall of Fame & Achievements
-* **Local Arcade Hall of Fame:** High scores are saved to `localStorage` per game with a classic 3-letter arcade initials entry screen.
-* **Trophy Room:** Comprehensive achievement system with real-time HUD notification toasts.
+### 🏆 Hall of Fame, Progression & Daily Challenges
+* **Local Arcade Hall of Fame:** High scores are saved to `localStorage` per game with a classic 3-letter arcade initials entry screen, verified player badges, demo score clearing, and deterministic tie-breaking.
+* **Per-Game Mastery Progression (Lv 1-10):** Earn mastery XP per game with reasonable session caps and farming safeguards; unlock specialized challenge modes (**Time Attack**, **One-Life Hardcore**, **Boss Rush**) and milestone rewards.
+* **Daily Seed Challenges:** Synchronized procedural seeds derived daily for deterministic hazard and enemy layouts with daily bonus rewards.
+* **Interactive Mission Briefings & Personal Bests:** Skippable tutorial guides for each game and live Personal Best delta comparisons (+/- PTS) on game-over screens.
+* **Trophy Room & Analytics Console:** Comprehensive achievement system with real-time HUD notification toasts, plus a local developer telemetry dashboard (press `F9` or `Ctrl+Shift+D`).
+* **Hardware & Accessibility Console:** Keybindings remapping table with conflict detection, reduced motion toggle, high-contrast mode, and graphics quality profiles.
 
 ---
 
@@ -145,22 +149,24 @@ neon-pulse-arcade/
 │   ├── engine/
 │   │   ├── audio.js         # Procedural synthwave Web Audio synthesizer
 │   │   ├── compat.js        # Canvas roundRect polyfill & fullscreen API fallbacks
+│   │   ├── dailyChallenge.js# Deterministic daily seed challenge generator
 │   │   ├── display.js       # High-DPI Retina backing store scaler
 │   │   ├── gamepad.js       # Gamepad polling, mapping normalizer & rumble
-│   │   ├── leaderboard.js   # Local Hall of Fame storage & high-score logic
-│   │   ├── particles.js     # Particle physics & camera screen-shake engine
-│   │   └── storage.js       # Save management (credits, quests, upgrades, armory)
+│   │   ├── gamesRegistry.js # Central game metadata registry & challenge mode definitions
+│   │   ├── leaderboard.js   # Local Hall of Fame storage, demo clearing & tie-breaking
+│   │   ├── particles.js     # Particle physics, quality profiles & reduced-motion engine
+│   │   └── storage.js       # Save management (v4 save, XP limits, keybindings, telemetry)
 │   ├── games/
-│   │   ├── astroPulse.js    # Vertical cyber shmup
-│   │   ├── cyberPacman.js   # Cyberpunk maze infiltrator
-│   │   ├── cyberSurvivors.js# Bullet-heaven roguelite
-│   │   ├── hexaTron.js      # Lightcycle arena combat
-│   │   ├── neonDash.js      # Gravity runner
-│   │   ├── neonDrift.js     # Pseudo-3D highway racer
-│   │   └── quantumBreaker.js# Handcrafted brick breaker
-│   ├── main.js              # State manager, UI modals, game loop router
-│   └── style.css            # Cyberpunk aesthetic, responsive layouts & HUD
-├── tests/                   # 82 automated unit tests (node --test)
+│   │   ├── astroPulse.js    # Vertical cyber shmup (multi-phase Mothership telegraph beam)
+│   │   ├── cyberPacman.js   # Cyberpunk maze infiltrator (ghost personality AI & EMP stun)
+│   │   ├── cyberSurvivors.js# Bullet-heaven roguelite (multi-phase Dreadnought, seeded PRNG)
+│   │   ├── hexaTron.js      # Lightcycle arena combat (adaptive lookahead AI)
+│   │   ├── neonDash.js      # Gravity runner (deterministic PRNG seed & replay system)
+│   │   ├── neonDrift.js     # Pseudo-3D highway racer (spin physics & near-miss scoring)
+│   │   └── quantumBreaker.js# Handcrafted brick breaker (Stage 6 Quantum Core Boss)
+│   ├── main.js              # State manager, system console, keybindings, game router
+│   └── style.css            # Cyberpunk aesthetic, responsive mobile deck & reduced motion
+├── tests/                   # 93 automated unit tests (node --test)
 ├── build-desktop.sh         # macOS/Linux desktop build helper
 ├── build-exe.bat            # Windows .exe builder helper
 ├── index.html               # Main arcade shell and modals

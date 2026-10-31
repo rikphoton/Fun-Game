@@ -123,7 +123,7 @@ class LeaderboardManager {
   }
 
   getScores(gameKey) {
-    const list = this.boards[gameKey] || DEFAULT_BOARDS[gameKey] || [];
+    const list = Array.isArray(this.boards[gameKey]) ? this.boards[gameKey] : (DEFAULT_BOARDS[gameKey] || []);
     return list.slice(0, 10).map((entry, index) => ({
       rank: index + 1,
       tag: (entry.tag || 'ARC').substring(0, 3).toUpperCase(),
@@ -132,6 +132,28 @@ class LeaderboardManager {
       isUser: Boolean(entry.isUser),
       isSample: entry.isSample !== undefined ? entry.isSample : !entry.isUser
     }));
+  }
+
+  clearDemoScores(gameKey) {
+    if (gameKey && gameKey !== 'all') {
+      const current = Array.isArray(this.boards[gameKey]) ? this.boards[gameKey] : (DEFAULT_BOARDS[gameKey] || []);
+      this.boards[gameKey] = current.filter(e => !e.isSample && e.isUser);
+    } else {
+      for (const k of VALID_GAME_KEYS) {
+        const current = Array.isArray(this.boards[k]) ? this.boards[k] : (DEFAULT_BOARDS[k] || []);
+        this.boards[k] = current.filter(e => !e.isSample && e.isUser);
+      }
+    }
+    this.save();
+  }
+
+  resetDefaultScores(gameKey) {
+    if (gameKey && gameKey !== 'all') {
+      this.boards[gameKey] = JSON.parse(JSON.stringify(DEFAULT_BOARDS[gameKey] || []));
+    } else {
+      this.boards = JSON.parse(JSON.stringify(DEFAULT_BOARDS));
+    }
+    this.save();
   }
 
   isHighScore(gameKey, score) {
@@ -160,7 +182,7 @@ class LeaderboardManager {
     if (!cleanTag) cleanTag = 'PIL';
     const today = localDateString();
 
-    if (!this.boards[gameKey]) {
+    if (!Array.isArray(this.boards[gameKey])) {
       this.boards[gameKey] = [...(DEFAULT_BOARDS[gameKey] || [])];
     }
 
@@ -173,8 +195,13 @@ class LeaderboardManager {
     };
 
     this.boards[gameKey].push(newEntry);
-    // Sort: highest score first; ties favor verified player entries over sample cabinet scores
-    this.boards[gameKey].sort((a, b) => (b.score - a.score) || ((b.isUser ? 1 : 0) - (a.isUser ? 1 : 0)));
+    // Sort: highest score first; ties favor verified player entries over sample cabinet scores; then earlier date
+    this.boards[gameKey].sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      const userDiff = (b.isUser ? 1 : 0) - (a.isUser ? 1 : 0);
+      if (userDiff !== 0) return userDiff;
+      return (a.date || '').localeCompare(b.date || '');
+    });
     this.boards[gameKey] = this.boards[gameKey].slice(0, 10);
 
     this.save();

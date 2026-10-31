@@ -7,8 +7,44 @@ export class ParticleSystem {
     this.shockwaves = [];
     this.shakeIntensity = 0;
     this.shakeDuration = 0;
+    this.reducedMotion = false;
+    this.quality = 'balanced';
     this.maxParticles = this._detectAdaptiveLimit();
     this.particlePool = [];
+  }
+
+  setReducedMotion(enabled) {
+    this.reducedMotion = Boolean(enabled);
+    if (this.reducedMotion) {
+      this.shakeIntensity = 0;
+      this.shakeDuration = 0;
+      this.maxParticles = 20;
+    } else {
+      this.setQuality(this.quality);
+    }
+  }
+
+  isReducedMotion() {
+    if (this.reducedMotion) return true;
+    if (typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      return true;
+    }
+    return false;
+  }
+
+  setQuality(quality = 'balanced') {
+    this.quality = quality;
+    if (this.isReducedMotion()) {
+      this.maxParticles = 20;
+      return;
+    }
+    if (quality === 'low') {
+      this.maxParticles = 35;
+    } else if (quality === 'high') {
+      this.maxParticles = 140;
+    } else {
+      this.maxParticles = this._detectAdaptiveLimit();
+    }
   }
 
   _detectAdaptiveLimit() {
@@ -17,7 +53,7 @@ export class ParticleSystem {
       const isWeakCpu = typeof navigator !== 'undefined' && navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4;
       if (isMobile || isWeakCpu) return 60;
     }
-    return 140;
+    return 100;
   }
 
   acquireParticle() {
@@ -31,7 +67,7 @@ export class ParticleSystem {
   }
 
   shake(intensity = 8, duration = 0.25) {
-    if (typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    if (this.isReducedMotion()) {
       return;
     }
     this.shakeIntensity = Math.max(this.shakeIntensity, intensity);
@@ -117,7 +153,7 @@ export class ParticleSystem {
       shape = 'circle'
     } = options;
 
-    const actualCount = Math.min(18, count);
+    const actualCount = this.isReducedMotion() ? Math.min(4, count) : Math.min(18, count);
 
     for (let i = 0; i < actualCount; i++) {
       if (this.particles.length >= this.maxParticles) {
@@ -173,6 +209,7 @@ export class ParticleSystem {
   }
 
   addShockwave(x, y, color = '#00f3ff', maxRadius = 70, duration = 0.25) {
+    if (this.isReducedMotion()) return;
     if (this.shockwaves.length > 5) this.shockwaves.shift();
     this.shockwaves.push({
       x,

@@ -2284,5 +2284,140 @@ body.theme-highcontrast .play-btn {
   color: var(--neon-purple);
 }
 
+/* ==========================================================================
+   REDUCED MOTION ACCESSIBILITY
+   ========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+  .arcade-curtain {
+    display: none !important;
+  }
+  .crt-overlay {
+    display: none !important;
+  }
+}
+
+body.reduced-motion *,
+body.reduced-motion ::before,
+body.reduced-motion ::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+}
+body.reduced-motion .arcade-curtain {
+  display: none !important;
+}
+body.reduced-motion .crt-overlay {
+  opacity: 0.1 !important;
+}
+
+/* ==========================================================================
+   CUSTOM KEYBINDINGS REMAPPING UI
+   ========================================================================== */
+.keybind-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  margin-bottom: 6px;
+}
+.keybind-label {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+.keybind-btn {
+  min-width: 90px;
+  padding: 6px 12px;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--neon-cyan);
+  background: rgba(0, 243, 255, 0.1);
+  border: 1px solid var(--neon-cyan);
+  border-radius: 4px;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.2s;
+}
+.keybind-btn:hover {
+  background: rgba(0, 243, 255, 0.25);
+  box-shadow: 0 0 10px rgba(0, 243, 255, 0.3);
+}
+.keybind-btn.listening {
+  color: #fff;
+  background: var(--neon-pink);
+  border-color: #fff;
+  box-shadow: 0 0 15px var(--neon-pink);
+  animation: keybindListenPulse 1s infinite alternate;
+}
+@keyframes keybindListenPulse {
+  from { opacity: 0.7; transform: scale(0.98); }
+  to { opacity: 1; transform: scale(1.02); }
+}
+.keybind-conflict {
+  border-color: #ff0055 !important;
+  color: #ff0055 !important;
+}
+
+/* ==========================================================================
+   DAILY SEED CHALLENGE & TUTORIAL OVERLAYS
+   ========================================================================== */
+.daily-challenge-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: rgba(255, 230, 0, 0.12);
+  border: 1px solid var(--neon-yellow);
+  border-radius: 6px;
+  color: var(--neon-yellow);
+  font-size: 0.8rem;
+  font-weight: bold;
+  letter-spacing: 0.5px;
+}
+
+.tutorial-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background: rgba(4, 6, 16, 0.88);
+  backdrop-filter: blur(4px);
+  z-index: 25;
+  padding: 24px;
+  text-align: center;
+  box-sizing: border-box;
+}
+.tutorial-box {
+  max-width: 500px;
+  background: rgba(14, 18, 36, 0.95);
+  border: 1px solid var(--neon-cyan);
+  border-radius: 12px;
+  padding: 20px 24px;
+  box-shadow: 0 0 30px rgba(0, 243, 255, 0.25);
+}
+
+/* Ultra-Compact Mobile Viewports (<= 360px) */
+@media (max-width: 360px) {
+  .logo-text { font-size: 1.1rem; }
+  .control-btn { padding: 4px 8px; font-size: 0.75rem; }
+  body.in-game .deck-joystick-cluster { width: 110px; height: 110px; }
+  body.in-game .joystick-base { width: 95px; height: 95px; }
+  body.in-game .joystick-knob { width: 42px; height: 42px; }
+  body.in-game .dpad-btn { width: 44px; height: 44px; font-size: 1.1rem; }
+  body.in-game .action-primary { width: 85px; height: 46px; font-size: 0.75rem; }
+  body.in-game .action-super { width: 44px; height: 44px; }
+}
+
 
 

@@ -20,13 +20,28 @@ export class CyberSurvivorsGame {
     this.mechClass = mech;
   }
 
-  reset() {
+  reset(customSeed = null) {
     this.isRunning = false;
     this.joystick = { x: 0, y: 0 };
     this.isPaused = false;
     this.gameTime = 0;
     this.score = 0;
     this.kills = 0;
+
+    // Seeded PRNG for reproducible daily challenges & replays
+    if (customSeed !== null && customSeed !== undefined) {
+      this.seed = Number(customSeed) >>> 0;
+      this._seedState = this.seed;
+      this.prng = () => {
+        let t = (this._seedState += 0x6d2b79f5);
+        t = Math.imul(t ^ (t >>> 15), t | 1);
+        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      };
+    } else {
+      this.seed = null;
+      this.prng = Math.random;
+    }
 
     // Super Meter (0 to 100%)
     this.superCharge = 0;
@@ -116,15 +131,15 @@ export class CyberSurvivorsGame {
     this.pointer = { x: this.width / 2, y: this.height / 2, active: false };
   }
 
-  init(mechClass = 'specter') {
+  init(mechClass = 'specter', customSeed = null) {
     this.mechClass = mechClass;
-    this.reset();
+    this.reset(customSeed);
     this.isRunning = true;
     sound.startBgm(storage.getSetting('bgmTrack') || 'synthwave');
   }
 
-  start(mechClass) {
-    this.init(mechClass);
+  start(mechClass, customSeed = null) {
+    this.init(mechClass, customSeed);
   }
 
   pause() {

@@ -89,6 +89,24 @@
         <p class="hero-subtitle">Step into a hyper-kinetic retro cyberpunk world. Seven adrenaline-fueled arcade games, tech tree progression, a local Hall of Fame, and procedural synthwave audio.</p>
       </div>
 
+      <!-- Daily Seed Challenge Banner -->
+      <div id="daily-challenge-banner" style="background: linear-gradient(90deg, rgba(255, 230, 0, 0.08), rgba(0, 243, 255, 0.08)); border: 1px solid rgba(255, 230, 0, 0.35); border-radius: 12px; padding: 14px 20px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+        <div style="display: flex; align-items: center; gap: 14px;">
+          <div style="font-size: 2rem;">📅</div>
+          <div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span class="daily-challenge-badge" id="daily-badge-text">TODAY'S SEED</span>
+              <span id="daily-status-tag" style="font-size: 0.75rem; color: #39ff14; font-weight: bold;">● DAILY BONUS AVAILABLE (+150 NC)</span>
+            </div>
+            <h3 id="daily-title" style="margin: 4px 0 2px 0; color: #fff; font-size: 1.15rem;">Daily Seed Challenge</h3>
+            <p id="daily-desc" style="margin: 0; color: #94a3b8; font-size: 0.85rem; max-width: 580px;">Synchronized procedural seed for all operatives worldwide.</p>
+          </div>
+        </div>
+        <button class="play-btn gold" id="btn-play-daily" style="min-width: 170px;">
+          <span>⚡</span> Enter Daily Run
+        </button>
+      </div>
+
       <div class="games-grid">
         <!-- Game 1: Cyber Survivors -->
         <div class="game-card">
@@ -259,8 +277,20 @@
       </div>
 
       <!-- Canvas Viewport -->
-      <div class="canvas-container">
+      <div class="canvas-container" style="position: relative;">
         <canvas id="game-canvas" width="800" height="600"></canvas>
+        <!-- Interactive Skippable Tutorial Overlay -->
+        <div class="tutorial-overlay" id="tutorial-overlay" style="display: none;">
+          <div class="tutorial-box">
+            <h3 id="tutorial-title" class="gold" style="margin-top: 0; font-size: 1.25rem;">MISSION BRIEFING</h3>
+            <p id="tutorial-desc" style="color: #cbd5e1; font-size: 0.9rem; line-height: 1.5; margin: 12px 0;"></p>
+            <div id="tutorial-controls-summary" style="background: rgba(0,0,0,0.4); border: 1px solid rgba(0,243,255,0.3); border-radius: 6px; padding: 10px; margin-bottom: 16px; font-size: 0.82rem; text-align: left;"></div>
+            <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+              <button class="play-btn gold" id="btn-tutorial-start">🚀 Start Mission</button>
+              <button class="control-btn" id="btn-tutorial-skip">Don't Show Again</button>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- Keybindings & Instruction Guide -->
@@ -447,13 +477,20 @@
     </div>
   </div>
 
-  <!-- Audio Settings Modal -->
+  <!-- System Console (Audio, Controls & Accessibility) Modal -->
   <div class="modal-overlay" id="modal-audio">
-    <div class="modal-box" style="max-width: 480px;">
-      <h2 class="modal-title gold">🎵 SYNTH AUDIO CONSOLE</h2>
-      <p class="modal-subtitle">Procedural synthesizer and announcer voice settings</p>
+    <div class="modal-box" style="max-width: 580px;">
+      <h2 class="modal-title gold">⚙️ ARCADE SYSTEM CONSOLE</h2>
+      <p class="modal-subtitle">Audio synthesis, keybindings and visual accessibility settings</p>
 
-      <div class="audio-controls-box">
+      <div class="shop-tabs" style="margin-bottom: 14px;">
+        <button class="shop-tab active" id="tab-settings-audio">🎵 Audio</button>
+        <button class="shop-tab" id="tab-settings-controls">🎮 Controls</button>
+        <button class="shop-tab" id="tab-settings-access">👁️ Display & FX</button>
+      </div>
+
+      <!-- Panel 1: Audio Console -->
+      <div id="panel-settings-audio" class="audio-controls-box">
         <div class="slider-row">
           <label>Music Volume (<span id="val-bgm">35%</span>)</label>
           <input type="range" id="slider-bgm" min="0" max="100" value="35">
@@ -476,6 +513,92 @@
         <div style="margin-top: 14px; display: flex; align-items: center; gap: 10px; cursor: pointer;">
           <input type="checkbox" id="check-announcer" checked style="width: 18px; height: 18px; accent-color: var(--neon-cyan); cursor: pointer;">
           <label for="check-announcer" style="margin: 0; cursor: pointer;">Enable Arcade Voice Announcer 🎙️</label>
+        </div>
+      </div>
+
+      <!-- Panel 2: Keybindings & Controls -->
+      <div id="panel-settings-controls" style="display: none;">
+        <div id="keybind-conflict-warning" style="display: none; background: rgba(255, 0, 85, 0.15); border: 1px solid #ff0055; border-radius: 6px; padding: 6px 12px; color: #ff0055; font-size: 0.8rem; margin-bottom: 10px; font-weight: bold;">
+          ⚠️ Duplicate key conflict detected. Each action must have a unique key.
+        </div>
+        <div class="keybinds-table" id="keybinds-container">
+          <!-- Dynamically populated or static slots -->
+          <div class="keybind-row">
+            <span class="keybind-label">MOVE UP / THRUST</span>
+            <button class="keybind-btn" id="btn-bind-moveUp" data-action="moveUp">W</button>
+          </div>
+          <div class="keybind-row">
+            <span class="keybind-label">MOVE DOWN / BRAKE</span>
+            <button class="keybind-btn" id="btn-bind-moveDown" data-action="moveDown">S</button>
+          </div>
+          <div class="keybind-row">
+            <span class="keybind-label">MOVE LEFT / STEER</span>
+            <button class="keybind-btn" id="btn-bind-moveLeft" data-action="moveLeft">A</button>
+          </div>
+          <div class="keybind-row">
+            <span class="keybind-label">MOVE RIGHT / STEER</span>
+            <button class="keybind-btn" id="btn-bind-moveRight" data-action="moveRight">D</button>
+          </div>
+          <div class="keybind-row">
+            <span class="keybind-label">PRIMARY ACTION / FIRE / JUMP</span>
+            <button class="keybind-btn" id="btn-bind-primary" data-action="primary">SPACE</button>
+          </div>
+          <div class="keybind-row">
+            <span class="keybind-label">SECONDARY / DRIFT / NITRO</span>
+            <button class="keybind-btn" id="btn-bind-secondary" data-action="secondary">SHIFT</button>
+          </div>
+          <div class="keybind-row">
+            <span class="keybind-label">SUPER NOVA / EMP / BOMB</span>
+            <button class="keybind-btn" id="btn-bind-super" data-action="super">E</button>
+          </div>
+        </div>
+        <div style="display: flex; justify-content: flex-end; margin-top: 10px;">
+          <button class="control-btn" id="btn-reset-keybinds" style="font-size: 0.8rem;">🔄 Reset Defaults</button>
+        </div>
+      </div>
+
+      <!-- Panel 3: Display & Accessibility -->
+      <div id="panel-settings-access" style="display: none;">
+        <div style="display: flex; flex-direction: column; gap: 12px; background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 14px;">
+          <div style="display: flex; align-items: center; justify-content: space-between;">
+            <div>
+              <div style="font-weight: 600; font-size: 0.9rem;">Reduced Motion</div>
+              <div style="font-size: 0.75rem; color: var(--text-muted);">Disables screen shakes, excessive particles & curtain transitions</div>
+            </div>
+            <input type="checkbox" id="check-reduced-motion" style="width: 20px; height: 20px; accent-color: var(--neon-cyan); cursor: pointer;">
+          </div>
+          <div style="display: flex; align-items: center; justify-content: space-between;">
+            <div>
+              <div style="font-weight: 600; font-size: 0.9rem;">High Contrast Mode</div>
+              <div style="font-size: 0.75rem; color: var(--text-muted);">Crisp borders and heightened luminance for enhanced visibility</div>
+            </div>
+            <input type="checkbox" id="check-high-contrast" style="width: 20px; height: 20px; accent-color: var(--neon-cyan); cursor: pointer;">
+          </div>
+          <div style="display: flex; align-items: center; justify-content: space-between;">
+            <div>
+              <div style="font-weight: 600; font-size: 0.9rem;">Retro CRT Scanlines</div>
+              <div style="font-size: 0.75rem; color: var(--text-muted);">Authentic curved raster cathode-ray tube overlay</div>
+            </div>
+            <input type="checkbox" id="check-crt-filter" checked style="width: 20px; height: 20px; accent-color: var(--neon-cyan); cursor: pointer;">
+          </div>
+          <div style="display: flex; align-items: center; justify-content: space-between;">
+            <div>
+              <div style="font-weight: 600; font-size: 0.9rem;">Mobile Haptic Feedback</div>
+              <div style="font-size: 0.75rem; color: var(--text-muted);">Tactile device vibrations on impacts and super charges</div>
+            </div>
+            <input type="checkbox" id="check-haptics" checked style="width: 20px; height: 20px; accent-color: var(--neon-cyan); cursor: pointer;">
+          </div>
+          <div style="display: flex; align-items: center; justify-content: space-between; border-top: 1px solid rgba(255, 255, 255, 0.1); padding-top: 10px;">
+            <div>
+              <div style="font-weight: 600; font-size: 0.9rem;">Graphics Performance Profile</div>
+              <div style="font-size: 0.75rem; color: var(--text-muted);">Adjusts particle caps and render complexity</div>
+            </div>
+            <select id="select-graphics-quality" style="background: rgba(0,0,0,0.6); color: #00f3ff; border: 1px solid rgba(0,243,255,0.4); border-radius: 4px; padding: 4px 8px; font-size: 0.8rem;">
+              <option value="low">Low (Mobile/Battery)</option>
+              <option value="balanced" selected>Balanced (60 FPS)</option>
+              <option value="high">High (Full FX)</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -570,9 +693,15 @@
         </table>
       </div>
 
-      <div class="modal-actions" style="margin-top: 18px;">
-        <button class="control-btn" id="btn-refresh-leaderboard">🔄 Refresh</button>
-        <button class="play-btn" id="btn-close-leaderboard">Close</button>
+      <div class="modal-actions" style="margin-top: 18px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+        <div style="display: flex; gap: 8px;">
+          <button class="control-btn" id="btn-clear-demo-scores" title="Hide demo cabinet scores to show only verified player runs">🧹 Clear Demo Scores</button>
+          <button class="control-btn" id="btn-reset-demo-scores" title="Restore default sample cabinet records">🔄 Restore Defaults</button>
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <button class="control-btn" id="btn-refresh-leaderboard">🔄 Refresh</button>
+          <button class="play-btn" id="btn-close-leaderboard">Close</button>
+        </div>
       </div>
     </div>
   </div>

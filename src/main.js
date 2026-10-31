@@ -15,6 +15,7 @@ import { CyberPacmanGame } from './games/cyberPacman.js';
 import { leaderboard } from './engine/leaderboard.js';
 import { gamepad } from './engine/gamepad.js';
 import { getGameMeta } from './engine/gamesRegistry.js';
+import { getTodayDateKey, getDailySeed, getDailyChallengeInfo } from './engine/dailyChallenge.js';
 
 class ArcadeApp {
   constructor() {
@@ -30,15 +31,26 @@ class ArcadeApp {
     this.lastTime = performance.now();
     this.isPaused = false;
     this.renderScale = 1;
+    this.isDailyChallenge = false;
+    this.dailySeed = null;
 
     this.initDOMElements();
     this.applyCabinetTheme(storage.getEquipped('theme') || 'cyberpunk');
     this.initGames();
     this.bindEvents();
+    this.initSystemConsole();
+    this.updateDailyChallengeBanner();
     this.updateLobbyScores();
     this.updateCreditsDisplay();
     this.initDisplayScaling();
     this.initVisibilityHandling();
+
+    // Visual accessibility initialization
+    if (storage.getSetting('reducedMotion')) {
+      document.body.classList.add('reduced-motion');
+      this.particles.setReducedMotion(true);
+    }
+    this.particles.setQuality(storage.getSetting('graphicsQuality') || 'balanced');
 
     // Storage Event Listeners
     storage.onAchievementUnlock = (ach) => this.showAchievementToast(ach);
@@ -134,6 +146,8 @@ class ArcadeApp {
     this.lbTableBody = document.getElementById('lb-table-body');
     this.btnCloseLeaderboard = document.getElementById('btn-close-leaderboard');
     this.btnRefreshLeaderboard = document.getElementById('btn-refresh-leaderboard');
+    this.btnClearDemoScores = document.getElementById('btn-clear-demo-scores');
+    this.btnResetDemoScores = document.getElementById('btn-reset-demo-scores');
     this.lbTabs = document.getElementById('lb-tabs');
     this.activeLbGame = 'cyberSurvivors';
 
@@ -681,8 +695,24 @@ class ArcadeApp {
       'Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight',
       'KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyE', 'ShiftLeft', 'ShiftRight'
     ]);
+
+    const getMappedCanonicalKeys = (code) => {
+      const bindings = storage.getKeyBindings();
+      const mapped = [];
+      if (code === bindings.moveUp) mapped.push('KeyW', 'ArrowUp');
+      if (code === bindings.moveDown) mapped.push('KeyS', 'ArrowDown');
+      if (code === bindings.moveLeft) mapped.push('KeyA', 'ArrowLeft');
+      if (code === bindings.moveRight) mapped.push('KeyD', 'ArrowRight');
+      if (code === bindings.primary) mapped.push('Space');
+      if (code === bindings.secondary) mapped.push('ShiftLeft', 'ShiftRight');
+      if (code === bindings.super) mapped.push('KeyE');
+      return mapped;
+    };
+
     const shouldCaptureKey = (e) => {
-      if (!GAME_KEYS.has(e.code)) return false;
+      const bindings = storage.getKeyBindings();
+      const isBound = Object.values(bindings).includes(e.code);
+      if (!GAME_KEYS.has(e.code) && !isBound) return false;
       if (!this.activeGame || !this.activeGame.isRunning || this.isPaused) return false;
       const t = e.target;
       const tag = t && t.tagName;
@@ -704,8 +734,19 @@ class ArcadeApp {
           return;
         }
       }
-      if (this.activeGame && this.activeGame.handleKeyDown) {
-        this.activeGame.handleKeyDown(e.code);
+      if (this.activeGame) {
+        if (!this.activeGame.keys) this.activeGame.keys = {};
+        this.activeGame.keys[e.code] = true;
+        const mapped = getMappedCanonicalKeys(e.code);
+        for (const c of mapped) {
+          this.activeGame.keys[c] = true;
+        }
+        if (this.activeGame.handleKeyDown) {
+          this.activeGame.handleKeyDown(e.code);
+          for (const c of mapped) {
+            if (c !== e.code) this.activeGame.handleKeyDown(c);
+          }
+        }
       }
     });
 
@@ -713,8 +754,19 @@ class ArcadeApp {
       this.keyboardHeldKeys.delete(e.code);
       // Firefox activates a focused button on Space *keyup*, so block it here too.
       if (shouldCaptureKey(e)) e.preventDefault();
-      if (this.activeGame && this.activeGame.handleKeyUp) {
-        this.activeGame.handleKeyUp(e.code);
+      if (this.activeGame) {
+        if (!this.activeGame.keys) this.activeGame.keys = {};
+        this.activeGame.keys[e.code] = false;
+        const mapped = getMappedCanonicalKeys(e.code);
+        for (const c of mapped) {
+          this.activeGame.keys[c] = false;
+        }
+        if (this.activeGame.handleKeyUp) {
+          this.activeGame.handleKeyUp(e.code);
+          for (const c of mapped) {
+            if (c !== e.code) this.activeGame.handleKeyUp(c);
+          }
+        }
       }
     });
 
@@ -1273,6 +1325,24 @@ class ArcadeApp {
       });
     }
 
+    if (this.btnClearDemoScores) {
+      this.btnClearDemoScores.addEventListener('click', () => {
+        leaderboard.clearDemoScores(this.activeLbGame);
+        this.renderLeaderboard(this.activeLbGame);
+        sound.play('powerup');
+        this.showToast('🧹', 'DEMO SCORES CLEARED', `Showing only verified personal records for ${this.activeLbGame}.`);
+      });
+    }
+
+    if (this.btnResetDemoScores) {
+      this.btnResetDemoScores.addEventListener('click', () => {
+        leaderboard.resetDefaultScores(this.activeLbGame);
+        this.renderLeaderboard(this.activeLbGame);
+        sound.play('powerup');
+        this.showToast('🔄', 'DEFAULT SCORES RESTORED', `Sample cabinet scores restored for ${this.activeLbGame}.`);
+      });
+    }
+
     if (this.lbTabs) {
       this.lbTabs.querySelectorAll('.lb-tab').forEach(tab => {
         tab.addEventListener('click', () => {
@@ -1344,6 +1414,20 @@ class ArcadeApp {
     if (!this.lbTableBody) return;
     const scores = leaderboard.getScores(gameKey);
     this.lbTableBody.innerHTML = '';
+
+    if (scores.length === 0) {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td colspan="5" style="text-align: center; padding: 32px 16px; color: var(--text-muted); font-style: italic;">
+          NO SCORES REGISTERED YET.<br>
+          <span style="color: var(--neon-cyan); font-size: 0.85rem; font-style: normal; margin-top: 6px; display: inline-block;">
+            Be the first operative to deploy and register a record!
+          </span>
+        </td>
+      `;
+      this.lbTableBody.appendChild(tr);
+      return;
+    }
 
     scores.forEach((entry) => {
       const tr = document.createElement('tr');
@@ -1951,6 +2035,284 @@ class ArcadeApp {
     }
   }
 
+  initSystemConsole() {
+    const tabAudio = document.getElementById('tab-settings-audio');
+    const tabControls = document.getElementById('tab-settings-controls');
+    const tabAccess = document.getElementById('tab-settings-access');
+    const panelAudio = document.getElementById('panel-settings-audio');
+    const panelControls = document.getElementById('panel-settings-controls');
+    const panelAccess = document.getElementById('panel-settings-access');
+
+    const switchTab = (activeTab, activePanel) => {
+      [tabAudio, tabControls, tabAccess].forEach(t => t && t.classList.remove('active'));
+      [panelAudio, panelControls, panelAccess].forEach(p => { if (p) p.style.display = 'none'; });
+      if (activeTab) activeTab.classList.add('active');
+      if (activePanel) activePanel.style.display = 'block';
+    };
+
+    if (tabAudio) tabAudio.addEventListener('click', () => switchTab(tabAudio, panelAudio));
+    if (tabControls) tabControls.addEventListener('click', () => {
+      switchTab(tabControls, panelControls);
+      this.refreshKeybindButtons();
+    });
+    if (tabAccess) tabAccess.addEventListener('click', () => {
+      switchTab(tabAccess, panelAccess);
+      this.refreshAccessibilitySettings();
+    });
+
+    const bindBtns = document.querySelectorAll('.keybind-btn');
+    let listeningAction = null;
+    let listeningBtn = null;
+
+    const stopListening = () => {
+      if (listeningBtn) {
+        listeningBtn.classList.remove('listening');
+        listeningBtn = null;
+      }
+      listeningAction = null;
+    };
+
+    bindBtns.forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (listeningBtn) stopListening();
+        listeningAction = btn.dataset.action;
+        listeningBtn = btn;
+        btn.classList.add('listening');
+        btn.textContent = 'PRESS KEY...';
+      });
+    });
+
+    window.addEventListener('keydown', (e) => {
+      if (!listeningAction || !listeningBtn) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const code = e.code;
+      if (code === 'Escape') {
+        stopListening();
+        this.refreshKeybindButtons();
+        return;
+      }
+      storage.setKeyBinding(listeningAction, code);
+      stopListening();
+      this.refreshKeybindButtons();
+    }, true);
+
+    const btnResetKeybinds = document.getElementById('btn-reset-keybinds');
+    if (btnResetKeybinds) {
+      btnResetKeybinds.addEventListener('click', () => {
+        storage.resetKeyBindings();
+        this.refreshKeybindButtons();
+        sound.play('powerup');
+      });
+    }
+
+    // Accessibility inputs
+    const checkReduced = document.getElementById('check-reduced-motion');
+    if (checkReduced) {
+      checkReduced.addEventListener('change', (e) => {
+        const enabled = e.target.checked;
+        storage.setSetting('reducedMotion', enabled);
+        document.body.classList.toggle('reduced-motion', enabled);
+        this.particles.setReducedMotion(enabled);
+      });
+    }
+
+    const checkHighContrast = document.getElementById('check-high-contrast');
+    if (checkHighContrast) {
+      checkHighContrast.addEventListener('change', (e) => {
+        const enabled = e.target.checked;
+        storage.setSetting('highContrast', enabled);
+        document.body.classList.toggle('theme-highcontrast', enabled);
+      });
+    }
+
+    const checkCrt = document.getElementById('check-crt-filter');
+    if (checkCrt) {
+      checkCrt.addEventListener('change', (e) => {
+        const enabled = e.target.checked;
+        storage.setSetting('crtFilter', enabled);
+        document.body.classList.toggle('crt-off', !enabled);
+      });
+    }
+
+    const checkHaptics = document.getElementById('check-haptics');
+    if (checkHaptics) {
+      checkHaptics.addEventListener('change', (e) => {
+        storage.setSetting('haptics', e.target.checked);
+      });
+    }
+
+    const selectQuality = document.getElementById('select-graphics-quality');
+    if (selectQuality) {
+      selectQuality.addEventListener('change', (e) => {
+        const q = e.target.value;
+        storage.setSetting('graphicsQuality', q);
+        this.particles.setQuality(q);
+      });
+    }
+  }
+
+  refreshKeybindButtons() {
+    const bindings = storage.getKeyBindings();
+    const actions = ['moveUp', 'moveDown', 'moveLeft', 'moveRight', 'primary', 'secondary', 'super'];
+    const codesUsed = new Map();
+
+    for (const a of actions) {
+      const code = bindings[a] || 'Unknown';
+      const btn = document.getElementById(`btn-bind-${a}`);
+      if (btn) {
+        const display = code.replace(/^Key/, '').replace(/^Digit/, '').toUpperCase();
+        btn.textContent = display;
+      }
+      codesUsed.set(code, (codesUsed.get(code) || 0) + 1);
+    }
+
+    let hasConflict = false;
+    for (const a of actions) {
+      const code = bindings[a];
+      const btn = document.getElementById(`btn-bind-${a}`);
+      if (btn) {
+        const isConflict = (codesUsed.get(code) || 0) > 1;
+        btn.classList.toggle('keybind-conflict', isConflict);
+        if (isConflict) hasConflict = true;
+      }
+    }
+    const conflictWarning = document.getElementById('keybind-conflict-warning');
+    if (conflictWarning) {
+      conflictWarning.style.display = hasConflict ? 'block' : 'none';
+    }
+  }
+
+  refreshAccessibilitySettings() {
+    const checkReduced = document.getElementById('check-reduced-motion');
+    if (checkReduced) {
+      checkReduced.checked = Boolean(storage.getSetting('reducedMotion'));
+    }
+    const checkHighContrast = document.getElementById('check-high-contrast');
+    if (checkHighContrast) {
+      checkHighContrast.checked = Boolean(storage.getSetting('highContrast'));
+    }
+    const checkCrt = document.getElementById('check-crt-filter');
+    if (checkCrt) {
+      checkCrt.checked = storage.getSetting('crtFilter') !== false;
+    }
+    const checkHaptics = document.getElementById('check-haptics');
+    if (checkHaptics) {
+      checkHaptics.checked = storage.getSetting('haptics') !== false;
+    }
+    const selectQuality = document.getElementById('select-graphics-quality');
+    if (selectQuality) {
+      selectQuality.value = storage.getSetting('graphicsQuality') || 'balanced';
+    }
+  }
+
+  updateDailyChallengeBanner() {
+    const banner = document.getElementById('daily-challenge-banner');
+    const badgeText = document.getElementById('daily-badge-text');
+    const statusTag = document.getElementById('daily-status-tag');
+    const titleEl = document.getElementById('daily-title');
+    const descEl = document.getElementById('daily-desc');
+    const btnPlay = document.getElementById('btn-play-daily');
+    if (!banner || !btnPlay) return;
+
+    const info = getDailyChallengeInfo();
+    const isCompleted = storage.isDailyChallengeCompleted(info.gameKey, info.dateKey);
+
+    if (badgeText) badgeText.textContent = `TODAY'S SEED #${info.seed}`;
+    if (titleEl) titleEl.textContent = `${info.title} (${info.gameKey.toUpperCase()})`;
+    if (descEl) descEl.textContent = info.description;
+
+    if (statusTag) {
+      if (isCompleted) {
+        statusTag.textContent = '★ COMPLETED TODAY (PRACTICE RUNS UNLIMITED)';
+        statusTag.style.color = 'var(--neon-cyan)';
+        btnPlay.innerHTML = '<span>⚡</span> Practice Run';
+      } else {
+        statusTag.textContent = '● DAILY BONUS AVAILABLE (+150 NC & +100 XP)';
+        statusTag.style.color = '#39ff14';
+        btnPlay.innerHTML = '<span>⚡</span> Enter Daily Run';
+      }
+    }
+
+    btnPlay.onclick = () => {
+      sound.init();
+      this.launchGame(info.gameKey, this.selectedMech, 'standard', { seed: info.seed, isDaily: true });
+    };
+  }
+
+  showTutorialOverlay(gameKey) {
+    const overlay = document.getElementById('tutorial-overlay');
+    const titleEl = document.getElementById('tutorial-title');
+    const descEl = document.getElementById('tutorial-desc');
+    const controlsEl = document.getElementById('tutorial-controls-summary');
+    const btnStart = document.getElementById('btn-tutorial-start');
+    const btnSkip = document.getElementById('btn-tutorial-skip');
+    if (!overlay || !this.activeGame) return;
+
+    this.activeGame.pause();
+
+    const meta = getGameMeta(gameKey);
+    if (titleEl) titleEl.textContent = `${meta ? meta.title.toUpperCase() : gameKey.toUpperCase()} - BRIEFING`;
+    if (descEl) descEl.textContent = meta ? meta.desc : 'Neutralize targets and achieve sector dominance.';
+    if (controlsEl) {
+      controlsEl.innerHTML = `
+        <div style="color:var(--neon-cyan); margin-bottom:4px; font-weight:bold;">KEYBOARD:</div>
+        <div>• WASD or Arrow Keys to Move / Steer</div>
+        <div>• Space: Primary Fire / Jump</div>
+        <div>• Shift: Drift / Nitro / Shield</div>
+        <div>• E: Super Nova / EMP</div>
+        <div style="color:var(--neon-yellow); margin-top:6px; font-weight:bold;">MOBILE / TOUCH:</div>
+        <div>• Virtual 360° Joystick & Touch D-Pad below canvas</div>
+      `;
+    }
+
+    overlay.style.display = 'flex';
+
+    const dismiss = (skipForever = false) => {
+      overlay.style.display = 'none';
+      if (skipForever) {
+        storage.setTutorialSeen(gameKey);
+      }
+      if (this.activeGame) this.activeGame.resume();
+    };
+
+    if (btnStart) btnStart.onclick = () => dismiss(false);
+    if (btnSkip) btnSkip.onclick = () => dismiss(true);
+  }
+
+  calculateSessionXp(gameKey, data) {
+    const score = Number(data.score) || 0;
+    const time = Number(data.time) || 0;
+    let xp = 0;
+    switch (gameKey) {
+      case 'cyberSurvivors':
+        xp = (data.kills || data.enemiesKilled || 0) * 1.5 + (time * 0.6) + ((data.level || 1) * 8) + (data.bossDefeated ? 80 : 0);
+        break;
+      case 'neonDash':
+        xp = ((data.distance || 0) * 0.15) + ((data.stars || 0) * 3);
+        break;
+      case 'quantumBreaker':
+        xp = ((data.bricksBroken || 0) * 2) + (((data.stage || 1) - 1) * 30) + ((data.maxCombo || 0) * 2);
+        break;
+      case 'astroPulse':
+        xp = (score * 0.08) + ((data.bossesKilled || 0) * 60) + (time * 0.4);
+        break;
+      case 'neonDrift':
+        xp = ((data.distance || 0) * 0.1) + ((data.overtakes || 0) * 3) + ((data.maxSpeed || 0) * 0.15);
+        break;
+      case 'hexaTron':
+        xp = ((data.rivalsKilled || 0) * 35) + (data.standing === 1 ? 80 : (time * 0.7));
+        break;
+      case 'cyberPacman':
+        xp = ((data.pelletsEaten || 0) * 0.2) + ((data.ghostsEaten || 0) * 15) + (((data.stage || 1) - 1) * 40);
+        break;
+      default:
+        xp = (score * 0.1) + (time * 0.5);
+    }
+    return Math.floor(xp);
+  }
+
   showCurtain(callback) {
     const curtain = document.getElementById('arcade-curtain');
     if (!curtain) {
@@ -1966,7 +2328,11 @@ class ArcadeApp {
     }, 180);
   }
 
-  launchGame(gameKey, mechClass = 'specter', mode = 'standard') {
+  launchGame(gameKey, mechClass = 'specter', mode = 'standard', options = {}) {
+    const { seed = null, isDaily = false } = options;
+    this.isDailyChallenge = isDaily;
+    this.dailySeed = seed;
+
     this.showCurtain(() => {
       sound.init();
       this.activeGameKey = gameKey;
@@ -2075,11 +2441,18 @@ class ArcadeApp {
       }
 
       if (gameKey === 'cyberSurvivors') {
-        this.activeGame.init(mechClass);
+        this.activeGame.init(mechClass, seed);
+      } else if (gameKey === 'neonDash') {
+        this.activeGame.init(seed);
       } else if (gameKey === 'neonDrift' || gameKey === 'hexaTron') {
         this.activeGame.start();
       } else if (this.activeGame.init) {
         this.activeGame.init();
+      }
+
+      // Check tutorial overlay
+      if (!storage.getTutorialSeen(gameKey)) {
+        this.showTutorialOverlay(gameKey);
       }
 
       // Apply challenge mode modifications
@@ -2109,7 +2482,7 @@ class ArcadeApp {
       document.body.classList.remove('in-game');
       if (this.activeGame) {
         // Record abandon in analytics telemetry
-        if (this.activeGame.isRunning) {
+        if (this.activeGame.isRunning && !this.isReplay) {
           storage.recordSessionAnalytics({
             gameKey: this.activeGameKey,
             score: this.activeGame.score || 0,
@@ -2133,6 +2506,7 @@ class ArcadeApp {
       this.modalInitials.style.display = 'none';
       this.isSliderActive = false;
       if (this.joystickKnob) this.joystickKnob.style.transform = 'translate(-50%, -50%)';
+      this.updateDailyChallengeBanner();
       this.updateLobbyScores();
       this.updateCreditsDisplay();
     });
@@ -2242,12 +2616,42 @@ class ArcadeApp {
       this.goSubtitle.textContent = data.isRecord ? 'Unbelievable performance, Operative!' : 'Mission Terminated';
     }
 
+    const pb = storage.getHighScore(this.activeGameKey) || 0;
+    const finalScore = data.score || 0;
+    const delta = finalScore - pb;
+    let pbRow = '';
+    if (finalScore > pb && finalScore > 0) {
+      pbRow = `<div class="stat-row" style="color:#39ff14; font-weight:bold;"><span>PERSONAL BEST:</span><span class="stat-val">🏆 NEW RECORD! (+${delta} PTS)</span></div>`;
+    } else {
+      const sign = delta >= 0 ? `+${delta}` : `${delta}`;
+      pbRow = `<div class="stat-row" style="color:#ffe600;"><span>PERSONAL BEST:</span><span class="stat-val">${pb.toLocaleString()} PTS (${sign})</span></div>`;
+    }
+
     let statsHtml = `
       <div class="stat-row">
         <span>FINAL SCORE:</span>
         <span class="stat-val">${data.score.toLocaleString()}</span>
       </div>
+      ${pbRow}
     `;
+
+    if (this.isDailyChallenge && !isReplaySession) {
+      const todayKey = getTodayDateKey();
+      const alreadyDone = storage.isDailyChallengeCompleted(this.activeGameKey, todayKey);
+      if (!alreadyDone && finalScore > 50) {
+        storage.recordDailyChallengeCompletion(this.activeGameKey, todayKey);
+        storage.addCredits(150);
+        storage.addMasteryXp(this.activeGameKey, 100);
+        this.showToast('⭐', 'DAILY CHALLENGE COMPLETE!', '+150 Neon Credits & +100 Mastery XP Awarded!');
+        statsHtml += `
+          <div class="stat-row" style="color:#ffe600; font-weight:bold;">
+            <span>DAILY BONUS:</span>
+            <span class="stat-val">+150 NC & +100 XP</span>
+          </div>
+        `;
+      }
+      this.isDailyChallenge = false;
+    }
 
     if (data.time !== undefined && data.kills !== undefined) {
       statsHtml += `
@@ -2296,28 +2700,56 @@ class ArcadeApp {
     }
 
     if (!isReplaySession && this.activeGameKey) {
-      const xpEarned = Math.max(15, Math.floor((data.score || 0) * 0.1) + ((data.time || 0) * 2));
-      const masteryResult = storage.addMasteryXp(this.activeGameKey, xpEarned);
+      const isWon = Boolean(
+        data.won === true ||
+        (this.activeGameKey === 'cyberSurvivors' && (data.bossDefeated || (data.time && data.time >= 300))) ||
+        (this.activeGameKey === 'neonDash' && data.distance && data.distance >= 1000) ||
+        (this.activeGameKey === 'quantumBreaker' && (data.stageCleared || (data.stage && data.stage > 5))) ||
+        (this.activeGameKey === 'astroPulse' && (data.mothershipKilled || (data.bossesKilled && data.bossesKilled >= 1))) ||
+        (this.activeGameKey === 'neonDrift' && data.distance && data.distance >= 2500) ||
+        (this.activeGameKey === 'hexaTron' && data.standing === 1) ||
+        (this.activeGameKey === 'cyberPacman' && (data.stageCleared || (data.stage && data.stage >= 3)))
+      );
+
+      const runDuration = data.time || (data.distance ? Math.round(data.distance / 50) : 30);
+      const calculatedXp = this.calculateSessionXp(this.activeGameKey, data);
+      const masteryResult = storage.addMasteryXp(this.activeGameKey, calculatedXp, {
+        duration: runDuration,
+        score: finalScore,
+        isReplay: isReplaySession,
+        mode: this.currentMode || 'standard',
+        isSession: true
+      });
+
       if (masteryResult.levelUp) {
         this.showToast('⭐', 'MASTERY LEVEL UP', `${this.activeGameKey} Level ${masteryResult.newLevel}!${masteryResult.unlockedMode ? ` Mode unlocked: ${masteryResult.unlockedMode}` : ''}`);
       }
 
       storage.recordSessionAnalytics({
         gameKey: this.activeGameKey,
-        score: data.score || 0,
-        duration: data.time || (data.distance ? Math.round(data.distance / 50) : 30),
+        score: finalScore,
+        duration: runDuration,
         mode: this.currentMode || 'standard',
-        won: Boolean(data.isRecord || (data.score && data.score > 1000)),
+        won: isWon,
         cause: data.cause || 'hazard',
         upgradesPicked: data.upgradesPicked || []
       });
 
-      statsHtml += `
-        <div class="stat-row">
-          <span>MASTERY XP:</span>
-          <span class="stat-val" style="color:var(--neon-cyan);">+${xpEarned} XP (LV ${storage.getGameProgression(this.activeGameKey).level})</span>
-        </div>
-      `;
+      if (masteryResult.awarded > 0) {
+        statsHtml += `
+          <div class="stat-row">
+            <span>MASTERY XP:</span>
+            <span class="stat-val" style="color:var(--neon-cyan);">+${masteryResult.awarded} XP (LV ${storage.getGameProgression(this.activeGameKey).level})</span>
+          </div>
+        `;
+      } else if (masteryResult.reason === 'session_too_short') {
+        statsHtml += `
+          <div class="stat-row" style="opacity:0.65;">
+            <span>MASTERY XP:</span>
+            <span class="stat-val" style="color:var(--text-muted);">0 XP (Session &lt; 15s)</span>
+          </div>
+        `;
+      }
     }
 
     this.goStats.innerHTML = statsHtml;

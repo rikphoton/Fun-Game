@@ -143,6 +143,7 @@ const INITIAL_DATA = {
     reducedMotion: false,
     haptics: true,
     highContrast: false,
+    graphicsQuality: 'balanced',
     keyBindings: {
       moveUp: 'KeyW',
       moveDown: 'KeyS',
@@ -152,7 +153,12 @@ const INITIAL_DATA = {
       secondary: 'ShiftLeft',
       super: 'KeyE'
     }
-  }
+  },
+  dailyChallenges: {
+    lastDate: '',
+    completed: {}
+  },
+  tutorialsSeen: {}
 };
 
 // Keep saved quest progress by quest id. New quests added in later
@@ -345,9 +351,27 @@ class StorageManager {
       if (typeof raw.settings.reducedMotion === 'boolean') clean.settings.reducedMotion = raw.settings.reducedMotion;
       if (typeof raw.settings.haptics === 'boolean') clean.settings.haptics = raw.settings.haptics;
       if (typeof raw.settings.highContrast === 'boolean') clean.settings.highContrast = raw.settings.highContrast;
+      if (typeof raw.settings.graphicsQuality === 'string' && ['low', 'balanced', 'high'].includes(raw.settings.graphicsQuality)) {
+        clean.settings.graphicsQuality = raw.settings.graphicsQuality;
+      }
       if (raw.settings.keyBindings && typeof raw.settings.keyBindings === 'object') {
         clean.settings.keyBindings = { ...clean.settings.keyBindings, ...raw.settings.keyBindings };
       }
+    }
+
+    // Daily Challenges
+    if (raw.dailyChallenges && typeof raw.dailyChallenges === 'object') {
+      clean.dailyChallenges = {
+        lastDate: typeof raw.dailyChallenges.lastDate === 'string' ? raw.dailyChallenges.lastDate : '',
+        completed: (raw.dailyChallenges.completed && typeof raw.dailyChallenges.completed === 'object')
+          ? { ...raw.dailyChallenges.completed }
+          : {}
+      };
+    }
+
+    // Tutorials Seen
+    if (raw.tutorialsSeen && typeof raw.tutorialsSeen === 'object') {
+      clean.tutorialsSeen = { ...raw.tutorialsSeen };
     }
 
     return clean;
@@ -830,8 +854,43 @@ class StorageManager {
     };
   }
 
-  addMasteryXp(gameKey, xpGained) {
-    if (typeof xpGained !== 'number' || xpGained <= 0) return { levelUp: false, oldLevel: 1, newLevel: 1, milestoneReward: 0 };
+  addMasteryXp(gameKey, xpGained, options = {}) {
+    const opts = typeof options === 'number' ? { duration: options } : (options || {});
+    const isSession = opts.isSession || opts.duration !== undefined || opts.score !== undefined;
+    const duration = typeof opts.duration === 'number' ? opts.duration : 999;
+    const score = typeof opts.score === 'number' ? opts.score : 999;
+    const isReplay = Boolean(opts.isReplay);
+    const mode = typeof opts.mode === 'string' ? opts.mode : 'standard';
+
+    // 1. Replays never award XP
+    if (isReplay) {
+      return { awarded: 0, levelUp: false, oldLevel: 1, newLevel: 1, milestoneReward: 0, reason: 'replay' };
+    }
+
+    // 2. Prevent XP farming through sub-15s & low-score runs
+    if (isSession && duration < 15 && score < 50) {
+      return { awarded: 0, levelUp: false, oldLevel: 1, newLevel: 1, milestoneReward: 0, reason: 'session_too_short' };
+    }
+
+    if (typeof xpGained !== 'number' || xpGained <= 0) {
+      return { awarded: 0, levelUp: false, oldLevel: 1, newLevel: 1, milestoneReward: 0 };
+    }
+
+    // 3. Challenge Mode Multipliers
+    let multiplier = 1.0;
+    if (mode === 'oneLife') multiplier = 1.25;
+    else if (mode === 'bossRush') multiplier = 1.2;
+    else if (mode === 'timeAttack') multiplier = 1.15;
+
+    // 4. Session Reward Cap (Max 350 XP per run for gameplay sessions)
+    let finalXp = Math.max(0, Math.round(xpGained * multiplier));
+    if (isSession) {
+      finalXp = Math.min(350, finalXp);
+    }
+    if (finalXp <= 0) {
+      return { awarded: 0, levelUp: false, oldLevel: 1, newLevel: 1, milestoneReward: 0 };
+    }
+
     if (!this.data.gameProgression) {
       this.data.gameProgression = JSON.parse(JSON.stringify(INITIAL_DATA.gameProgression));
     }
@@ -840,7 +899,7 @@ class StorageManager {
     }
     const prog = this.data.gameProgression[gameKey];
     const oldLevel = prog.level || 1;
-    prog.xp = (prog.xp || 0) + Math.round(xpGained);
+    prog.xp = (prog.xp || 0) + finalXp;
 
     // Calculate new level from MASTERY_LEVEL_THRESHOLDS
     let newLevel = 1;
@@ -871,7 +930,7 @@ class StorageManager {
         unlockedMode = 'bossRush';
       }
 
-      // Check milestones
+      // Check milestones (duplicate protected)
       if (newLevel >= 3 && !prog.milestonesClaimed.includes(3)) {
         prog.milestonesClaimed.push(3);
         milestoneReward += 100;
@@ -893,12 +952,64 @@ class StorageManager {
 
     this.save();
     return {
+      awarded: finalXp,
       levelUp: newLevel > oldLevel,
       oldLevel,
       newLevel,
       unlockedMode,
       milestoneReward
     };
+  }
+
+  // --- KEY BINDINGS & TUTORIALS & DAILY CHALLENGES ---
+
+  getKeyBindings() {
+    const defaults = INITIAL_DATA.settings.keyBindings;
+    const current = (this.data.settings && this.data.settings.keyBindings) || {};
+    return { ...defaults, ...current };
+  }
+
+  setKeyBinding(action, code) {
+    if (!action || !code || typeof code !== 'string') return false;
+    if (!this.data.settings.keyBindings) {
+      this.data.settings.keyBindings = { ...INITIAL_DATA.settings.keyBindings };
+    }
+    this.data.settings.keyBindings[action] = code;
+    this.save();
+    return true;
+  }
+
+  resetKeyBindings() {
+    this.data.settings.keyBindings = { ...INITIAL_DATA.settings.keyBindings };
+    this.save();
+    return this.getKeyBindings();
+  }
+
+  getTutorialSeen(gameKey) {
+    return Boolean(this.data.tutorialsSeen && this.data.tutorialsSeen[gameKey]);
+  }
+
+  setTutorialSeen(gameKey) {
+    if (!this.data.tutorialsSeen) this.data.tutorialsSeen = {};
+    this.data.tutorialsSeen[gameKey] = true;
+    this.save();
+  }
+
+  isDailyChallengeCompleted(gameKey, dateKey) {
+    if (!this.data.dailyChallenges) return false;
+    if (this.data.dailyChallenges.lastDate !== dateKey) return false;
+    return Boolean(this.data.dailyChallenges.completed && this.data.dailyChallenges.completed[gameKey]);
+  }
+
+  recordDailyChallengeCompletion(gameKey, dateKey) {
+    if (!this.data.dailyChallenges || this.data.dailyChallenges.lastDate !== dateKey) {
+      this.data.dailyChallenges = {
+        lastDate: dateKey,
+        completed: {}
+      };
+    }
+    this.data.dailyChallenges.completed[gameKey] = true;
+    this.save();
   }
 
   isModeUnlocked(gameKey, mode) {
