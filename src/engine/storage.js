@@ -127,11 +127,13 @@ class StorageManager {
     clean.version = SAVE_VERSION;
     clean.updatedAt = Date.now();
 
-    // High Scores
+    // High Scores (Validated against whitelist of games and realistic limits)
+    const VALID_GAME_KEYS = ['cyberSurvivors', 'neonDash', 'quantumBreaker', 'astroPulse', 'neonDrift', 'hexaTron', 'cyberPacman'];
+    const MAX_SCORE = 99999999;
     if (raw.highScores && typeof raw.highScores === 'object') {
       for (const [k, v] of Object.entries(raw.highScores)) {
-        if (typeof v === 'number' && Number.isFinite(v) && v >= 0) {
-          clean.highScores[k] = Math.floor(v);
+        if (VALID_GAME_KEYS.includes(k) && typeof v === 'number' && Number.isFinite(v) && v >= 0) {
+          clean.highScores[k] = Math.min(MAX_SCORE, Math.floor(v));
         }
       }
     }
@@ -144,13 +146,13 @@ class StorageManager {
         }
       }
       if (Array.isArray(raw.stats.playedGames)) {
-        clean.stats.playedGames = raw.stats.playedGames.filter(x => typeof x === 'string');
+        clean.stats.playedGames = raw.stats.playedGames.filter(x => typeof x === 'string' && VALID_GAME_KEYS.includes(x));
       }
     }
 
     // Credits
     if (typeof raw.neonCredits === 'number' && Number.isFinite(raw.neonCredits) && raw.neonCredits >= 0) {
-      clean.neonCredits = Math.floor(raw.neonCredits);
+      clean.neonCredits = Math.min(10000000, Math.floor(raw.neonCredits));
     }
 
     // Cyber Lab
@@ -178,11 +180,20 @@ class StorageManager {
       }
     }
 
-    // Equipped
+    // Equipped (Strictly validated against unlocked inventory)
     if (raw.equipped && typeof raw.equipped === 'object') {
       if (typeof raw.equipped.trail === 'string') clean.equipped.trail = raw.equipped.trail;
       if (typeof raw.equipped.theme === 'string') clean.equipped.theme = raw.equipped.theme;
       if (typeof raw.equipped.mech === 'string') clean.equipped.mech = raw.equipped.mech;
+    }
+    if (!clean.inventory.trails.includes(clean.equipped.trail)) {
+      clean.equipped.trail = clean.inventory.trails[0] || 'cyan';
+    }
+    if (!clean.inventory.themes.includes(clean.equipped.theme)) {
+      clean.equipped.theme = clean.inventory.themes[0] || 'cyberpunk';
+    }
+    if (!clean.inventory.mechs.includes(clean.equipped.mech)) {
+      clean.equipped.mech = clean.inventory.mechs[0] || 'specter';
     }
 
     // Achievements
@@ -290,18 +301,35 @@ class StorageManager {
 
   importSaveData(input) {
     try {
+      if (!input) return { success: false, error: 'Empty save data' };
       let parsed = typeof input === 'string' ? JSON.parse(input) : input;
-      const rawData = (parsed && parsed.data && parsed.app === 'NeonPulseArcade') ? parsed.data : parsed;
-      if (!rawData || typeof rawData !== 'object') {
-        return { success: false, error: 'Invalid save data format' };
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+        return { success: false, error: 'Invalid save payload structure' };
       }
-      this.data = this.validateAndSanitize(rawData);
+
+      // Safe rejection of unsupported future save versions
+      if (typeof parsed.version === 'number' && parsed.version > SAVE_VERSION) {
+        return { success: false, error: `Unsupported future save format (v${parsed.version})` };
+      }
+
+      const rawData = (parsed && parsed.data && parsed.app === 'NeonPulseArcade') ? parsed.data : parsed;
+      if (!rawData || typeof rawData !== 'object' || Array.isArray(rawData)) {
+        return { success: false, error: 'Malformed save data contents' };
+      }
+
+      // Migrate older formats cleanly
+      let migrated = rawData;
+      if (rawData.version === 1 || rawData.version === 2 || rawData.version === 3) {
+        migrated = this.migrate(rawData);
+      }
+
+      this.data = this.validateAndSanitize(migrated);
       this.save();
       if (this.onCreditsChange) this.onCreditsChange(this.data.neonCredits);
       if (this.onQuestUpdate) this.onQuestUpdate();
       return { success: true, version: this.data.version };
     } catch (e) {
-      return { success: false, error: e.message };
+      return { success: false, error: e.message || 'Corrupted save data' };
     }
   }
 

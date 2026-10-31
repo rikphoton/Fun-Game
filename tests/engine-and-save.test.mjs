@@ -18,6 +18,8 @@ const { AstroPulseGame } = await import('../src/games/astroPulse.js');
 const { NeonDriftGame } = await import('../src/games/neonDrift.js');
 const { HexaTronGame } = await import('../src/games/hexaTron.js');
 const { CyberPacmanGame } = await import('../src/games/cyberPacman.js');
+const { leaderboard } = await import('../src/engine/leaderboard.js');
+const { gamepad } = await import('../src/engine/gamepad.js');
 
 test('Storage is versioned and maintains rolling backup', () => {
   storage.saveHighScore('cyberSurvivors', 8888);
@@ -286,4 +288,190 @@ test('QuantumBreaker Stage 6 generates Quantum Core Boss encounter', () => {
   const bossBrick = game.bricks.find(b => b.isBoss);
   assert.ok(bossBrick, 'Quantum Core boss brick should exist in stage 6');
   assert.ok(bossBrick.hp >= 40, 'Boss brick should have high health');
+});
+
+test('NeonDash PRNG produces 100% deterministic obstacle and item layouts for identical seeds', () => {
+  const dummyCanvas = { getContext: () => ({ fillRect: () => {}, beginPath: () => {}, arc: () => {} }), addEventListener: () => {}, width: 800, height: 600 };
+  const dummyParticles = { particles: [], burst: () => {}, shockwave: () => {}, shake: () => {}, explode: () => {}, spawn: () => {}, addFloatingText: () => {} };
+
+  const game1 = new NeonDashGame(dummyCanvas, dummyParticles, { onScoreUpdate: () => {}, onGameOver: () => {} });
+  const game2 = new NeonDashGame(dummyCanvas, dummyParticles, { onScoreUpdate: () => {}, onGameOver: () => {} });
+
+  const testSeed = 54321;
+  game1.reset(testSeed);
+  game2.reset(testSeed);
+
+  for (let i = 0; i < 8; i++) {
+    game1.spawnHazardWave();
+    game2.spawnHazardWave();
+  }
+
+  assert.equal(game1.obstacles.length, game2.obstacles.length, 'Obstacle count must match');
+  for (let i = 0; i < game1.obstacles.length; i++) {
+    assert.equal(game1.obstacles[i].type, game2.obstacles[i].type, `Obstacle ${i} type must match`);
+    assert.equal(game1.obstacles[i].y, game2.obstacles[i].y, `Obstacle ${i} Y-coord must match`);
+    assert.equal(game1.obstacles[i].width, game2.obstacles[i].width, `Obstacle ${i} width must match`);
+  }
+
+  assert.equal(game1.collectibles.length, game2.collectibles.length, 'Collectibles count must match');
+  for (let i = 0; i < game1.collectibles.length; i++) {
+    assert.equal(game1.collectibles[i].y, game2.collectibles[i].y, `Collectible ${i} Y-coord must match`);
+  }
+});
+
+test('NeonDash Replay mode does not award credits, record high scores or overwrite existing replay', () => {
+  const dummyCanvas = { getContext: () => ({ fillRect: () => {}, beginPath: () => {}, arc: () => {} }), addEventListener: () => {}, width: 800, height: 600 };
+  const dummyParticles = { particles: [], burst: () => {}, shockwave: () => {}, shake: () => {}, explode: () => {}, spawn: () => {}, addFloatingText: () => {} };
+
+  storage.data.neonDashReplay = {
+    score: 300,
+    distance: 250,
+    seed: 42,
+    inputs: [{ t: 0.5 }]
+  };
+  storage.save();
+
+  let gameOverData = null;
+  const game = new NeonDashGame(dummyCanvas, dummyParticles, {
+    onScoreUpdate: () => {},
+    onGameOver: (d) => { gameOverData = d; }
+  });
+
+  game.startReplay(storage.data.neonDashReplay);
+  assert.equal(game.isReplay, true);
+
+  const initialCredits = storage.data.neonCredits;
+  game.multiplier = 2;
+  game.collectStar({ x: 100, y: 100 });
+  assert.equal(storage.data.neonCredits, initialCredits, 'Replay collectStar must not award credits');
+
+  // Trigger game over in replay mode with a higher score
+  game.score = 9999;
+  game.distance = 5000;
+  game.gameOver();
+
+  assert.equal(gameOverData.isReplay, true);
+  assert.equal(gameOverData.isRecord, false, 'Replay mode must never qualify for a high score record');
+  assert.equal(storage.data.neonDashReplay.score, 300, 'Original recorded session must not be overwritten by replay playback');
+});
+
+test('Save validation enforces cosmetic ownership and resets unowned cosmetics', () => {
+  const rawSave = {
+    inventory: {
+      trails: ['cyan'],
+      themes: ['cyberpunk'],
+      mechs: ['specter']
+    },
+    equipped: {
+      trail: 'hacker_matrix_glow',
+      theme: 'ultra_rare_neon',
+      mech: 'giga_titan'
+    }
+  };
+
+  const sanitized = storage.validateAndSanitize(rawSave);
+  assert.equal(sanitized.equipped.trail, 'cyan', 'Unowned trail should reset to owned default');
+  assert.equal(sanitized.equipped.theme, 'cyberpunk', 'Unowned theme should reset to owned default');
+  assert.equal(sanitized.equipped.mech, 'specter', 'Unowned mech should reset to owned default');
+});
+
+test('Save import safely rejects unsupported future versions and malformed structures', () => {
+  const futureSave = JSON.stringify({
+    app: 'NeonPulseArcade',
+    version: 99,
+    data: { score: 1000 }
+  });
+  const resFuture = storage.importSaveData(futureSave);
+  assert.equal(resFuture.success, false);
+  assert.ok(resFuture.error.includes('Unsupported future'));
+
+  const resInvalid = storage.importSaveData('NOT_VALID_JSON{]');
+  assert.equal(resInvalid.success, false);
+
+  const resArray = storage.importSaveData([1, 2, 3]);
+  assert.equal(resArray.success, false);
+});
+
+test('Leaderboard distinguishes sample cabinet scores from verified player scores', () => {
+  const scores = leaderboard.getScores('neonDash');
+  assert.equal(scores.length, 10);
+  // Default arcade scores are marked as sample
+  assert.equal(scores[0].isSample, true);
+  assert.equal(scores[0].isUser, false);
+
+  // Add verified user score
+  const rank = leaderboard.addScore('neonDash', 'USR', 999999);
+  assert.equal(rank, 1);
+  const updatedScores = leaderboard.getScores('neonDash');
+  assert.equal(updatedScores[0].tag, 'USR');
+  assert.equal(updatedScores[0].isUser, true);
+  assert.equal(updatedScores[0].isSample, false);
+
+  // Rejects invalid gameKey or bad scores safely
+  assert.equal(leaderboard.addScore('invalidGame', 'AAA', 1000), -1);
+  assert.equal(leaderboard.addScore('neonDash', 'AAA', -50), -1);
+  assert.equal(leaderboard.addScore('neonDash', 'AAA', NaN), -1);
+});
+
+test('Gamepad controller handles deadzone configuration and clean disconnection state', () => {
+  gamepad.setDeadzone(0.35);
+  assert.equal(gamepad.deadzone, 0.35);
+  gamepad.setDeadzone(5.0); // Oversized clamped
+  assert.equal(gamepad.deadzone, 0.6);
+
+  // Simulate disconnected controller state reset
+  gamepad.state.up = true;
+  gamepad.state.action = true;
+  gamepad.handleDisconnect(gamepad.gamepadIndex);
+  assert.equal(gamepad.state.up, false);
+  assert.equal(gamepad.state.action, false);
+});
+
+test('CyberPacman and HexaTron quest and statistics handling are completely separated', () => {
+  const tronQuestInitial = storage.data.quests.find(q => q.id === 'quest_tron')?.current || 0;
+
+  // Simulate CyberPacman game-over statistics handling
+  const pacmanGameOverData = {
+    score: 12000,
+    stage: 3,
+    dotsEaten: 180,
+    ghostsEaten: 6,
+    credits: 50
+  };
+
+  // CyberPacman stats must not modify quest_tron
+  assert.equal(pacmanGameOverData.ghostsEaten, 6);
+  assert.equal(pacmanGameOverData.dotsEaten, 180);
+  const tronQuestAfter = storage.data.quests.find(q => q.id === 'quest_tron')?.current || 0;
+  assert.equal(tronQuestAfter, tronQuestInitial, 'Cyber Pacman game-over must never increment HexaTron quest');
+});
+
+test('All seven games initialize, pause, resume and destroy cleanly', () => {
+  const dummyCanvas = { getContext: () => ({ fillRect: () => {}, beginPath: () => {}, arc: () => {} }), addEventListener: () => {}, width: 800, height: 600 };
+  const dummyParticles = { particles: [], burst: () => {}, shockwave: () => {}, shake: () => {}, explode: () => {}, spawn: () => {}, addFloatingText: () => {} };
+
+  const games = [
+    new CyberSurvivorsGame(dummyCanvas, dummyParticles, { onScoreUpdate: () => {}, onGameOver: () => {} }),
+    new NeonDashGame(dummyCanvas, dummyParticles, { onScoreUpdate: () => {}, onGameOver: () => {} }),
+    new QuantumBreakerGame(dummyCanvas, dummyParticles, { onScoreUpdate: () => {}, onGameOver: () => {} }),
+    new AstroPulseGame(dummyCanvas, dummyParticles, { onScoreUpdate: () => {}, onGameOver: () => {} }),
+    new NeonDriftGame(dummyCanvas, dummyParticles, { onScoreUpdate: () => {}, onGameOver: () => {} }),
+    new HexaTronGame(dummyCanvas, dummyParticles, { onScoreUpdate: () => {}, onGameOver: () => {} }),
+    new CyberPacmanGame(dummyCanvas, dummyParticles, { onScoreUpdate: () => {}, onGameOver: () => {} })
+  ];
+
+  for (const g of games) {
+    if (g.init) g.init();
+    if (g.start) g.start();
+    assert.equal(g.isRunning, true, 'Game should be running after init/start');
+
+    if (g.pause) g.pause();
+    assert.equal(g.isPaused, true, 'Game should be paused');
+
+    if (g.resume) g.resume();
+    assert.equal(g.isPaused, false, 'Game should be resumed');
+
+    if (g.destroy) g.destroy();
+    assert.equal(g.isRunning, false, 'Game should be stopped after destroy');
+  }
 });

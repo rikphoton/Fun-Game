@@ -45,17 +45,40 @@ class GamepadController {
     });
 
     window.addEventListener('gamepaddisconnected', (e) => {
-      if (this.gamepadIndex === e.gamepad.index) {
-        console.log(`[Gamepad] Disconnected: ${this.name}`);
-        this.isConnected = false;
-        this.gamepadIndex = null;
-        sound.play('hit');
-
-        if (this.onStatusChange) {
-          this.onStatusChange(false, this.name);
-        }
-      }
+      this.handleDisconnect(e && e.gamepad ? e.gamepad.index : undefined);
     });
+  }
+
+  handleDisconnect(index) {
+    if (this.gamepadIndex === index || index === undefined) {
+      console.log(`[Gamepad] Disconnected: ${this.name}`);
+      this.isConnected = false;
+      this.gamepadIndex = null;
+      this.state = {
+        up: false,
+        down: false,
+        left: false,
+        right: false,
+        action: false,
+        super: false,
+        nitro: false,
+        pause: false,
+        axisX: 0,
+        axisY: 0
+      };
+      this.prevState = { ...this.state };
+      sound.play('hit');
+
+      if (this.onStatusChange) {
+        this.onStatusChange(false, this.name);
+      }
+    }
+  }
+
+  setDeadzone(val) {
+    if (typeof val === 'number' && Number.isFinite(val)) {
+      this.deadzone = Math.max(0.05, Math.min(0.6, val));
+    }
   }
 
   poll() {

@@ -192,7 +192,9 @@ class ArcadeApp {
         onGameOver: (data) => this.handleGameOver(data),
         onScoreUpdate: (score, distance, stars, multiplier) => {
           this.hudScore.textContent = score;
-          storage.recordDistance(distance);
+          if (!this.games.neonDash.isReplay) {
+            storage.recordDistance(distance);
+          }
           const multiText = multiplier > 1 ? ` | <span style="color:#ffe600;font-weight:900;">${multiplier}x STREAK</span>` : '';
           this.hudSecondary.innerHTML = `DIST: <span>${distance}m</span> | ⭐ <span>${stars}</span>${multiText}`;
         }
@@ -1250,6 +1252,16 @@ class ArcadeApp {
         this.showToast('🎮', 'GAMEPAD CONNECTED', `${name} ready for action!`);
       } else {
         this.showToast('🔌', 'GAMEPAD DISCONNECTED', 'Switched back to keyboard/mouse');
+        if (this.activeGame && this.activeGame.keys) {
+          this.activeGame.keys['ArrowLeft'] = false;
+          this.activeGame.keys['ArrowRight'] = false;
+          this.activeGame.keys['ArrowUp'] = false;
+          this.activeGame.keys['ArrowDown'] = false;
+          this.activeGame.keys['ShiftLeft'] = false;
+        }
+        if (this.activeGame && this.activeGame.joystick) {
+          this.activeGame.joystick = { x: 0, y: 0, active: false };
+        }
       }
     };
   }
@@ -1276,9 +1288,9 @@ class ArcadeApp {
 
       tr.innerHTML = `
         <td><span class="lb-rank ${rankClass}">${entry.rank}</span></td>
-        <td><span class="lb-tag">${entry.tag}</span>${entry.isUser ? ' <span style="font-size:0.7rem;color:var(--neon-green);">● YOU</span>' : ''}</td>
+        <td><span class="lb-tag">${entry.tag}</span>${entry.isUser ? ' <span style="font-size:0.7rem;color:var(--neon-green);font-weight:700;">★ VERIFIED</span>' : ' <span style="font-size:0.65rem;color:#64748b;">[SAMPLE]</span>'}</td>
         <td><span class="lb-score">${scoreLabel}</span></td>
-        <td style="color:var(--text-muted);font-size:0.8rem;">${entry.isUser ? 'THIS DEVICE' : 'ARCADE'}</td>
+        <td style="color:var(--text-muted);font-size:0.8rem;">${entry.isUser ? 'LOCAL PILOT' : 'CABINET MOCK'}</td>
         <td style="color:var(--text-muted);font-size:0.8rem;">${entry.date || '2026-09-13'}</td>
       `;
       this.lbTableBody.appendChild(tr);
@@ -1899,9 +1911,17 @@ class ArcadeApp {
   }
 
   handleGameOver(data) {
-    this.goTitle.textContent = data.isRecord ? '⚡ NEW HIGH SCORE! ⚡' : 'SYSTEM OFFLINE';
-    this.goTitle.className = data.isRecord ? 'modal-title gold' : 'modal-title red';
-    this.goSubtitle.textContent = data.isRecord ? 'Unbelievable performance, Operative!' : 'Mission Terminated';
+    const isReplaySession = Boolean(data.isReplay || (this.activeGame && this.activeGame.isReplay));
+
+    if (isReplaySession) {
+      this.goTitle.textContent = '📽️ REPLAY COMPLETE';
+      this.goTitle.className = 'modal-title cyan';
+      this.goSubtitle.textContent = 'Playback Finished (No Rewards in Replay Mode)';
+    } else {
+      this.goTitle.textContent = data.isRecord ? '⚡ NEW HIGH SCORE! ⚡' : 'SYSTEM OFFLINE';
+      this.goTitle.className = data.isRecord ? 'modal-title gold' : 'modal-title red';
+      this.goSubtitle.textContent = data.isRecord ? 'Unbelievable performance, Operative!' : 'Mission Terminated';
+    }
 
     let statsHtml = `
       <div class="stat-row">
@@ -1921,14 +1941,18 @@ class ArcadeApp {
         <div class="stat-row"><span>HIGHWAY DISTANCE:</span><span class="stat-val">${data.distance}m</span></div>
         <div class="stat-row"><span>CREDITS EARNED:</span><span class="stat-val">💎 ${data.credits} NC</span></div>
       `;
-      storage.updateQuestProgress('quest_drift', data.score);
-    } else if (this.activeGameKey === 'hexaTron' || this.activeGameKey === 'cyberPacman') {
+      if (!isReplaySession) {
+        storage.updateQuestProgress('quest_drift', data.score);
+      }
+    } else if (this.activeGameKey === 'hexaTron') {
       statsHtml += `
         <div class="stat-row"><span>RIVALS DESTROYED:</span><span class="stat-val">${data.kills || 0}</span></div>
         <div class="stat-row"><span>ROUNDS SURVIVED:</span><span class="stat-val">${data.round || 1}</span></div>
         <div class="stat-row"><span>CREDITS EARNED:</span><span class="stat-val">💎 ${data.credits || 0} NC</span></div>
       `;
-      storage.updateQuestProgress('quest_tron', data.kills || 0);
+      if (!isReplaySession) {
+        storage.updateQuestProgress('quest_tron', data.kills || 0);
+      }
     } else if (this.activeGameKey === 'cyberPacman') {
       statsHtml += `
         <div class="stat-row"><span>STAGE REACHED:</span><span class="stat-val">${data.stage || 1}</span></div>
@@ -1936,6 +1960,9 @@ class ArcadeApp {
         <div class="stat-row"><span>DRONES NEUTRALIZED:</span><span class="stat-val">${data.ghostsEaten || 0}</span></div>
         <div class="stat-row"><span>CREDITS EARNED:</span><span class="stat-val">💎 ${data.credits || 0} NC</span></div>
       `;
+      if (!isReplaySession) {
+        storage.updateQuestProgress('quest_pacman', data.ghostsEaten || 0);
+      }
     } else if (data.distance !== undefined) {
       statsHtml += `
         <div class="stat-row"><span>DISTANCE RUN:</span><span class="stat-val">${data.distance}m</span></div>
@@ -1956,13 +1983,13 @@ class ArcadeApp {
 
     // Toggle Watch Replay button visibility
     if (this.btnWatchReplay) {
-      this.btnWatchReplay.style.display = (this.activeGameKey === 'neonDash' && data.hasReplay) ? 'inline-block' : 'none';
+      this.btnWatchReplay.style.display = (this.activeGameKey === 'neonDash' && data.hasReplay && !isReplaySession) ? 'inline-block' : 'none';
     }
 
-    if (data.isRecord) sound.announce('New Record!');
+    if (data.isRecord && !isReplaySession) sound.announce('New Record!');
 
-    // Handle Arcade Tournament progression
-    if (this.isTournament) {
+    // Handle Arcade Tournament progression (never in replay mode)
+    if (!isReplaySession && this.isTournament) {
       this.tournamentScores.push(data.score);
       if (this.tournamentStage === 1) {
         this.tournamentStage = 2;
@@ -1991,8 +2018,8 @@ class ArcadeApp {
       }
     }
 
-    // Check for Top-10 Leaderboard High Score qualification
-    if (data.score > 0 && leaderboard.isHighScore(this.activeGameKey, data.score)) {
+    // Check for Top-10 Leaderboard High Score qualification (never in replay mode)
+    if (!isReplaySession && data.score > 0 && leaderboard.isHighScore(this.activeGameKey, data.score)) {
       const rank = leaderboard.getRankForScore(this.activeGameKey, data.score);
       this.pendingScoreData = {
         gameKey: this.activeGameKey,
@@ -2068,12 +2095,29 @@ class ArcadeApp {
 
     const state = gamepad.state;
 
-    // Directional keys dispatch
+    // Directional keys dispatch (synchronise press and release)
     if (this.activeGame.keys !== undefined) {
-      if (state.left) this.activeGame.keys['ArrowLeft'] = true;
-      if (state.right) this.activeGame.keys['ArrowRight'] = true;
-      if (state.up) this.activeGame.keys['ArrowUp'] = true;
-      if (state.down) this.activeGame.keys['ArrowDown'] = true;
+      this.activeGame.keys['ArrowLeft'] = Boolean(state.left || this.activeGame.keys['KeyA']);
+      this.activeGame.keys['ArrowRight'] = Boolean(state.right || this.activeGame.keys['KeyD']);
+      this.activeGame.keys['ArrowUp'] = Boolean(state.up || this.activeGame.keys['KeyW']);
+      this.activeGame.keys['ArrowDown'] = Boolean(state.down || this.activeGame.keys['KeyS']);
+      if (this.activeGame.keys['ShiftLeft'] !== undefined) {
+        this.activeGame.keys['ShiftLeft'] = Boolean(state.nitro);
+      }
+    }
+
+    // Direct analog joystick steering for games supporting 360 degree movement
+    if (this.activeGame.joystick !== undefined) {
+      const mag = Math.hypot(state.axisX, state.axisY);
+      if (mag > 0.15) {
+        this.activeGame.joystick = {
+          x: state.axisX,
+          y: state.axisY,
+          active: true
+        };
+      } else if (!this.isTouchJoystickActive) {
+        this.activeGame.joystick = { x: 0, y: 0, active: false };
+      }
     }
 
     // In Hexa-Tron: steering turns on direction press
@@ -2101,7 +2145,6 @@ class ArcadeApp {
 
     // Nitro Boost (Button Y or RT)
     if (state.nitro) {
-      if (this.activeGame.keys) this.activeGame.keys['ShiftLeft'] = true;
       if (this.activeGame.triggerNitro) this.activeGame.triggerNitro();
     }
   }

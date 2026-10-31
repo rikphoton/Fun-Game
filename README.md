@@ -39,7 +39,7 @@ Open [http://localhost:3000](http://localhost:3000) (or the port Vite prints in 
 ### 🧪 Run Automated Tests
 
 ```bash
-# Run all 54 automated unit tests (using Node's native test runner)
+# Run all 78 automated unit tests (using Node's native test runner)
 npm test
 ```
 
@@ -160,7 +160,7 @@ neon-pulse-arcade/
 │   │   └── quantumBreaker.js# Handcrafted brick breaker
 │   ├── main.js              # State manager, UI modals, game loop router
 │   └── style.css            # Cyberpunk aesthetic, responsive layouts & HUD
-├── tests/                   # 49 automated unit tests (node --test)
+├── tests/                   # 78 automated unit tests (node --test)
 ├── build-desktop.sh         # macOS/Linux desktop build helper
 ├── build-exe.bat            # Windows .exe builder helper
 ├── index.html               # Main arcade shell and modals

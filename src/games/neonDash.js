@@ -18,7 +18,15 @@ export class NeonDashGame {
     this.reset();
   }
 
-  reset() {
+  // Mulberry32 deterministic 32-bit PRNG
+  prng() {
+    let t = (this._seedState += 0x6d2b79f5);
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  }
+
+  reset(customSeed = null) {
     this.isRunning = false;
     this.isPaused = false;
     this.gameTime = 0;
@@ -28,9 +36,15 @@ export class NeonDashGame {
     this.starsCollected = 0;
     this.currentSector = 1;
 
+    // Seeded deterministic PRNG
+    const seed = (customSeed !== null && customSeed !== undefined)
+      ? (Number(customSeed) >>> 0)
+      : Math.floor(Math.random() * 1000000);
+    this._seedState = seed;
+
     // Run Replay Recording
     this.recording = {
-      seed: Math.floor(Math.random() * 100000),
+      seed,
       inputs: []
     };
     this.isReplay = false;
@@ -93,10 +107,10 @@ export class NeonDashGame {
     for (let x = 0; x < this.width + 200; x += 60) {
       this.backgroundBuildings.push({
         x,
-        width: 40 + Math.random() * 35,
-        height: 120 + Math.random() * 180,
-        color: Math.random() < 0.5 ? '#15092a' : '#1f0d3d',
-        windowColor: Math.random() < 0.5 ? '#ff0055' : '#00f3ff'
+        width: 40 + this.prng() * 35,
+        height: 120 + this.prng() * 180,
+        color: this.prng() < 0.5 ? '#15092a' : '#1f0d3d',
+        windowColor: this.prng() < 0.5 ? '#ff0055' : '#00f3ff'
       });
     }
   }
@@ -105,7 +119,7 @@ export class NeonDashGame {
     if (!this.isRunning || this.isPaused) return;
 
     if (!this.isReplay) {
-      this.recording.inputs.push({ t: Math.round(this.gameTime * 100) / 100 });
+      this.recording.inputs.push({ t: Math.round(this.gameTime * 1000) / 1000 });
     }
 
     if (this.player.onGround) {
@@ -161,8 +175,7 @@ export class NeonDashGame {
 
     // Process replay automated inputs if in replay mode
     if (this.isReplay && this.replayInputs && this.replayInputIndex < this.replayInputs.length) {
-      const nextInput = this.replayInputs[this.replayInputIndex];
-      if (this.gameTime >= nextInput.t) {
+      while (this.replayInputIndex < this.replayInputs.length && this.gameTime >= this.replayInputs[this.replayInputIndex].t) {
         this.handleAction();
         this.replayInputIndex++;
       }
@@ -360,10 +373,10 @@ export class NeonDashGame {
   }
 
   spawnHazardWave() {
-    const roll = Math.random();
+    const roll = this.prng();
 
     if (roll < 0.45) {
-      const onCeiling = Math.random() < 0.5;
+      const onCeiling = this.prng() < 0.5;
       const width = 28;
       const height = 36;
       this.obstacles.push({
@@ -376,7 +389,7 @@ export class NeonDashGame {
         color: onCeiling ? '#ff0055' : '#ffe600'
       });
     } else if (roll < 0.75) {
-      const onCeiling = Math.random() < 0.5;
+      const onCeiling = this.prng() < 0.5;
       this.obstacles.push({
         type: 'spike',
         x: this.width + 30,
@@ -406,8 +419,8 @@ export class NeonDashGame {
       });
     }
 
-    if (Math.random() < 0.7) {
-      const starY = Math.random() < 0.5 ? this.floorY - 50 : this.ceilY + 50;
+    if (this.prng() < 0.7) {
+      const starY = this.prng() < 0.5 ? this.floorY - 50 : this.ceilY + 50;
       this.collectibles.push({
         x: this.width + 75,
         y: starY,
@@ -421,7 +434,9 @@ export class NeonDashGame {
     this.starsCollected++;
     this.starStreak++;
     const rewardCredits = 2 * this.multiplier;
-    storage.addCredits(rewardCredits);
+    if (!this.isReplay) {
+      storage.addCredits(rewardCredits);
+    }
 
     sound.playGemPickup(this.starStreak);
     this.particles.burst(c.x, c.y, 8, { color: '#ffe600', life: 0.3 });
@@ -451,10 +466,12 @@ export class NeonDashGame {
       life: 0.5
     });
 
-    const isRecord = storage.saveHighScore('neonDash', this.score);
-    storage.recordGamePlayed();
+    const isRecord = !this.isReplay && storage.saveHighScore('neonDash', this.score);
+    if (!this.isReplay) {
+      storage.recordGamePlayed();
+    }
 
-    // Store replay if highest score or if no replay exists
+    // Store replay only for actual player runs (never overwrite from replay playback)
     if (!this.isReplay && this.recording.inputs.length > 0) {
       storage.data.neonDashReplay = {
         score: this.score,
@@ -470,17 +487,18 @@ export class NeonDashGame {
       distance: Math.floor(this.distance),
       stars: this.starsCollected,
       multiplier: `${this.multiplier}x`,
-      isRecord,
-      hasReplay: !!storage.data.neonDashReplay
+      isRecord: Boolean(isRecord),
+      hasReplay: !!storage.data.neonDashReplay,
+      isReplay: this.isReplay
     });
   }
 
   startReplay(recData = null) {
     const replay = recData || storage.data.neonDashReplay;
     if (!replay) return false;
-    this.reset();
+    this.reset(replay.seed || 12345);
     this.isReplay = true;
-    this.replayInputs = replay.inputs || [];
+    this.replayInputs = Array.isArray(replay.inputs) ? replay.inputs.slice() : [];
     this.replayInputIndex = 0;
     this.isRunning = true;
     if (typeof window !== 'undefined' && (window.AudioContext || window.webkitAudioContext)) {

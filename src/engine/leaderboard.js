@@ -125,15 +125,16 @@ class LeaderboardManager {
     const list = this.boards[gameKey] || DEFAULT_BOARDS[gameKey] || [];
     return list.slice(0, 10).map((entry, index) => ({
       rank: index + 1,
-      tag: entry.tag.toUpperCase(),
-      score: entry.score,
-      date: entry.date,
-      isUser: entry.isUser || false
+      tag: (entry.tag || 'ARC').substring(0, 3).toUpperCase(),
+      score: Math.floor(entry.score || 0),
+      date: entry.date || '2026-09-01',
+      isUser: Boolean(entry.isUser),
+      isSample: entry.isSample !== undefined ? entry.isSample : !entry.isUser
     }));
   }
 
   isHighScore(gameKey, score) {
-    if (score <= 0) return false;
+    if (typeof score !== 'number' || !Number.isFinite(score) || score <= 0) return false;
     const scores = this.getScores(gameKey);
     if (scores.length < 10) return true;
     return score > scores[scores.length - 1].score;
@@ -149,7 +150,14 @@ class LeaderboardManager {
   }
 
   addScore(gameKey, tag, score) {
-    const cleanTag = (tag || 'PIL').substring(0, 3).toUpperCase();
+    const VALID_GAMES = ['cyberSurvivors', 'neonDash', 'quantumBreaker', 'astroPulse', 'neonDrift', 'hexaTron', 'cyberPacman'];
+    if (!VALID_GAMES.includes(gameKey)) return -1;
+
+    const numScore = Math.floor(Number(score));
+    if (!Number.isFinite(numScore) || numScore <= 0 || numScore > 99999999) return -1;
+
+    let cleanTag = (String(tag || 'PIL').replace(/[^a-zA-Z0-9]/g, '')).substring(0, 3).toUpperCase();
+    if (!cleanTag) cleanTag = 'PIL';
     const today = localDateString();
 
     if (!this.boards[gameKey]) {
@@ -158,13 +166,15 @@ class LeaderboardManager {
 
     const newEntry = {
       tag: cleanTag,
-      score: Math.floor(score),
+      score: numScore,
       date: today,
-      isUser: true
+      isUser: true,
+      isSample: false
     };
 
     this.boards[gameKey].push(newEntry);
-    this.boards[gameKey].sort((a, b) => b.score - a.score);
+    // Sort: highest score first; ties favor verified player entries over sample cabinet scores
+    this.boards[gameKey].sort((a, b) => (b.score - a.score) || ((b.isUser ? 1 : 0) - (a.isUser ? 1 : 0)));
     this.boards[gameKey] = this.boards[gameKey].slice(0, 10);
 
     this.save();

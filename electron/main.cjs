@@ -1,4 +1,4 @@
-﻿const { app, BrowserWindow, shell } = require('electron');
+const { app, BrowserWindow, shell } = require('electron');
 const path = require('path');
 
 let mainWindow = null;
@@ -14,6 +14,7 @@ function createWindow() {
     minWidth: 860,
     minHeight: 640,
     title: 'NeonPulse Arcade - Ultra Edition',
+    icon: path.join(__dirname, '..', 'pwa', 'icon-512.png'),
     backgroundColor: '#0a0a14',
     autoHideMenuBar: true,
     show: false,

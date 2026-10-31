@@ -678,6 +678,9 @@ class SoundEngine {
     };
 
     this.bgmInterval = setInterval(tick, stepDuration * 1000);
+    if (this.bgmInterval && typeof this.bgmInterval.unref === 'function') {
+      this.bgmInterval.unref();
+    }
   }
 
   stopBgm() {
