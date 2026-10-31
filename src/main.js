@@ -710,6 +710,205 @@ class ArcadeApp {
       dpadCluster.addEventListener('pointercancel', clearDpadSlide);
     }
 
+    // ==========================================================================
+    // Virtual 360° Analog Joystick (Cyber Survivors)
+    // ==========================================================================
+    const joystickBase = document.getElementById('joystick-base');
+    const joystickKnob = document.getElementById('joystick-knob');
+    this.joystickKnob = joystickKnob;
+    let activeJoyPointerId = null;
+    let joyCenter = { x: 0, y: 0 };
+    const maxJoyRadius = 38; // px
+
+    if (joystickBase && joystickKnob) {
+      const updateJoyPosition = (clientX, clientY) => {
+        const dx = clientX - joyCenter.x;
+        const dy = clientY - joyCenter.y;
+        const dist = Math.hypot(dx, dy);
+
+        let nx = 0;
+        let ny = 0;
+        if (dist > 3) {
+          const clampedDist = Math.min(dist, maxJoyRadius);
+          const ratio = clampedDist / maxJoyRadius;
+          const angle = Math.atan2(dy, dx);
+          const visualX = Math.cos(angle) * clampedDist;
+          const visualY = Math.sin(angle) * clampedDist;
+
+          joystickKnob.style.transform = `translate(calc(-50% + ${visualX.toFixed(1)}px), calc(-50% + ${visualY.toFixed(1)}px))`;
+
+          nx = Math.cos(angle) * ratio;
+          ny = Math.sin(angle) * ratio;
+        } else {
+          joystickKnob.style.transform = 'translate(-50%, -50%)';
+        }
+
+        if (this.activeGame) {
+          if (!this.activeGame.joystick) this.activeGame.joystick = { x: 0, y: 0 };
+          this.activeGame.joystick.x = nx;
+          this.activeGame.joystick.y = ny;
+        }
+      };
+
+      const resetJoy = () => {
+        activeJoyPointerId = null;
+        joystickBase.classList.remove('active');
+        joystickKnob.style.transform = 'translate(-50%, -50%)';
+        if (this.activeGame && this.activeGame.joystick) {
+          this.activeGame.joystick.x = 0;
+          this.activeGame.joystick.y = 0;
+        }
+      };
+
+      joystickBase.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        sound.init();
+        if (navigator.vibrate) navigator.vibrate(8);
+        activeJoyPointerId = e.pointerId;
+        try { joystickBase.setPointerCapture(e.pointerId); } catch (_) {}
+        joystickBase.classList.add('active');
+
+        const rect = joystickBase.getBoundingClientRect();
+        joyCenter = {
+          x: rect.left + rect.width / 2,
+          y: rect.top + rect.height / 2
+        };
+        updateJoyPosition(e.clientX, e.clientY);
+      }, { passive: false });
+
+      joystickBase.addEventListener('pointermove', (e) => {
+        if (activeJoyPointerId === null || e.pointerId !== activeJoyPointerId) return;
+        e.preventDefault();
+        updateJoyPosition(e.clientX, e.clientY);
+      }, { passive: false });
+
+      const clearJoyPointer = (e) => {
+        if (e.pointerId === activeJoyPointerId) {
+          e.preventDefault();
+          try { joystickBase.releasePointerCapture(e.pointerId); } catch (_) {}
+          resetJoy();
+        }
+      };
+
+      joystickBase.addEventListener('pointerup', clearJoyPointer, { passive: false });
+      joystickBase.addEventListener('pointercancel', clearJoyPointer, { passive: false });
+    }
+
+    // ==========================================================================
+    // Horizontal Touch Slider (Quantum Breaker & Cyber Pacman)
+    // ==========================================================================
+    const sliderWrap = document.getElementById('slider-track-wrap');
+    const sliderTrack = document.getElementById('slider-track');
+    const sliderKnob = document.getElementById('slider-knob');
+    const sliderFill = document.getElementById('slider-track-fill');
+    const btnSliderUp = document.getElementById('btn-slider-up');
+    const btnSliderDown = document.getElementById('btn-slider-down');
+    this.sliderKnob = sliderKnob;
+    this.sliderFill = sliderFill;
+    this.isSliderActive = false;
+    let activeSliderPointerId = null;
+    let sliderStartY = 0;
+
+    const wireSliderBtn = (btnEl, code, dir) => {
+      if (!btnEl) return;
+      const press = () => {
+        sound.init();
+        if (navigator.vibrate) navigator.vibrate(8);
+        btnEl.classList.add('pressed');
+        if (!this.activeGame) return;
+        if (this.activeGame.keys) this.activeGame.keys[code] = true;
+        if (this.activeGame.handleKeyDown) this.activeGame.handleKeyDown(code);
+        if (this.activeGame.setNextDir) this.activeGame.setNextDir(dir);
+      };
+      const release = () => {
+        btnEl.classList.remove('pressed');
+        if (!this.activeGame) return;
+        if (this.activeGame.keys) this.activeGame.keys[code] = false;
+        if (this.activeGame.handleKeyUp) this.activeGame.handleKeyUp(code);
+      };
+      btnEl.addEventListener('pointerdown', (e) => { e.preventDefault(); press(); }, { passive: false });
+      btnEl.addEventListener('pointerup', (e) => { e.preventDefault(); release(); }, { passive: false });
+      btnEl.addEventListener('pointercancel', (e) => { e.preventDefault(); release(); }, { passive: false });
+      btnEl.addEventListener('pointerleave', release);
+    };
+
+    wireSliderBtn(btnSliderUp, 'ArrowUp', 'up');
+    wireSliderBtn(btnSliderDown, 'ArrowDown', 'down');
+
+    if (sliderWrap && sliderTrack && sliderKnob) {
+      const updateSliderFromClient = (clientX, clientY) => {
+        const rect = sliderTrack.getBoundingClientRect();
+        const clampedX = Math.max(rect.left, Math.min(rect.right, clientX));
+        const ratio = (clampedX - rect.left) / (rect.width || 1);
+        const pct = (ratio * 100).toFixed(1);
+
+        sliderKnob.style.left = `${pct}%`;
+        if (sliderFill) sliderFill.style.width = `${pct}%`;
+
+        if (!this.activeGame) return;
+
+        // 1. Quantum Breaker: map paddle position across horizontal bounds
+        if (this.activeGameKey === 'quantumBreaker') {
+          this.activeGame.sliderPos = ratio;
+        }
+
+        // 2. Cyber Pacman: steer left/right from slider offset, and up/down from vertical drag
+        if (this.activeGameKey === 'cyberPacman') {
+          if (clientY !== undefined && sliderStartY !== 0) {
+            const dy = clientY - sliderStartY;
+            if (dy < -20) {
+              this.activeGame.setNextDir('up');
+            } else if (dy > 20) {
+              this.activeGame.setNextDir('down');
+            }
+          }
+          if (ratio < 0.40) {
+            this.activeGame.setNextDir('left');
+          } else if (ratio > 0.60) {
+            this.activeGame.setNextDir('right');
+          }
+        }
+      };
+
+      sliderWrap.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        sound.init();
+        if (navigator.vibrate) navigator.vibrate(8);
+        activeSliderPointerId = e.pointerId;
+        this.isSliderActive = true;
+        sliderStartY = e.clientY;
+        try { sliderWrap.setPointerCapture(e.pointerId); } catch (_) {}
+        sliderWrap.classList.add('active');
+        updateSliderFromClient(e.clientX, e.clientY);
+      }, { passive: false });
+
+      sliderWrap.addEventListener('pointermove', (e) => {
+        if (activeSliderPointerId === null || e.pointerId !== activeSliderPointerId) return;
+        e.preventDefault();
+        updateSliderFromClient(e.clientX, e.clientY);
+      }, { passive: false });
+
+      const clearSliderPointer = (e) => {
+        if (e.pointerId === activeSliderPointerId) {
+          e.preventDefault();
+          try { sliderWrap.releasePointerCapture(e.pointerId); } catch (_) {}
+          activeSliderPointerId = null;
+          this.isSliderActive = false;
+          sliderStartY = 0;
+          sliderWrap.classList.remove('active');
+
+          // For Cyber Pacman, re-center the knob to 50% on release
+          if (this.activeGameKey === 'cyberPacman') {
+            sliderKnob.style.left = '50%';
+            if (sliderFill) sliderFill.style.width = '50%';
+          }
+        }
+      };
+
+      sliderWrap.addEventListener('pointerup', clearSliderPointer, { passive: false });
+      sliderWrap.addEventListener('pointercancel', clearSliderPointer, { passive: false });
+    }
+
     // Primary Action Button (🅰️)
     const btnTouchA = document.getElementById('touch-action-a');
     if (btnTouchA) {
@@ -1214,17 +1413,32 @@ class ArcadeApp {
     const lblSuper = document.getElementById('lbl-touch-super');
     const hintText = document.getElementById('deck-hint-text');
 
+    const dpadCluster = document.getElementById('deck-dpad');
+    const joystickCluster = document.getElementById('deck-joystick');
+    const sliderCluster = document.getElementById('deck-slider');
+    const sliderVUp = document.getElementById('slider-v-up-wrap');
+    const sliderVDown = document.getElementById('slider-v-down-wrap');
+    const sliderLabel = document.getElementById('slider-sublabel');
+
+    const setDeckMode = (mode) => {
+      if (dpadCluster) dpadCluster.style.display = mode === 'dpad' ? 'flex' : 'none';
+      if (joystickCluster) joystickCluster.style.display = mode === 'joystick' ? 'flex' : 'none';
+      if (sliderCluster) sliderCluster.style.display = mode === 'slider' ? 'flex' : 'none';
+    };
+
     if (gameKey === 'cyberSurvivors') {
+      setDeckMode('joystick');
       this.hudGameName.textContent = `Cyber Survivors (${mechClass.toUpperCase()})`;
       this.hudHpContainer.style.display = 'flex';
       this.hudSuperContainer.style.display = 'flex';
-      this.instructionsEl.innerHTML = `Move: <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or Mouse Drag | Super EMP: <kbd>SPACE</kbd> | Auto-Fire`;
+      this.instructionsEl.innerHTML = `Move: <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or 360° Joystick | Super EMP: <kbd>SPACE</kbd> | Auto-Fire`;
       if (lblPrimary) lblPrimary.textContent = 'SUPER EMP';
       if (lblSub) lblSub.textContent = 'BOOST';
       if (lblSuper) lblSuper.textContent = 'NOVA';
-      if (hintText) hintText.textContent = '🕹️ D-PAD: MOVE | 💣 EMP NOVA';
+      if (hintText) hintText.textContent = '🕹️ 360° JOYSTICK: MOVE | 💣 EMP NOVA';
       this.activeGame.init(mechClass);
     } else if (gameKey === 'neonDash') {
+      setDeckMode('dpad');
       this.hudGameName.textContent = 'Neon Dash';
       this.hudHpContainer.style.display = 'none';
       this.hudSuperContainer.style.display = 'none';
@@ -1235,16 +1449,23 @@ class ArcadeApp {
       if (hintText) hintText.textContent = '🕹️ TAP 🅰️ TO FLIP GRAVITY';
       this.activeGame.init();
     } else if (gameKey === 'quantumBreaker') {
+      setDeckMode('slider');
+      if (sliderVUp) sliderVUp.style.display = 'none';
+      if (sliderVDown) sliderVDown.style.display = 'none';
+      if (sliderLabel) sliderLabel.textContent = 'PADDLE SLIDER';
+      if (this.sliderKnob) this.sliderKnob.style.left = '50%';
+      if (this.sliderFill) this.sliderFill.style.width = '50%';
       this.hudGameName.textContent = 'Quantum Breaker';
       this.hudHpContainer.style.display = 'none';
       this.hudSuperContainer.style.display = 'none';
-      this.instructionsEl.innerHTML = `Paddle: Mouse or <kbd>A</kbd><kbd>D</kbd> | Fire Lasers: <kbd>SPACE</kbd> or Click | Catch Power-ups`;
+      this.instructionsEl.innerHTML = `Paddle: Touch Slider or Mouse / <kbd>A</kbd><kbd>D</kbd> | Fire Lasers: <kbd>SPACE</kbd>`;
       if (lblPrimary) lblPrimary.textContent = 'LAUNCH / FIRE';
       if (lblSub) lblSub.textContent = 'LASER';
       if (lblSuper) lblSuper.textContent = 'BOMB';
-      if (hintText) hintText.textContent = '🕹️ ◀ ▶ STEER | 🅰️ FIRE LASER';
+      if (hintText) hintText.textContent = '🕹️ SLIDER: PADDLE | 🅰️ FIRE LASER';
       this.activeGame.init();
     } else if (gameKey === 'astroPulse') {
+      setDeckMode('dpad');
       this.hudGameName.textContent = 'Astro Pulse';
       this.hudHpContainer.style.display = 'flex';
       this.hudSuperContainer.style.display = 'flex';
@@ -1256,6 +1477,7 @@ class ArcadeApp {
       if (hintText) hintText.textContent = '🕹️ D-PAD: FLY | 💣 SMART BOMB';
       this.activeGame.init();
     } else if (gameKey === 'neonDrift') {
+      setDeckMode('dpad');
       this.hudGameName.textContent = 'Neon Drift';
       this.hudHpContainer.style.display = 'flex';
       this.hudSuperContainer.style.display = 'flex';
@@ -1267,6 +1489,7 @@ class ArcadeApp {
       if (hintText) hintText.textContent = '🕹️ ◀ ▶ STEER | ⚡ DRIFT | 🅰️ NITRO';
       this.activeGame.start();
     } else if (gameKey === 'hexaTron') {
+      setDeckMode('dpad');
       this.hudGameName.textContent = 'Hexa-Tron';
       this.hudHpContainer.style.display = 'none';
       this.hudSuperContainer.style.display = 'flex';
@@ -1278,15 +1501,21 @@ class ArcadeApp {
       if (hintText) hintText.textContent = '🕹️ D-PAD: TURN | 🅰️ PHASE JUMP';
       this.activeGame.init();
     } else if (gameKey === 'cyberPacman') {
+      setDeckMode('slider');
+      if (sliderVUp) sliderVUp.style.display = 'flex';
+      if (sliderVDown) sliderVDown.style.display = 'flex';
+      if (sliderLabel) sliderLabel.textContent = 'STEER SLIDER';
+      if (this.sliderKnob) this.sliderKnob.style.left = '50%';
+      if (this.sliderFill) this.sliderFill.style.width = '50%';
       this.hudGameName.textContent = 'Cyber Pacman';
       this.hudHpContainer.style.display = 'flex';
       this.hudSuperContainer.style.display = 'flex';
       this.hudSuperText.textContent = 'EMP';
-      this.instructionsEl.innerHTML = `Steer: <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or Arrows / Gamepad | EMP Stun: <kbd>SPACE</kbd> / (A) | Touch Swipe`;
+      this.instructionsEl.innerHTML = `Steer: Touch Slider ◀ ▶ & ▲ ▼ / Swipe / <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> | EMP: <kbd>SPACE</kbd>`;
       if (lblPrimary) lblPrimary.textContent = 'EMP STUN';
       if (lblSub) lblSub.textContent = 'SPEED';
       if (lblSuper) lblSuper.textContent = 'EMP BLAST';
-      if (hintText) hintText.textContent = '🕹️ D-PAD: STEER | 🅰️ EMP STUN PULSE';
+      if (hintText) hintText.textContent = '🕹️ SLIDER: ◀ ▶ | ▲ ▼: TURNS | 🅰️ EMP';
       this.activeGame.init();
     }
   }
@@ -1304,6 +1533,8 @@ class ArcadeApp {
     this.modalGameOver.style.display = 'none';
     this.modalUpgrade.style.display = 'none';
     this.modalInitials.style.display = 'none';
+    this.isSliderActive = false;
+    if (this.joystickKnob) this.joystickKnob.style.transform = 'translate(-50%, -50%)';
     this.updateLobbyScores();
     this.updateCreditsDisplay();
   }
@@ -1577,6 +1808,17 @@ class ArcadeApp {
       if (!this.isPaused && !this.activeGame.isPaused) {
         this.activeGame.update(dt);
         this.particles.update(dt);
+
+        if (this.activeGameKey === 'quantumBreaker' && this.activeGame.paddle && this.sliderKnob && !this.isSliderActive) {
+          const halfWidth = this.activeGame.paddle.width / 2;
+          const span = this.activeGame.width - this.activeGame.paddle.width;
+          if (span > 0) {
+            const ratio = Math.max(0, Math.min(1, (this.activeGame.paddle.x - halfWidth) / span));
+            const pct = (ratio * 100).toFixed(1);
+            this.sliderKnob.style.left = `${pct}%`;
+            if (this.sliderFill) this.sliderFill.style.width = `${pct}%`;
+          }
+        }
       }
 
       const shake = this.particles.getShakeOffset();

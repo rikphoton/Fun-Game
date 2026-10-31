@@ -631,6 +631,220 @@ canvas {
   color: #fff;
 }
 
+/* --- Virtual 360° Analog Joystick Cluster --- */
+.deck-joystick-cluster {
+  width: 140px;
+  height: 140px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+}
+
+.joystick-base {
+  position: relative;
+  width: 114px;
+  height: 114px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(0, 243, 255, 0.08) 0%, rgba(10, 16, 32, 0.95) 70%, rgba(4, 7, 18, 0.98) 100%);
+  border: 2px solid rgba(0, 243, 255, 0.45);
+  box-shadow: 0 0 16px rgba(0, 243, 255, 0.2), inset 0 0 18px rgba(0, 243, 255, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+  touch-action: none;
+}
+
+.joystick-base:active,
+.joystick-base.active {
+  border-color: rgba(0, 243, 255, 0.85);
+  box-shadow: 0 0 24px rgba(0, 243, 255, 0.45), inset 0 0 22px rgba(0, 243, 255, 0.25);
+  cursor: grabbing;
+}
+
+.joystick-ring {
+  position: absolute;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  border: 1px dashed rgba(0, 243, 255, 0.35);
+  pointer-events: none;
+}
+
+.joystick-axis-h {
+  position: absolute;
+  width: 80%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(0, 243, 255, 0.25), transparent);
+  pointer-events: none;
+}
+
+.joystick-axis-v {
+  position: absolute;
+  height: 80%;
+  width: 1px;
+  background: linear-gradient(180deg, transparent, rgba(0, 243, 255, 0.25), transparent);
+  pointer-events: none;
+}
+
+.joystick-knob {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #00f3ff 0%, #0284c7 50%, #03203c 100%);
+  border: 2px solid #ffffff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6), 0 0 16px rgba(0, 243, 255, 0.65);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.05s ease-out;
+}
+
+.joystick-base.active .joystick-knob {
+  transition: none;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.7), 0 0 24px var(--neon-cyan);
+}
+
+.joystick-core {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 0 8px #ffffff;
+}
+
+/* --- Horizontal Slider Cluster --- */
+.deck-slider-cluster {
+  width: 154px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.slider-v-row {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.slider-v-btn {
+  width: 46px;
+  height: 34px;
+  border-radius: 8px;
+  font-size: 1rem;
+  color: var(--neon-cyan);
+  text-shadow: 0 0 8px var(--neon-cyan);
+  background: rgba(18, 24, 48, 0.85);
+  border: 1.5px solid rgba(0, 243, 255, 0.4);
+}
+
+.slider-v-btn:active,
+.slider-v-btn.pressed {
+  background: rgba(0, 243, 255, 0.4);
+  border-color: #fff;
+  transform: scale(0.92);
+  box-shadow: 0 0 16px var(--neon-cyan);
+}
+
+.slider-track-wrap {
+  width: 100%;
+  padding: 6px 0;
+  display: flex;
+  align-items: center;
+  touch-action: none;
+  cursor: pointer;
+}
+
+.slider-track {
+  position: relative;
+  width: 100%;
+  height: 24px;
+  background: linear-gradient(180deg, rgba(8, 12, 24, 0.95) 0%, rgba(18, 26, 52, 0.95) 100%);
+  border: 1.5px solid rgba(0, 243, 255, 0.45);
+  border-radius: 12px;
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.8), 0 0 12px rgba(0, 243, 255, 0.2);
+  touch-action: none;
+}
+
+.slider-track-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 50%;
+  background: linear-gradient(90deg, rgba(0, 243, 255, 0.2) 0%, rgba(0, 243, 255, 0.55) 100%);
+  border-radius: 10px;
+  pointer-events: none;
+  transition: width 0.05s ease-out;
+}
+
+.slider-track-wrap.active .slider-track-fill {
+  transition: none;
+}
+
+.slider-knob {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 44px;
+  height: 38px;
+  transform: translate(-50%, -50%);
+  background: linear-gradient(180deg, #00f3ff 0%, #0284c7 55%, #032545 100%);
+  border: 2px solid #ffffff;
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6), 0 0 16px rgba(0, 243, 255, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  pointer-events: none;
+  transition: left 0.05s ease-out;
+}
+
+.slider-track-wrap.active .slider-knob {
+  transition: none;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.8), 0 0 24px var(--neon-cyan);
+}
+
+.slider-grip-line {
+  width: 2px;
+  height: 18px;
+  background: rgba(255, 255, 255, 0.7);
+  border-radius: 1px;
+}
+
+.slider-grip-line.center {
+  height: 22px;
+  background: #ffffff;
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.8);
+}
+
+.deck-sublabel {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 1px;
+  color: var(--neon-cyan);
+  text-shadow: 0 0 6px rgba(0, 243, 255, 0.4);
+  font-weight: 700;
+  text-transform: uppercase;
+  margin-top: 2px;
+  pointer-events: none;
+}
+
 /* --- Right Action Cluster --- */
 .deck-right {
   gap: 8px;
@@ -1028,6 +1242,39 @@ canvas {
   body.in-game .dpad-center-hub {
     width: 32px;
     height: 32px;
+  }
+
+  body.in-game .deck-joystick-cluster {
+    width: 148px;
+    height: 148px;
+  }
+
+  body.in-game .joystick-base {
+    width: 122px;
+    height: 122px;
+  }
+
+  body.in-game .joystick-knob {
+    width: 52px;
+    height: 52px;
+  }
+
+  body.in-game .deck-slider-cluster {
+    width: 160px;
+  }
+
+  body.in-game .slider-track {
+    height: 26px;
+  }
+
+  body.in-game .slider-knob {
+    width: 48px;
+    height: 40px;
+  }
+
+  body.in-game .slider-v-btn {
+    width: 52px;
+    height: 38px;
   }
 
   body.in-game .action-primary {

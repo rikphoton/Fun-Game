@@ -48,6 +48,7 @@ export class QuantumBreakerGame {
 
     this.keys = {};
     this.pointerX = this.width / 2;
+    this.sliderPos = undefined;
 
     this.initStage(1);
     this.spawnInitialBall();
@@ -216,7 +217,11 @@ export class QuantumBreakerGame {
     if (this.keys['KeyA'] || this.keys['ArrowLeft']) dx -= 1;
     if (this.keys['KeyD'] || this.keys['ArrowRight']) dx += 1;
 
-    if (dx !== 0) {
+    if (this.sliderPos !== undefined) {
+      const halfWidth = this.paddle.width / 2;
+      const targetX = halfWidth + this.sliderPos * (this.width - this.paddle.width);
+      this.paddle.x += (targetX - this.paddle.x) * Math.min(1, 28 * dt);
+    } else if (dx !== 0) {
       this.paddle.x += dx * this.paddle.speed * dt;
     } else if (this.pointerX !== undefined) {
       this.paddle.x += (this.pointerX - this.paddle.x) * 16 * dt;

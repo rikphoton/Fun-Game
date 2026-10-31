@@ -22,6 +22,7 @@ export class CyberSurvivorsGame {
 
   reset() {
     this.isRunning = false;
+    this.joystick = { x: 0, y: 0 };
     this.isPaused = false;
     this.gameTime = 0;
     this.score = 0;
@@ -205,12 +206,17 @@ export class CyberSurvivorsGame {
     // 1. Movement
     let dx = 0;
     let dy = 0;
-    if (this.keys['KeyW'] || this.keys['ArrowUp']) dy -= 1;
-    if (this.keys['KeyS'] || this.keys['ArrowDown']) dy += 1;
-    if (this.keys['KeyA'] || this.keys['ArrowLeft']) dx -= 1;
-    if (this.keys['KeyD'] || this.keys['ArrowRight']) dx += 1;
+    if (this.joystick && (this.joystick.x !== 0 || this.joystick.y !== 0)) {
+      dx = this.joystick.x;
+      dy = this.joystick.y;
+    } else {
+      if (this.keys['KeyW'] || this.keys['ArrowUp']) dy -= 1;
+      if (this.keys['KeyS'] || this.keys['ArrowDown']) dy += 1;
+      if (this.keys['KeyA'] || this.keys['ArrowLeft']) dx -= 1;
+      if (this.keys['KeyD'] || this.keys['ArrowRight']) dx += 1;
+    }
 
-    if (this.pointer.active) {
+    if (this.pointer.active && (!this.joystick || (this.joystick.x === 0 && this.joystick.y === 0))) {
       const pdx = this.pointer.x - this.player.x;
       const pdy = this.pointer.y - this.player.y;
       const dsq = pdx * pdx + pdy * pdy;
@@ -221,10 +227,10 @@ export class CyberSurvivorsGame {
       }
     }
 
-    if (dx !== 0 && dy !== 0) {
-      const len = Math.hypot(dx, dy);
-      dx /= len;
-      dy /= len;
+    const joyMag = Math.hypot(dx, dy);
+    if (joyMag > 1) {
+      dx /= joyMag;
+      dy /= joyMag;
     }
 
     this.player.x += dx * this.player.speed * dt;
@@ -249,17 +255,19 @@ export class CyberSurvivorsGame {
           trailColor = '#ff007b';
         }
 
-        this.particles.particles.push({
-          x: this.player.x - dx * 10,
-          y: this.player.y - dy * 10,
-          vx: -dx * 30 + (Math.random() * 16 - 8),
-          vy: -dy * 30 + (Math.random() * 16 - 8),
-          size: 3,
-          color: trailColor,
-          maxLife: 0.22,
-          life: 0.22,
-          friction: 0.9
-        });
+        if (this.particles && Array.isArray(this.particles.particles)) {
+          this.particles.particles.push({
+            x: this.player.x - dx * 10,
+            y: this.player.y - dy * 10,
+            vx: -dx * 30 + (Math.random() * 16 - 8),
+            vy: -dy * 30 + (Math.random() * 16 - 8),
+            size: 3,
+            color: trailColor,
+            maxLife: 0.22,
+            life: 0.22,
+            friction: 0.9
+          });
+        }
       }
     }
 

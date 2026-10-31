@@ -39,7 +39,7 @@ Open [http://localhost:3000](http://localhost:3000) (or the port Vite prints in 
 ### 🧪 Run Automated Tests
 
 ```bash
-# Run all 49 automated unit tests (using Node's native test runner)
+# Run all 53 automated unit tests (using Node's native test runner)
 npm test
 ```
 
@@ -115,8 +115,11 @@ npm run package:linux  # Linux x64
 ### 🕹️ Multi-Platform Controls
 * **Keyboard & Mouse:** Standard WASD / Arrows with Space / Shift / E action keys. Key events prevent default page scrolling.
 * **Gamepad Support:** Standard and non-standard controllers supported (PlayStation, Xbox, generic USB). Includes D-pad/hat switch axis fallbacks and controller rumble vibration feedback.
-* **Mobile Arcade Deck:** Dedicated, ergonomic on-screen touch D-pad and tactile action clusters designed specifically for portrait and landscape mobile screens.
-* **Canvas Touch Steering:** Drag/slide directly on the canvas for fluid mobile navigation.
+* **Dynamic Mobile Arcade Deck:** Ergonomic on-screen touch clusters that adapt dynamically to each game:
+  * **Virtual 360° Analog Joystick:** Smooth omnidirectional maneuvering with tilt sensitivity for *Cyber Survivors*.
+  * **Horizontal Touch Slider:** Responsive 1:1 track glider for *Quantum Breaker* and intuitive steering track with turns for *Cyber Pacman*.
+  * **Tactile D-Pad & Action Cluster:** Responsive directional cluster for *Hexa-Tron*, *Astro Pulse*, *Neon Drift*, and *Neon Dash*.
+* **Canvas Touch Steering:** Direct drag/slide on the canvas for fluid mobile interaction.
 
 ### 🏆 Hall of Fame & Achievements
 * **Local Arcade Hall of Fame:** High scores are saved to `localStorage` per game with a classic 3-letter arcade initials entry screen.
