@@ -21,10 +21,10 @@ const BASE_HALF_MAP = [
   [1, 2, 2, 2, 1, 2, 2, 1, 2, 2, 2, 2, 2, 1], // 6
   [1, 1, 1, 2, 1, 1, 0, 1, 1, 1, 1, 1, 2, 1], // 7
   [0, 0, 1, 2, 1, 0, 0, 0, 0, 0, 0, 1, 2, 1], // 8
-  [1, 1, 1, 2, 1, 0, 1, 1, 4, 1, 0, 1, 2, 1], // 9: Ghost gate
-  [0, 0, 0, 2, 0, 0, 1, 5, 5, 1, 0, 0, 2, 0], // 10: Tunnel row & ghost house
+  [1, 1, 1, 2, 1, 0, 1, 1, 4, 1, 0, 1, 2, 1], // 9: Ghost gate (col 8)
+  [0, 0, 0, 2, 0, 0, 1, 5, 5, 1, 0, 0, 2, 0], // 10: Tunnel row & ghost house interior (cols 7 & 8)
   [1, 1, 1, 2, 1, 0, 1, 5, 5, 1, 0, 1, 2, 1], // 11: Ghost house inside
-  [0, 0, 1, 2, 1, 0, 1, 1, 1, 1, 0, 1, 2, 1], // 12
+  [0, 0, 1, 2, 1, 0, 1, 1, 1, 1, 0, 1, 2, 1], // 12: House bottom wall
   [1, 1, 1, 2, 1, 0, 0, 0, 0, 0, 0, 1, 2, 1], // 13: Below house
   [1, 2, 2, 2, 2, 2, 1, 1, 1, 1, 2, 2, 2, 0], // 14: Fruit spawn area
   [1, 2, 1, 1, 1, 2, 2, 1, 2, 2, 2, 1, 1, 1], // 15
@@ -189,8 +189,8 @@ export class CyberPacmanGame {
         name: 'RedLine',
         color: '#ff0055',
         aura: 'rgba(255, 0, 85, 0.4)',
-        x: ORIGIN_X + 13.5 * TILE_SIZE + TILE_SIZE / 2,
-        y: ORIGIN_Y + 8 * TILE_SIZE + TILE_SIZE / 2, // Outside gate
+        x: ORIGIN_X + 8 * TILE_SIZE + TILE_SIZE / 2,
+        y: ORIGIN_Y + 8 * TILE_SIZE + TILE_SIZE / 2, // Outside gate in corridor
         dir: 'left',
         mode: 'scatter',
         targetX: 25,
@@ -208,8 +208,8 @@ export class CyberPacmanGame {
         name: 'Valkyrie',
         color: '#ff71ce',
         aura: 'rgba(255, 113, 206, 0.4)',
-        x: ORIGIN_X + 13.5 * TILE_SIZE + TILE_SIZE / 2,
-        y: ORIGIN_Y + 11 * TILE_SIZE + TILE_SIZE / 2, // Inside
+        x: ORIGIN_X + 8 * TILE_SIZE + TILE_SIZE / 2,
+        y: ORIGIN_Y + 10 * TILE_SIZE + TILE_SIZE / 2, // Inside house
         dir: 'up',
         mode: 'house',
         targetX: 2,
@@ -218,7 +218,7 @@ export class CyberPacmanGame {
         homeY: 0,
         speed: baseSpeed * 0.95,
         inHouse: true,
-        exitTimer: 1.0,
+        exitTimer: 0.8,
         isStunned: false,
         stunTimer: 0
       },
@@ -227,8 +227,8 @@ export class CyberPacmanGame {
         name: 'Glitch',
         color: '#00f3ff',
         aura: 'rgba(0, 243, 255, 0.4)',
-        x: ORIGIN_X + 11.5 * TILE_SIZE + TILE_SIZE / 2,
-        y: ORIGIN_Y + 11 * TILE_SIZE + TILE_SIZE / 2,
+        x: ORIGIN_X + 7 * TILE_SIZE + TILE_SIZE / 2,
+        y: ORIGIN_Y + 10 * TILE_SIZE + TILE_SIZE / 2, // Inside house left
         dir: 'up',
         mode: 'house',
         targetX: 27,
@@ -237,7 +237,7 @@ export class CyberPacmanGame {
         homeY: 24,
         speed: baseSpeed * 0.9,
         inHouse: true,
-        exitTimer: 3.5,
+        exitTimer: 2.5,
         isStunned: false,
         stunTimer: 0
       },
@@ -246,8 +246,8 @@ export class CyberPacmanGame {
         name: 'Chaos',
         color: '#ff9900',
         aura: 'rgba(255, 153, 0, 0.4)',
-        x: ORIGIN_X + 15.5 * TILE_SIZE + TILE_SIZE / 2,
-        y: ORIGIN_Y + 11 * TILE_SIZE + TILE_SIZE / 2,
+        x: ORIGIN_X + 8 * TILE_SIZE + TILE_SIZE / 2,
+        y: ORIGIN_Y + 11 * TILE_SIZE + TILE_SIZE / 2, // Inside house lower
         dir: 'up',
         mode: 'house',
         targetX: 0,
@@ -256,7 +256,7 @@ export class CyberPacmanGame {
         homeY: 24,
         speed: baseSpeed * 0.85,
         inHouse: true,
-        exitTimer: 6.0,
+        exitTimer: 4.5,
         isStunned: false,
         stunTimer: 0
       }
@@ -751,7 +751,7 @@ export class CyberPacmanGame {
         ghost.exitTimer -= dt;
         if (ghost.exitTimer <= 0) {
           // Move towards gate
-          const gateX = ORIGIN_X + 13.5 * TILE_SIZE + TILE_SIZE / 2;
+          const gateX = ORIGIN_X + 8 * TILE_SIZE + TILE_SIZE / 2;
           const gateY = ORIGIN_Y + 8 * TILE_SIZE + TILE_SIZE / 2;
           ghost.x = gateX;
           ghost.y = gateY;
@@ -792,7 +792,7 @@ export class CyberPacmanGame {
 
     const distToCenterX = Math.abs(ghost.x - centerX);
     const distToCenterY = Math.abs(ghost.y - centerY);
-    const TURN_THRESHOLD = 4;
+    const TURN_THRESHOLD = Math.max(8, moveDist + 1);
 
     // Check intersection turn decision
     if (distToCenterX <= TURN_THRESHOLD && distToCenterY <= TURN_THRESHOLD) {
@@ -804,6 +804,21 @@ export class CyberPacmanGame {
       this.chooseGhostNextDir(ghost, curTileX, curTileY);
     }
 
+    // Safety: if facing an unwalkable tile, snap and choose direction immediately
+    const aheadTile = this.getAdjacentTile(curTileX, curTileY, ghost.dir);
+    if (!this.isWalkableForGhost(aheadTile.col, aheadTile.row, ghost)) {
+      if (
+        (ghost.dir === 'left' && ghost.x <= centerX) ||
+        (ghost.dir === 'right' && ghost.x >= centerX) ||
+        (ghost.dir === 'up' && ghost.y <= centerY) ||
+        (ghost.dir === 'down' && ghost.y >= centerY)
+      ) {
+        ghost.x = centerX;
+        ghost.y = centerY;
+        this.chooseGhostNextDir(ghost, curTileX, curTileY);
+      }
+    }
+
     // Move forward in current direction
     if (ghost.dir === 'left') ghost.x -= moveDist;
     else if (ghost.dir === 'right') ghost.x += moveDist;
@@ -812,8 +827,8 @@ export class CyberPacmanGame {
 
     // If eaten ghost reaches house door, enter and respawn
     if (ghost.mode === 'eaten') {
-      const houseDoorX = ORIGIN_X + 13.5 * TILE_SIZE + TILE_SIZE / 2;
-      const houseDoorY = ORIGIN_Y + 11 * TILE_SIZE + TILE_SIZE / 2;
+      const houseDoorX = ORIGIN_X + 8 * TILE_SIZE + TILE_SIZE / 2;
+      const houseDoorY = ORIGIN_Y + 9 * TILE_SIZE + TILE_SIZE / 2;
       if (Math.hypot(ghost.x - houseDoorX, ghost.y - houseDoorY) < 14) {
         ghost.mode = this.frightenedTimer > 0 ? 'frightened' : this.waveMode;
         ghost.dir = 'up';
@@ -870,8 +885,8 @@ export class CyberPacmanGame {
 
   updateGhostTarget(ghost) {
     if (ghost.mode === 'eaten') {
-      ghost.targetX = 13.5;
-      ghost.targetY = 10;
+      ghost.targetX = 8;
+      ghost.targetY = 9;
       return;
     }
 

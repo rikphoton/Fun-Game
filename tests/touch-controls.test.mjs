@@ -6,6 +6,9 @@ installBrowserMocks();
 const { CyberSurvivorsGame } = await import('../src/games/cyberSurvivors.js');
 const { QuantumBreakerGame } = await import('../src/games/quantumBreaker.js');
 const { CyberPacmanGame } = await import('../src/games/cyberPacman.js');
+const { HexaTronGame } = await import('../src/games/hexaTron.js');
+const { NeonDriftGame } = await import('../src/games/neonDrift.js');
+const { sound } = await import('../src/engine/audio.js');
 
 test('CyberSurvivors responds to virtual analog joystick input', () => {
   const dummyCanvas = { getContext: () => ({}) };
@@ -117,4 +120,85 @@ test('CyberPacman moves and chomps pellets from spawn without getting stuck', ()
 
   assert.ok(game.player.x < startX, `Pacman should move left from spawn, started at ${startX}, now at ${game.player.x}`);
   assert.ok(game.dotsLeft < game.totalDots, 'Pacman should eat dots along the corridor');
+});
+
+test('HexaTron initializes and runs with both init() and start() without crashing', () => {
+  const dummyCtx = {
+    fillStyle: '', strokeStyle: '', lineWidth: 0, shadowColor: '', shadowBlur: 0,
+    fillRect: () => {}, strokeRect: () => {}, beginPath: () => {}, moveTo: () => {},
+    lineTo: () => {}, stroke: () => {}, fill: () => {}, arc: () => {}, save: () => {},
+    restore: () => {}, translate: () => {}, rotate: () => {}, scale: () => {}, fillText: () => {}
+  };
+  const dummyCanvas = { getContext: () => dummyCtx, addEventListener: () => {} };
+  const dummyParticles = { shake: () => {}, addShockwave: () => {}, explode: () => {}, spawn: () => {} };
+  let hudScore = 0;
+  const game = new HexaTronGame(dummyCanvas, dummyParticles, {
+    onScoreUpdate: (s) => { hudScore = s; },
+    onGameOver: () => {}
+  });
+
+  game.init();
+  assert.equal(game.isRunning, true);
+  assert.ok(game.player !== null);
+  assert.equal(game.opponents.length, 3);
+
+  // Update several frames
+  for (let i = 0; i < 20; i++) {
+    game.update(0.016);
+  }
+  assert.ok(game.player.y < game.arena.y + game.arena.h * 0.85, 'Player should move up');
+  assert.doesNotThrow(() => game.draw());
+});
+
+test('NeonDrift initializes, runs and handles SFX without crashing or getting stuck', () => {
+  const dummyCtx = {
+    fillStyle: '', strokeStyle: '', lineWidth: 0,
+    fillRect: () => {}, beginPath: () => {}, arc: () => {}, clip: () => {},
+    save: () => {}, restore: () => {}, moveTo: () => {}, lineTo: () => {},
+    stroke: () => {}, fill: () => {}, closePath: () => {}, ellipse: () => {},
+    roundRect: () => {}, translate: () => {}, rotate: () => {}, createLinearGradient: () => ({ addColorStop: () => {} }),
+    createRadialGradient: () => ({ addColorStop: () => {} })
+  };
+  const dummyCanvas = { getContext: () => dummyCtx, addEventListener: () => {}, getBoundingClientRect: () => ({ left: 0, top: 0, width: 800, height: 600 }) };
+  const dummyParticles = { shake: () => {}, explode: () => {}, spawn: () => {} };
+  const game = new NeonDriftGame(dummyCanvas, dummyParticles, { onScoreUpdate: () => {}, onGameOver: () => {} });
+
+  game.init();
+  assert.equal(game.isRunning, true);
+  assert.ok(game.speed >= 100);
+
+  // sound.play dispatcher should not throw
+  assert.doesNotThrow(() => sound.play('powerup'));
+  assert.doesNotThrow(() => sound.play('pickup'));
+  assert.doesNotThrow(() => sound.play('laser'));
+  assert.doesNotThrow(() => sound.play('explosion'));
+
+  // Test updates and near miss
+  for (let i = 0; i < 30; i++) {
+    game.update(0.016);
+  }
+  assert.ok(game.distance > 0, 'Car should travel forward');
+  assert.doesNotThrow(() => game.draw());
+});
+
+test('CyberPacman ghosts actively move in scatter and chase modes without being stuck', () => {
+  const dummyCanvas = { getContext: () => ({}) };
+  const dummyParticles = { particles: [], burst: () => {}, shockwave: () => {}, floatingTexts: [] };
+  const game = new CyberPacmanGame(dummyCanvas, dummyParticles, {});
+
+  game.buildGrid();
+  game.resetPositions();
+  game.gameState = 'playing';
+  game.isRunning = true;
+
+  const blinky = game.ghosts.find(g => g.id === 'blinky');
+  assert.ok(blinky, 'Blinky should exist');
+  const initialBlinkyX = blinky.x;
+
+  for (let i = 0; i < 30; i++) {
+    game.update(0.016);
+  }
+
+  // Blinky starts facing left in corridor (8, 8) and must move left
+  assert.ok(blinky.x < initialBlinkyX, `Blinky should move left along corridor, started at ${initialBlinkyX}, now at ${blinky.x}`);
 });

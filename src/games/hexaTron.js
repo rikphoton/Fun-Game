@@ -116,6 +116,10 @@ export class HexaTronGame {
     }
   }
 
+  init() {
+    this.start();
+  }
+
   start() {
     this.isRunning = true;
     this.isPaused = false;

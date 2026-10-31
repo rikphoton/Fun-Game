@@ -113,6 +113,26 @@ export class NeonDriftGame {
     this.canvas.addEventListener('pointerdown', this.onPointerDown);
     this.canvas.addEventListener('pointermove', this.onPointerMove);
     window.addEventListener('pointerup', this.onPointerUp);
+    window.addEventListener('pointercancel', this.onPointerUp);
+    window.addEventListener('touchend', this.onPointerUp);
+    window.addEventListener('touchcancel', this.onPointerUp);
+    this.canvas.addEventListener('pointerleave', this.onPointerUp);
+  }
+
+  handlePointerDown(x) {
+    if (!this.isRunning) return;
+    const norm = (x / this.width) * 2 - 1;
+    this.touchSteer = Math.max(-1, Math.min(1, norm));
+  }
+
+  handlePointerMove(x) {
+    if (!this.isRunning) return;
+    const norm = (x / this.width) * 2 - 1;
+    this.touchSteer = Math.max(-1, Math.min(1, norm));
+  }
+
+  handlePointerUp() {
+    this.touchSteer = 0;
   }
 
   updateTouchPosition(e) {
@@ -122,6 +142,10 @@ export class NeonDriftGame {
     // Map clientX (0 to 800) to playerX (-1.0 to 1.0)
     const norm = (clientX / this.width) * 2 - 1;
     this.touchSteer = Math.max(-1, Math.min(1, norm));
+  }
+
+  init() {
+    this.start();
   }
 
   start() {

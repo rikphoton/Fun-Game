@@ -121,6 +121,42 @@ class SoundEngine {
     return this.isMuted;
   }
 
+  // Generic SFX dispatcher for string-based play calls (e.g. sound.play('powerup'))
+  play(name, ...args) {
+    if (!name || this.isMuted) return;
+    const key = String(name).toLowerCase();
+    const map = {
+      laser: () => this.playLaser(...args),
+      explosion: () => this.playExplosion(...args),
+      powerup: () => this.playPowerup(...args),
+      pickup: () => this.playGemPickup(...args),
+      gem: () => this.playGemPickup(...args),
+      gameover: () => this.playGameOver(...args),
+      victory: () => this.playVictory(...args),
+      hit: () => this.playHit(...args),
+      warning: () => this.playWarning(...args),
+      supernova: () => this.playSuperNova(...args),
+      bomb: () => this.playSuperNova(...args),
+      missile: () => this.playMissile(...args),
+      jump: () => this.playJump(...args),
+      dash: () => this.playAirDash(...args),
+      airdash: () => this.playAirDash(...args),
+      bounce: () => this.playBounce(...args),
+      chomp: () => this.playChomp(...args),
+      ghost: () => this.playGhostEaten(...args),
+      levelup: () => this.playLevelUp(...args)
+    };
+
+    if (map[key]) {
+      map[key]();
+    } else {
+      const methodName = 'play' + key.charAt(0).toUpperCase() + key.slice(1);
+      if (typeof this[methodName] === 'function') {
+        this[methodName](...args);
+      }
+    }
+  }
+
   // --- PROCEDURAL SFX ---
 
   playLaser(type = 'normal') {

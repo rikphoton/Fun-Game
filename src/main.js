@@ -209,13 +209,12 @@ class ArcadeApp {
 
       hexaTron: new HexaTronGame(this.canvas, this.particles, {
         onGameOver: (data) => this.handleGameOver(data),
-        onScoreUpdate: (score, rivalsLeft, round, nitroPct, jumps, emps) => {
+        onScoreUpdate: (score, round, rivalsLeft, jumps) => {
           this.hudScore.textContent = score;
-          this.hudSecondary.innerHTML = `ROUND: <span>${round}</span> | RIVALS: <span>${rivalsLeft}/3</span> | JUMP: <span>${jumps}</span> | EMP: <span>${emps}</span>`;
+          this.hudSecondary.innerHTML = `ROUND: <span>${round}</span> | RIVALS: <span>${rivalsLeft}/3</span> | JUMP: <span>${jumps}</span>`;
           if (this.hudSuperFill) {
-            this.hudSuperFill.style.width = `${nitroPct}%`;
-            this.hudSuperText.textContent = nitroPct >= 100 ? 'NITRO MAX!' : `NITRO: ${nitroPct}%`;
-            this.btnSuperAbility.classList.toggle('ready', nitroPct >= 30);
+            this.hudSuperFill.style.width = '100%';
+            this.hudSuperText.textContent = 'JUMP';
           }
           if (this.hudHpFill) {
             this.hudHpFill.style.width = '100%';
@@ -1548,13 +1547,13 @@ class ArcadeApp {
       this.hudGameName.textContent = 'Hexa-Tron';
       this.hudHpContainer.style.display = 'none';
       this.hudSuperContainer.style.display = 'flex';
-      this.hudSuperText.textContent = 'NITRO';
+      this.hudSuperText.textContent = 'JUMP';
       this.instructionsEl.innerHTML = `Steer: <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or Arrows / Gamepad | Jump: <kbd>SPACE</kbd> / (A) | Nitro: <kbd>SHIFT</kbd> / (RT) | EMP: <kbd>E</kbd> / (X)`;
       if (lblPrimary) lblPrimary.textContent = 'PHASE JUMP';
       if (lblSub) lblSub.textContent = 'NITRO';
       if (lblSuper) lblSuper.textContent = 'EMP BLAST';
       if (hintText) hintText.textContent = '🕹️ CENTER D-PAD: TURN | 🅰️ PHASE JUMP';
-      this.activeGame.init();
+      this.activeGame.start();
     } else if (gameKey === 'cyberPacman') {
       if (btnModeToggle) btnModeToggle.style.display = 'flex';
       applyPacmanDeck();
