@@ -250,63 +250,73 @@
 
         <!-- Ergonomic Dual Thumb Controls: Left D-Pad & Right Actions -->
         <div class="deck-controls-row">
-          <!-- Left Thumb: Directional D-Pad Cluster -->
-          <div class="deck-cluster deck-left" id="deck-dpad">
-            <button class="deck-btn dpad-btn dpad-up" id="btn-touch-up" data-code="ArrowUp" aria-label="Up">▲</button>
-            <div class="dpad-horizontal">
-              <button class="deck-btn dpad-btn dpad-left" id="btn-touch-left" data-code="ArrowLeft" aria-label="Left">◀</button>
-              <div class="dpad-center-hub"></div>
-              <button class="deck-btn dpad-btn dpad-right" id="btn-touch-right" data-code="ArrowRight" aria-label="Right">▶</button>
-            </div>
-            <button class="deck-btn dpad-btn dpad-down" id="btn-touch-down" data-code="ArrowDown" aria-label="Down">▼</button>
+          <!-- Left Wing: Auxiliary Action / Sub-ability (Nitro / Speed / Drift) & Style Toggle -->
+          <div class="deck-wing deck-wing-left" id="deck-wing-left">
+            <button class="deck-btn action-btn action-sub" id="btn-touch-nitro" data-code="ShiftLeft" aria-label="Nitro / Boost / Drift">
+              <span class="btn-icon">⚡</span>
+              <span class="btn-subtext" id="lbl-touch-sub">NITRO</span>
+            </button>
+            <button class="deck-mode-toggle" id="btn-deck-mode-toggle" aria-label="Toggle Movement Style" style="display: none;">
+              <span class="mode-toggle-icon" id="lbl-deck-mode-icon">🕹️</span>
+              <span class="mode-toggle-text" id="lbl-deck-mode-text">STICK</span>
+            </button>
           </div>
 
-          <!-- Left Thumb Option 2: Virtual 360° Analog Joystick (Cyber Survivors) -->
-          <div class="deck-cluster deck-left deck-joystick-cluster" id="deck-joystick" style="display: none;">
-            <div class="joystick-base" id="joystick-base">
-              <div class="joystick-ring"></div>
-              <div class="joystick-axis-h"></div>
-              <div class="joystick-axis-v"></div>
-              <div class="joystick-knob" id="joystick-knob">
-                <span class="joystick-core"></span>
-              </div>
-            </div>
-            <div class="deck-sublabel">360° JOYSTICK</div>
-          </div>
-
-          <!-- Left Thumb Option 3: Horizontal Touch Slider (Quantum Breaker & Cyber Pacman) -->
-          <div class="deck-cluster deck-left deck-slider-cluster" id="deck-slider" style="display: none;">
-            <div class="slider-v-row" id="slider-v-up-wrap">
-              <button class="deck-btn slider-v-btn" id="btn-slider-up" data-code="ArrowUp" aria-label="Up">▲</button>
-            </div>
-            <div class="slider-track-wrap" id="slider-track-wrap">
-              <div class="slider-track" id="slider-track">
-                <div class="slider-track-fill" id="slider-track-fill"></div>
-                <div class="slider-knob" id="slider-knob">
-                  <span class="slider-grip-line"></span>
-                  <span class="slider-grip-line center"></span>
-                  <span class="slider-grip-line"></span>
+          <!-- Center Stage: The Movement Controller (CENTERED!) -->
+          <div class="deck-movement-center" id="deck-movement-center">
+            <!-- 1. Virtual 360° Analog Joystick (Cyber Survivors, Cyber Pacman) -->
+            <div class="deck-cluster deck-joystick-cluster" id="deck-joystick" style="display: none;">
+              <div class="joystick-base" id="joystick-base">
+                <div class="joystick-ring"></div>
+                <div class="joystick-axis-h"></div>
+                <div class="joystick-axis-v"></div>
+                <div class="joystick-knob" id="joystick-knob">
+                  <span class="joystick-core"></span>
                 </div>
               </div>
+              <div class="deck-sublabel" id="joystick-sublabel">360° JOYSTICK</div>
             </div>
-            <div class="slider-v-row" id="slider-v-down-wrap">
-              <button class="deck-btn slider-v-btn" id="btn-slider-down" data-code="ArrowDown" aria-label="Down">▼</button>
+
+            <!-- 2. Directional D-Pad Cluster (Cyber Pacman, Hexa-Tron, Astro Pulse, Neon Drift) -->
+            <div class="deck-cluster deck-dpad-cluster" id="deck-dpad">
+              <button class="deck-btn dpad-btn dpad-up" id="btn-touch-up" data-code="ArrowUp" aria-label="Up">▲</button>
+              <div class="dpad-horizontal">
+                <button class="deck-btn dpad-btn dpad-left" id="btn-touch-left" data-code="ArrowLeft" aria-label="Left">◀</button>
+                <div class="dpad-center-hub"></div>
+                <button class="deck-btn dpad-btn dpad-right" id="btn-touch-right" data-code="ArrowRight" aria-label="Right">▶</button>
+              </div>
+              <button class="deck-btn dpad-btn dpad-down" id="btn-touch-down" data-code="ArrowDown" aria-label="Down">▼</button>
+              <div class="deck-sublabel" id="dpad-sublabel" style="display: none;">D-PAD</div>
             </div>
-            <div class="deck-sublabel" id="slider-sublabel">HORIZONTAL SLIDER</div>
+
+            <!-- 3. Horizontal Touch Slider (Quantum Breaker) -->
+            <div class="deck-cluster deck-slider-cluster" id="deck-slider" style="display: none;">
+              <div class="slider-v-row" id="slider-v-up-wrap" style="display: none;">
+                <button class="deck-btn slider-v-btn" id="btn-slider-up" data-code="ArrowUp" aria-label="Up">▲</button>
+              </div>
+              <div class="slider-track-wrap" id="slider-track-wrap">
+                <div class="slider-track" id="slider-track">
+                  <div class="slider-track-fill" id="slider-track-fill"></div>
+                  <div class="slider-knob" id="slider-knob">
+                    <span class="slider-grip-line"></span>
+                    <span class="slider-grip-line center"></span>
+                    <span class="slider-grip-line"></span>
+                  </div>
+                </div>
+              </div>
+              <div class="slider-v-row" id="slider-v-down-wrap" style="display: none;">
+                <button class="deck-btn slider-v-btn" id="btn-slider-down" data-code="ArrowDown" aria-label="Down">▼</button>
+              </div>
+              <div class="deck-sublabel" id="slider-sublabel">HORIZONTAL SLIDER</div>
+            </div>
           </div>
 
-          <!-- Right Thumb: Action Cluster -->
-          <div class="deck-cluster deck-right" id="deck-actions">
-            <div class="deck-action-row">
-              <button class="deck-btn action-btn action-sub" id="btn-touch-nitro" data-code="ShiftLeft" aria-label="Nitro / Boost / Drift">
-                <span class="btn-icon">⚡</span>
-                <span class="btn-subtext" id="lbl-touch-sub">NITRO</span>
-              </button>
-              <button class="deck-btn action-btn action-super" id="touch-super-btn" data-code="KeyE" aria-label="Super Nova EMP / Bomb">
-                <span class="btn-icon">💣</span>
-                <span class="btn-subtext" id="lbl-touch-super">EMP</span>
-              </button>
-            </div>
+          <!-- Right Wing: Action Cluster (Super & Primary 🅰️) -->
+          <div class="deck-wing deck-wing-right" id="deck-actions">
+            <button class="deck-btn action-btn action-super" id="touch-super-btn" data-code="KeyE" aria-label="Super Nova EMP / Bomb">
+              <span class="btn-icon">💣</span>
+              <span class="btn-subtext" id="lbl-touch-super">EMP</span>
+            </button>
             <button class="deck-btn action-btn action-primary" id="touch-action-a" data-code="Space" aria-label="Primary Action / Jump / Fire">
               <span class="btn-icon">🅰️</span>
               <span class="btn-subtext" id="lbl-touch-primary">ACTION</span>

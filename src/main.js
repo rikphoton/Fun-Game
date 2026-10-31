@@ -613,6 +613,9 @@ class ArcadeApp {
       if (this.activeGame.handlePlayerTurn) {
         this.activeGame.handlePlayerTurn(btnDef.code);
       }
+      if (btnDef.dir && this.activeGame.setNextDir) {
+        this.activeGame.setNextDir(btnDef.dir);
+      }
       if (btnDef.steer !== undefined && this.activeGame.touchSteer !== undefined) {
         this.activeGame.touchSteer = btnDef.steer;
       }
@@ -747,6 +750,19 @@ class ArcadeApp {
           if (!this.activeGame.joystick) this.activeGame.joystick = { x: 0, y: 0 };
           this.activeGame.joystick.x = nx;
           this.activeGame.joystick.y = ny;
+
+          // In Cyber Pacman: steer according to dominant joystick tilt
+          if (this.activeGameKey === 'cyberPacman' && this.activeGame.setNextDir) {
+            const absX = Math.abs(nx);
+            const absY = Math.abs(ny);
+            if (absX > 0.25 || absY > 0.25) {
+              if (absX >= absY) {
+                this.activeGame.setNextDir(nx > 0 ? 'right' : 'left');
+              } else {
+                this.activeGame.setNextDir(ny > 0 ? 'down' : 'up');
+              }
+            }
+          }
         }
       };
 
@@ -1419,6 +1435,9 @@ class ArcadeApp {
     const sliderVUp = document.getElementById('slider-v-up-wrap');
     const sliderVDown = document.getElementById('slider-v-down-wrap');
     const sliderLabel = document.getElementById('slider-sublabel');
+    const btnModeToggle = document.getElementById('btn-deck-mode-toggle');
+    const lblModeText = document.getElementById('lbl-deck-mode-text');
+    const lblModeIcon = document.getElementById('lbl-deck-mode-icon');
 
     const setDeckMode = (mode) => {
       if (dpadCluster) dpadCluster.style.display = mode === 'dpad' ? 'flex' : 'none';
@@ -1426,18 +1445,50 @@ class ArcadeApp {
       if (sliderCluster) sliderCluster.style.display = mode === 'slider' ? 'flex' : 'none';
     };
 
+    if (btnModeToggle && !this._modeToggleWired) {
+      this._modeToggleWired = true;
+      btnModeToggle.addEventListener('click', (e) => {
+        e.preventDefault();
+        sound.init();
+        if (navigator.vibrate) navigator.vibrate(10);
+        const curMode = localStorage.getItem('neonpulse_pacman_control') || 'buttons';
+        const nextMode = curMode === 'buttons' ? 'joystick' : 'buttons';
+        localStorage.setItem('neonpulse_pacman_control', nextMode);
+        if (this.activeGameKey === 'cyberPacman') {
+          applyPacmanDeck();
+        }
+      });
+    }
+
+    const applyPacmanDeck = () => {
+      const mode = localStorage.getItem('neonpulse_pacman_control') || 'buttons';
+      if (mode === 'joystick') {
+        setDeckMode('joystick');
+        if (lblModeIcon) lblModeIcon.textContent = '🎛️';
+        if (lblModeText) lblModeText.textContent = 'D-PAD';
+        if (hintText) hintText.textContent = '🕹️ CENTER JOYSTICK: STEER | 🅰️ EMP';
+      } else {
+        setDeckMode('dpad');
+        if (lblModeIcon) lblModeIcon.textContent = '🕹️';
+        if (lblModeText) lblModeText.textContent = 'STICK';
+        if (hintText) hintText.textContent = '🕹️ CENTER D-PAD: STEER | 🅰️ EMP';
+      }
+    };
+
     if (gameKey === 'cyberSurvivors') {
+      if (btnModeToggle) btnModeToggle.style.display = 'none';
       setDeckMode('joystick');
       this.hudGameName.textContent = `Cyber Survivors (${mechClass.toUpperCase()})`;
       this.hudHpContainer.style.display = 'flex';
       this.hudSuperContainer.style.display = 'flex';
-      this.instructionsEl.innerHTML = `Move: <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or 360° Joystick | Super EMP: <kbd>SPACE</kbd> | Auto-Fire`;
+      this.instructionsEl.innerHTML = `Move: Centered 360° Joystick / <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> | Super EMP: <kbd>SPACE</kbd> | Auto-Fire`;
       if (lblPrimary) lblPrimary.textContent = 'SUPER EMP';
       if (lblSub) lblSub.textContent = 'BOOST';
       if (lblSuper) lblSuper.textContent = 'NOVA';
-      if (hintText) hintText.textContent = '🕹️ 360° JOYSTICK: MOVE | 💣 EMP NOVA';
+      if (hintText) hintText.textContent = '🕹️ CENTER 360° JOYSTICK: MOVE | 💣 NOVA';
       this.activeGame.init(mechClass);
     } else if (gameKey === 'neonDash') {
+      if (btnModeToggle) btnModeToggle.style.display = 'none';
       setDeckMode('dpad');
       this.hudGameName.textContent = 'Neon Dash';
       this.hudHpContainer.style.display = 'none';
@@ -1449,6 +1500,7 @@ class ArcadeApp {
       if (hintText) hintText.textContent = '🕹️ TAP 🅰️ TO FLIP GRAVITY';
       this.activeGame.init();
     } else if (gameKey === 'quantumBreaker') {
+      if (btnModeToggle) btnModeToggle.style.display = 'none';
       setDeckMode('slider');
       if (sliderVUp) sliderVUp.style.display = 'none';
       if (sliderVDown) sliderVDown.style.display = 'none';
@@ -1458,13 +1510,14 @@ class ArcadeApp {
       this.hudGameName.textContent = 'Quantum Breaker';
       this.hudHpContainer.style.display = 'none';
       this.hudSuperContainer.style.display = 'none';
-      this.instructionsEl.innerHTML = `Paddle: Touch Slider or Mouse / <kbd>A</kbd><kbd>D</kbd> | Fire Lasers: <kbd>SPACE</kbd>`;
+      this.instructionsEl.innerHTML = `Paddle: Centered Slider or Mouse / <kbd>A</kbd><kbd>D</kbd> | Fire Lasers: <kbd>SPACE</kbd>`;
       if (lblPrimary) lblPrimary.textContent = 'LAUNCH / FIRE';
       if (lblSub) lblSub.textContent = 'LASER';
       if (lblSuper) lblSuper.textContent = 'BOMB';
-      if (hintText) hintText.textContent = '🕹️ SLIDER: PADDLE | 🅰️ FIRE LASER';
+      if (hintText) hintText.textContent = '🕹️ CENTER SLIDER: PADDLE | 🅰️ FIRE';
       this.activeGame.init();
     } else if (gameKey === 'astroPulse') {
+      if (btnModeToggle) btnModeToggle.style.display = 'none';
       setDeckMode('dpad');
       this.hudGameName.textContent = 'Astro Pulse';
       this.hudHpContainer.style.display = 'flex';
@@ -1474,9 +1527,10 @@ class ArcadeApp {
       if (lblPrimary) lblPrimary.textContent = 'FIRE';
       if (lblSub) lblSub.textContent = 'THRUST';
       if (lblSuper) lblSuper.textContent = 'SMART BOMB';
-      if (hintText) hintText.textContent = '🕹️ D-PAD: FLY | 💣 SMART BOMB';
+      if (hintText) hintText.textContent = '🕹️ CENTER D-PAD: FLY | 💣 SMART BOMB';
       this.activeGame.init();
     } else if (gameKey === 'neonDrift') {
+      if (btnModeToggle) btnModeToggle.style.display = 'none';
       setDeckMode('dpad');
       this.hudGameName.textContent = 'Neon Drift';
       this.hudHpContainer.style.display = 'flex';
@@ -1486,9 +1540,10 @@ class ArcadeApp {
       if (lblPrimary) lblPrimary.textContent = 'NITRO';
       if (lblSub) lblSub.textContent = 'DRIFT';
       if (lblSuper) lblSuper.textContent = 'BOOST';
-      if (hintText) hintText.textContent = '🕹️ ◀ ▶ STEER | ⚡ DRIFT | 🅰️ NITRO';
+      if (hintText) hintText.textContent = '🕹️ CENTER D-PAD | ⚡ DRIFT | 🅰️ NITRO';
       this.activeGame.start();
     } else if (gameKey === 'hexaTron') {
+      if (btnModeToggle) btnModeToggle.style.display = 'none';
       setDeckMode('dpad');
       this.hudGameName.textContent = 'Hexa-Tron';
       this.hudHpContainer.style.display = 'none';
@@ -1498,24 +1553,19 @@ class ArcadeApp {
       if (lblPrimary) lblPrimary.textContent = 'PHASE JUMP';
       if (lblSub) lblSub.textContent = 'NITRO';
       if (lblSuper) lblSuper.textContent = 'EMP BLAST';
-      if (hintText) hintText.textContent = '🕹️ D-PAD: TURN | 🅰️ PHASE JUMP';
+      if (hintText) hintText.textContent = '🕹️ CENTER D-PAD: TURN | 🅰️ PHASE JUMP';
       this.activeGame.init();
     } else if (gameKey === 'cyberPacman') {
-      setDeckMode('slider');
-      if (sliderVUp) sliderVUp.style.display = 'flex';
-      if (sliderVDown) sliderVDown.style.display = 'flex';
-      if (sliderLabel) sliderLabel.textContent = 'STEER SLIDER';
-      if (this.sliderKnob) this.sliderKnob.style.left = '50%';
-      if (this.sliderFill) this.sliderFill.style.width = '50%';
+      if (btnModeToggle) btnModeToggle.style.display = 'flex';
+      applyPacmanDeck();
       this.hudGameName.textContent = 'Cyber Pacman';
       this.hudHpContainer.style.display = 'flex';
       this.hudSuperContainer.style.display = 'flex';
       this.hudSuperText.textContent = 'EMP';
-      this.instructionsEl.innerHTML = `Steer: Touch Slider ◀ ▶ & ▲ ▼ / Swipe / <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> | EMP: <kbd>SPACE</kbd>`;
+      this.instructionsEl.innerHTML = `Steer: Centered Joystick / D-Pad Buttons / Swipe / <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> | EMP: <kbd>SPACE</kbd>`;
       if (lblPrimary) lblPrimary.textContent = 'EMP STUN';
       if (lblSub) lblSub.textContent = 'SPEED';
       if (lblSuper) lblSuper.textContent = 'EMP BLAST';
-      if (hintText) hintText.textContent = '🕹️ SLIDER: ◀ ▶ | ▲ ▼: TURNS | 🅰️ EMP';
       this.activeGame.init();
     }
   }

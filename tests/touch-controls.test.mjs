@@ -83,17 +83,38 @@ test('CyberPacman queues directions from slider and vertical steering', () => {
 
   game.buildGrid();
   game.resetPositions();
-  assert.equal(game.player.nextDir, 'none');
 
-  game.setNextDir('left');
-  assert.equal(game.player.nextDir, 'left');
+  // Player starts facing 'left'
+  assert.equal(game.player.dir, 'left');
 
+  // Queue perpendicular turn 'up'
   game.setNextDir('up');
   assert.equal(game.player.nextDir, 'up');
 
-  game.setNextDir('right');
-  assert.equal(game.player.nextDir, 'right');
-
+  // Queue perpendicular turn 'down'
   game.setNextDir('down');
   assert.equal(game.player.nextDir, 'down');
+
+  // Immediate 180-degree reverse to 'right' updates dir instantly
+  game.setNextDir('right');
+  assert.equal(game.player.dir, 'right');
+});
+
+test('CyberPacman moves and chomps pellets from spawn without getting stuck', () => {
+  const dummyCanvas = { getContext: () => ({}) };
+  const dummyParticles = { particles: [], burst: () => {}, shockwave: () => {}, floatingTexts: [] };
+  const game = new CyberPacmanGame(dummyCanvas, dummyParticles, {});
+
+  game.buildGrid();
+  game.resetPositions();
+  game.gameState = 'playing';
+  game.isRunning = true;
+
+  const startX = game.player.x;
+  for (let i = 0; i < 30; i++) {
+    game.update(0.016);
+  }
+
+  assert.ok(game.player.x < startX, `Pacman should move left from spawn, started at ${startX}, now at ${game.player.x}`);
+  assert.ok(game.dotsLeft < game.totalDots, 'Pacman should eat dots along the corridor');
 });

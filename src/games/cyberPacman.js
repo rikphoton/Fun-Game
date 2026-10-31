@@ -30,7 +30,7 @@ const BASE_HALF_MAP = [
   [1, 2, 1, 1, 1, 2, 2, 1, 2, 2, 2, 1, 1, 1], // 15
   [1, 3, 2, 2, 1, 1, 2, 1, 2, 1, 1, 1, 2, 1], // 16: Bottom power pellet
   [1, 1, 1, 2, 1, 2, 2, 2, 2, 2, 2, 1, 2, 1], // 17
-  [1, 2, 2, 2, 2, 2, 1, 1, 1, 1, 2, 2, 2, 1], // 18: Pacman spawn
+  [1, 2, 2, 2, 2, 2, 1, 1, 1, 1, 2, 2, 2, 0], // 18: Pacman spawn corridor (cols 13 & 14 are open 0,0)
   [1, 2, 1, 1, 1, 1, 1, 2, 2, 1, 1, 1, 2, 1], // 19
   [1, 2, 2, 2, 2, 2, 2, 2, 1, 1, 2, 2, 2, 1], // 20
   [1, 1, 1, 1, 2, 1, 1, 2, 1, 1, 2, 1, 1, 1], // 21
@@ -169,14 +169,14 @@ export class CyberPacmanGame {
   }
 
   resetPositions() {
-    // Pacman Start (Row 18, center between col 13 & 14)
-    const startTileX = 13.5;
+    // Pacman Start (Row 18, Col 13 - open corridor facing left)
+    const startTileX = 13;
     const startTileY = 18;
     this.player.x = ORIGIN_X + startTileX * TILE_SIZE + TILE_SIZE / 2;
     this.player.y = ORIGIN_Y + startTileY * TILE_SIZE + TILE_SIZE / 2;
-    this.player.tileX = Math.floor(startTileX);
+    this.player.tileX = startTileX;
     this.player.tileY = startTileY;
-    this.player.dir = 'none';
+    this.player.dir = 'left';
     this.player.nextDir = 'none';
     this.player.alive = true;
 
@@ -294,9 +294,18 @@ export class CyberPacmanGame {
 
   setNextDir(dir) {
     this.player.nextDir = dir;
-    // Immediate 180 reverse check
+    // Immediate 180 reverse check or start moving from stop
     if (this.isOppositeDir(this.player.dir, dir)) {
       this.player.dir = dir;
+      this.player.nextDir = 'none';
+    } else if (this.player.dir === 'none') {
+      const curTileX = Math.floor((this.player.x - ORIGIN_X) / TILE_SIZE);
+      const curTileY = Math.floor((this.player.y - ORIGIN_Y) / TILE_SIZE);
+      const targetTile = this.getAdjacentTile(curTileX, curTileY, dir);
+      if (this.isWalkableForPlayer(targetTile.col, targetTile.row)) {
+        this.player.dir = dir;
+        this.player.nextDir = 'none';
+      }
     }
   }
 
@@ -501,16 +510,29 @@ export class CyberPacmanGame {
 
     const distToCenterX = Math.abs(this.player.x - centerX);
     const distToCenterY = Math.abs(this.player.y - centerY);
-    const TURN_THRESHOLD = 5;
+    const TURN_THRESHOLD = Math.max(9, moveDist + 1);
 
-    // Check if queued direction can be taken
+    // If stopped at wall, take any walkable queued direction immediately
+    if (this.player.dir === 'none') {
+      if (this.player.nextDir !== 'none') {
+        const nextTile = this.getAdjacentTile(curTileX, curTileY, this.player.nextDir);
+        if (this.isWalkableForPlayer(nextTile.col, nextTile.row)) {
+          this.player.x = centerX;
+          this.player.y = centerY;
+          this.player.dir = this.player.nextDir;
+          this.player.nextDir = 'none';
+        }
+      }
+      return;
+    }
+
+    // Check if queued direction can be taken at intersection
     if (this.player.nextDir !== 'none' && this.player.nextDir !== this.player.dir) {
       const isPerpendicular =
         (this.player.dir === 'left' || this.player.dir === 'right') &&
         (this.player.nextDir === 'up' || this.player.nextDir === 'down') ||
         (this.player.dir === 'up' || this.player.dir === 'down') &&
-        (this.player.nextDir === 'left' || this.player.nextDir === 'right') ||
-        this.player.dir === 'none';
+        (this.player.nextDir === 'left' || this.player.nextDir === 'right');
 
       if (isPerpendicular) {
         if (distToCenterX <= TURN_THRESHOLD && distToCenterY <= TURN_THRESHOLD) {
@@ -525,8 +547,6 @@ export class CyberPacmanGame {
         }
       }
     }
-
-    if (this.player.dir === 'none') return;
 
     // Check obstacle ahead
     const checkAheadDist = moveDist + 1;

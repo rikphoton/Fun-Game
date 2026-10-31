@@ -39,7 +39,7 @@ Open [http://localhost:3000](http://localhost:3000) (or the port Vite prints in 
 ### 🧪 Run Automated Tests
 
 ```bash
-# Run all 53 automated unit tests (using Node's native test runner)
+# Run all 54 automated unit tests (using Node's native test runner)
 npm test
 ```
 

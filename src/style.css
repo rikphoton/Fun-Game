@@ -568,6 +568,65 @@ canvas {
   width: 100%;
   box-sizing: border-box;
   padding: 0 4px;
+  position: relative;
+}
+
+.deck-movement-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 5;
+  margin: 0 auto;
+}
+
+.deck-wing {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  z-index: 5;
+}
+
+.deck-wing-left {
+  align-items: flex-start;
+  min-width: 56px;
+}
+
+.deck-wing-right {
+  align-items: flex-end;
+  min-width: 100px;
+}
+
+/* Control Mode Switcher Pill (e.g. For Pacman: STICK vs BUTTONS) */
+.deck-mode-toggle {
+  background: rgba(18, 24, 48, 0.9);
+  border: 1.5px solid rgba(0, 243, 255, 0.45);
+  color: var(--neon-cyan);
+  border-radius: 14px;
+  padding: 4px 10px;
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  touch-action: none;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.15);
+  transition: transform 0.08s ease, background-color 0.08s ease, box-shadow 0.08s ease;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.deck-mode-toggle:active {
+  transform: scale(0.92);
+  background: rgba(0, 243, 255, 0.35);
+  border-color: #ffffff;
+  box-shadow: 0 0 12px var(--neon-cyan);
 }
 
 .deck-cluster {
@@ -1343,8 +1402,13 @@ canvas {
     z-index: 50;
   }
 
-  body.in-game .deck-cluster {
+  body.in-game .deck-cluster,
+  body.in-game .deck-wing,
+  body.in-game .deck-movement-center {
     pointer-events: auto;
+  }
+
+  body.in-game .deck-cluster {
     background: rgba(8, 12, 28, 0.75);
     -webkit-backdrop-filter: blur(8px);
     backdrop-filter: blur(8px);
