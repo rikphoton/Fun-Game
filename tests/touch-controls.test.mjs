@@ -8,6 +8,7 @@ const { QuantumBreakerGame } = await import('../src/games/quantumBreaker.js');
 const { CyberPacmanGame } = await import('../src/games/cyberPacman.js');
 const { HexaTronGame } = await import('../src/games/hexaTron.js');
 const { NeonDriftGame } = await import('../src/games/neonDrift.js');
+const { AstroPulseGame } = await import('../src/games/astroPulse.js');
 const { sound } = await import('../src/engine/audio.js');
 
 test('CyberSurvivors responds to virtual analog joystick input', () => {
@@ -214,4 +215,28 @@ test('CyberPacman ghosts actively move in scatter and chase modes without being 
   for (const ghost of game.ghosts) {
     assert.equal(ghost.inHouse, false, `${ghost.name} should have exited the house after 5 seconds`);
   }
+});
+
+test('AstroPulse ship responds to virtual analog joystick input', () => {
+  const dummyCtx = {
+    fillStyle: '', strokeStyle: '', lineWidth: 0, shadowColor: '', shadowBlur: 0,
+    fillRect: () => {}, strokeRect: () => {}, beginPath: () => {}, moveTo: () => {},
+    lineTo: () => {}, stroke: () => {}, fill: () => {}, arc: () => {}, save: () => {},
+    restore: () => {}, translate: () => {}, rotate: () => {}, scale: () => {}, fillText: () => {}
+  };
+  const dummyCanvas = { getContext: () => dummyCtx, addEventListener: () => {}, width: 800, height: 600 };
+  const dummyParticles = { particles: [], shake: () => {}, explode: () => {}, burst: () => {}, spawn: () => {} };
+  const game = new AstroPulseGame(dummyCanvas, dummyParticles, { onScoreUpdate: () => {}, onGameOver: () => {} });
+
+  game.reset();
+  game.isRunning = true;
+  const startX = game.player.x;
+  const startY = game.player.y;
+
+  // Move right and up via joystick
+  game.joystick = { x: 0.8, y: -0.6 };
+  game.update(0.1);
+
+  assert.ok(game.player.x > startX, `Player should move right with positive joystick X (${game.player.x} > ${startX})`);
+  assert.ok(game.player.y < startY, `Player should move up with negative joystick Y (${game.player.y} < ${startY})`);
 });

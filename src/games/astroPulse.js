@@ -59,6 +59,7 @@ export class AstroPulseGame {
     this.boss = null;
 
     this.keys = {};
+    this.joystick = { x: 0, y: 0 };
     this.pointer = { x: this.width / 2, y: this.height - 70, active: false };
 
     this.initStarfield();
@@ -146,12 +147,17 @@ export class AstroPulseGame {
     // 2. Player Movement
     let dx = 0;
     let dy = 0;
-    if (this.keys['KeyA'] || this.keys['ArrowLeft']) dx -= 1;
-    if (this.keys['KeyD'] || this.keys['ArrowRight']) dx += 1;
-    if (this.keys['KeyW'] || this.keys['ArrowUp']) dy -= 1;
-    if (this.keys['KeyS'] || this.keys['ArrowDown']) dy += 1;
+    if (this.joystick && (this.joystick.x !== 0 || this.joystick.y !== 0)) {
+      dx = this.joystick.x;
+      dy = this.joystick.y;
+    } else {
+      if (this.keys['KeyA'] || this.keys['ArrowLeft']) dx -= 1;
+      if (this.keys['KeyD'] || this.keys['ArrowRight']) dx += 1;
+      if (this.keys['KeyW'] || this.keys['ArrowUp']) dy -= 1;
+      if (this.keys['KeyS'] || this.keys['ArrowDown']) dy += 1;
+    }
 
-    if (this.pointer.active) {
+    if (this.pointer.active && (!this.joystick || (this.joystick.x === 0 && this.joystick.y === 0))) {
       const pdx = this.pointer.x - this.player.x;
       const pdy = this.pointer.y - this.player.y;
       const dsq = pdx * pdx + pdy * pdy;
@@ -162,10 +168,10 @@ export class AstroPulseGame {
       }
     }
 
-    if (dx !== 0 && dy !== 0) {
-      const len = Math.hypot(dx, dy);
-      dx /= len;
-      dy /= len;
+    const joyMag = Math.hypot(dx, dy);
+    if (joyMag > 1.0) {
+      dx /= joyMag;
+      dy /= joyMag;
     }
 
     this.player.x += dx * this.player.speed * dt;

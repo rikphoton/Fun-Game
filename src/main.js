@@ -1517,16 +1517,16 @@ class ArcadeApp {
       this.activeGame.init();
     } else if (gameKey === 'astroPulse') {
       if (btnModeToggle) btnModeToggle.style.display = 'none';
-      setDeckMode('dpad');
+      setDeckMode('joystick');
       this.hudGameName.textContent = 'Astro Pulse';
       this.hudHpContainer.style.display = 'flex';
       this.hudSuperContainer.style.display = 'flex';
       this.hudSuperText.textContent = 'BOMB';
-      this.instructionsEl.innerHTML = `Move: Mouse / <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> | Smart Bomb: <kbd>SPACE</kbd> | Auto-Fire`;
+      this.instructionsEl.innerHTML = `Move: 360° Joystick / Mouse / <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> | Smart Bomb: <kbd>SPACE</kbd> | Auto-Fire`;
       if (lblPrimary) lblPrimary.textContent = 'FIRE';
       if (lblSub) lblSub.textContent = 'THRUST';
       if (lblSuper) lblSuper.textContent = 'SMART BOMB';
-      if (hintText) hintText.textContent = '🕹️ CENTER D-PAD: FLY | 💣 SMART BOMB';
+      if (hintText) hintText.textContent = '🕹️ CENTER 360° JOYSTICK: FLY | 💣 SMART BOMB';
       this.activeGame.init();
     } else if (gameKey === 'neonDrift') {
       if (btnModeToggle) btnModeToggle.style.display = 'none';
