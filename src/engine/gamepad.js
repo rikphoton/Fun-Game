@@ -179,7 +179,7 @@ class GamepadController {
 
   rumble(durationMs = 200, weakMagnitude = 0.5, strongMagnitude = 0.5) {
     if (this.gamepadIndex === null) return;
-    const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+    const gamepads = (typeof navigator !== 'undefined' && navigator.getGamepads) ? navigator.getGamepads() : [];
     const gp = gamepads[this.gamepadIndex];
 
     if (gp && gp.vibrationActuator) {

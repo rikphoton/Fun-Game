@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { installBrowserMocks } from './helpers/browser-mocks.mjs';
+import { installBrowserMocks, setNavigator } from './helpers/browser-mocks.mjs';
 
 const ls = installBrowserMocks();
 const {
@@ -497,8 +497,8 @@ test('Gamepad poll gracefully handles null controller and missed disconnect with
   gamepad.state.action = true;
 
   // Mock navigator.getGamepads returning empty/disconnected
-  const origGetGamepads = navigator.getGamepads;
-  navigator.getGamepads = () => [];
+  const origGetGamepads = (typeof navigator !== 'undefined' && navigator.getGamepads) ? navigator.getGamepads : undefined;
+  setNavigator({ getGamepads: () => [] });
 
   const polled = gamepad.poll();
   assert.equal(polled.left, false, 'Left direction must reset to false on missed disconnect');
@@ -506,7 +506,9 @@ test('Gamepad poll gracefully handles null controller and missed disconnect with
   assert.equal(gamepad.isConnected, false);
   assert.equal(gamepad.gamepadIndex, null);
 
-  navigator.getGamepads = origGetGamepads;
+  if (origGetGamepads) {
+    setNavigator({ getGamepads: origGetGamepads });
+  }
 });
 
 test('NeonDash PRNG cosmetic stream does not desynchronize gameplay hazard rolls', () => {
