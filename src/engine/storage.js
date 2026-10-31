@@ -6,6 +6,19 @@ export const STORAGE_KEY_V4 = 'neonpulse_arcade_v4';
 export const STORAGE_BACKUP_KEY = 'neonpulse_arcade_v4_backup';
 export const STORAGE_KEY_LEGACY = 'neonpulse_arcade_v3';
 
+export const MASTERY_LEVEL_THRESHOLDS = [
+  0,     // Level 1
+  200,   // Level 2 (Unlocks Time Attack)
+  500,   // Level 3 (+100 Credits)
+  900,   // Level 4 (Unlocks One-Life Hardcore)
+  1400,  // Level 5 (Unlocks Boss Rush)
+  2000,  // Level 6 (+250 Credits)
+  2800,  // Level 7
+  3800,  // Level 8
+  5000,  // Level 9
+  6500   // Level 10 (Mastery Badge + 500 Credits)
+];
+
 const INITIAL_DATA = {
   version: SAVE_VERSION,
   createdAt: Date.now(),
@@ -19,6 +32,41 @@ const INITIAL_DATA = {
     neonDrift: 0,
     hexaTron: 0,
     cyberPacman: 0
+  },
+  gameProgression: {
+    cyberSurvivors: { level: 1, xp: 0, unlockedModes: ['standard'], milestonesClaimed: [] },
+    neonDash: { level: 1, xp: 0, unlockedModes: ['standard'], milestonesClaimed: [] },
+    quantumBreaker: { level: 1, xp: 0, unlockedModes: ['standard'], milestonesClaimed: [] },
+    astroPulse: { level: 1, xp: 0, unlockedModes: ['standard'], milestonesClaimed: [] },
+    neonDrift: { level: 1, xp: 0, unlockedModes: ['standard'], milestonesClaimed: [] },
+    hexaTron: { level: 1, xp: 0, unlockedModes: ['standard'], milestonesClaimed: [] },
+    cyberPacman: { level: 1, xp: 0, unlockedModes: ['standard'], milestonesClaimed: [] }
+  },
+  recentRuns: {
+    cyberSurvivors: [],
+    neonDash: [],
+    quantumBreaker: [],
+    astroPulse: [],
+    neonDrift: [],
+    hexaTron: [],
+    cyberPacman: []
+  },
+  analytics: {
+    sessionsCount: 0,
+    totalPlayTime: 0,
+    totalScore: 0,
+    deathCauses: {},
+    upgradePicks: {},
+    gameSessions: {
+      cyberSurvivors: { runs: 0, totalScore: 0, totalTime: 0, maxScore: 0, completions: 0, abandons: 0 },
+      neonDash: { runs: 0, totalScore: 0, totalTime: 0, maxScore: 0, completions: 0, abandons: 0 },
+      quantumBreaker: { runs: 0, totalScore: 0, totalTime: 0, maxScore: 0, completions: 0, abandons: 0 },
+      astroPulse: { runs: 0, totalScore: 0, totalTime: 0, maxScore: 0, completions: 0, abandons: 0 },
+      neonDrift: { runs: 0, totalScore: 0, totalTime: 0, maxScore: 0, completions: 0, abandons: 0 },
+      hexaTron: { runs: 0, totalScore: 0, totalTime: 0, maxScore: 0, completions: 0, abandons: 0 },
+      cyberPacman: { runs: 0, totalScore: 0, totalTime: 0, maxScore: 0, completions: 0, abandons: 0 }
+    },
+    recentSessions: []
   },
   stats: {
     gamesPlayed: 0,
@@ -40,12 +88,14 @@ const INITIAL_DATA = {
   inventory: {
     trails: ['cyan'],
     themes: ['cyberpunk'],
-    mechs: ['specter']
+    mechs: ['specter'],
+    titles: ['operative']
   },
   equipped: {
     trail: 'cyan',
     theme: 'cyberpunk',
-    mech: 'specter'
+    mech: 'specter',
+    title: 'operative'
   },
   cyberLab: {
     hull: 0,       // +15 HP per level
@@ -91,7 +141,17 @@ const INITIAL_DATA = {
     bgmTrack: 'synthwave',
     announcerEnabled: true,
     reducedMotion: false,
-    haptics: true
+    haptics: true,
+    highContrast: false,
+    keyBindings: {
+      moveUp: 'KeyW',
+      moveDown: 'KeyS',
+      moveLeft: 'KeyA',
+      moveRight: 'KeyD',
+      primary: 'Space',
+      secondary: 'ShiftLeft',
+      super: 'KeyE'
+    }
   }
 };
 
@@ -179,6 +239,9 @@ class StorageManager {
       if (Array.isArray(raw.inventory.mechs)) {
         clean.inventory.mechs = Array.from(new Set([...clean.inventory.mechs, ...raw.inventory.mechs.filter(x => typeof x === 'string')]));
       }
+      if (Array.isArray(raw.inventory.titles)) {
+        clean.inventory.titles = Array.from(new Set([...clean.inventory.titles, ...raw.inventory.titles.filter(x => typeof x === 'string')]));
+      }
     }
 
     // Equipped (Strictly validated against unlocked inventory)
@@ -186,6 +249,7 @@ class StorageManager {
       if (typeof raw.equipped.trail === 'string') clean.equipped.trail = raw.equipped.trail;
       if (typeof raw.equipped.theme === 'string') clean.equipped.theme = raw.equipped.theme;
       if (typeof raw.equipped.mech === 'string') clean.equipped.mech = raw.equipped.mech;
+      if (typeof raw.equipped.title === 'string') clean.equipped.title = raw.equipped.title;
     }
     if (!clean.inventory.trails.includes(clean.equipped.trail)) {
       clean.equipped.trail = clean.inventory.trails[0] || 'cyan';
@@ -195,6 +259,66 @@ class StorageManager {
     }
     if (!clean.inventory.mechs.includes(clean.equipped.mech)) {
       clean.equipped.mech = clean.inventory.mechs[0] || 'specter';
+    }
+    if (!clean.inventory.titles.includes(clean.equipped.title)) {
+      clean.equipped.title = clean.inventory.titles[0] || 'operative';
+    }
+
+    // Game Progression (Per-Game Mastery Levels 1-10)
+    if (raw.gameProgression && typeof raw.gameProgression === 'object') {
+      for (const k of VALID_GAME_KEYS) {
+        if (raw.gameProgression[k] && typeof raw.gameProgression[k] === 'object') {
+          const p = raw.gameProgression[k];
+          clean.gameProgression[k] = {
+            level: typeof p.level === 'number' && p.level >= 1 ? Math.min(10, Math.floor(p.level)) : 1,
+            xp: typeof p.xp === 'number' && p.xp >= 0 ? Math.floor(p.xp) : 0,
+            unlockedModes: Array.isArray(p.unlockedModes) ? p.unlockedModes.filter(m => typeof m === 'string') : ['standard'],
+            milestonesClaimed: Array.isArray(p.milestonesClaimed) ? p.milestonesClaimed.filter(x => typeof x === 'number') : []
+          };
+          if (!clean.gameProgression[k].unlockedModes.includes('standard')) {
+            clean.gameProgression[k].unlockedModes.unshift('standard');
+          }
+        }
+      }
+    }
+
+    // Recent Runs (Bounded to last 10 runs per game)
+    if (raw.recentRuns && typeof raw.recentRuns === 'object') {
+      for (const k of VALID_GAME_KEYS) {
+        if (Array.isArray(raw.recentRuns[k])) {
+          clean.recentRuns[k] = raw.recentRuns[k]
+            .filter(r => r && typeof r === 'object' && typeof r.score === 'number')
+            .slice(-10);
+        }
+      }
+    }
+
+    // Analytics Telemetry (Local Only)
+    if (raw.analytics && typeof raw.analytics === 'object') {
+      clean.analytics.sessionsCount = typeof raw.analytics.sessionsCount === 'number' ? Math.max(0, raw.analytics.sessionsCount) : 0;
+      clean.analytics.totalPlayTime = typeof raw.analytics.totalPlayTime === 'number' ? Math.max(0, raw.analytics.totalPlayTime) : 0;
+      clean.analytics.totalScore = typeof raw.analytics.totalScore === 'number' ? Math.max(0, raw.analytics.totalScore) : 0;
+      if (raw.analytics.deathCauses && typeof raw.analytics.deathCauses === 'object') {
+        clean.analytics.deathCauses = { ...raw.analytics.deathCauses };
+      }
+      if (raw.analytics.upgradePicks && typeof raw.analytics.upgradePicks === 'object') {
+        clean.analytics.upgradePicks = { ...raw.analytics.upgradePicks };
+      }
+      if (raw.analytics.gameSessions && typeof raw.analytics.gameSessions === 'object') {
+        for (const k of VALID_GAME_KEYS) {
+          if (raw.analytics.gameSessions[k]) {
+            clean.analytics.gameSessions[k] = { ...clean.analytics.gameSessions[k], ...raw.analytics.gameSessions[k] };
+          }
+        }
+      }
+      if (Array.isArray(raw.analytics.recentSessions)) {
+        clean.analytics.recentSessions = raw.analytics.recentSessions.slice(-50);
+      }
+    }
+
+    // Preserve Neon Dash Replay Data
+    if (raw.neonDashReplay && typeof raw.neonDashReplay === 'object') {
+      clean.neonDashReplay = raw.neonDashReplay;
     }
 
     // Achievements
@@ -220,6 +344,10 @@ class StorageManager {
       if (typeof raw.settings.announcerEnabled === 'boolean') clean.settings.announcerEnabled = raw.settings.announcerEnabled;
       if (typeof raw.settings.reducedMotion === 'boolean') clean.settings.reducedMotion = raw.settings.reducedMotion;
       if (typeof raw.settings.haptics === 'boolean') clean.settings.haptics = raw.settings.haptics;
+      if (typeof raw.settings.highContrast === 'boolean') clean.settings.highContrast = raw.settings.highContrast;
+      if (raw.settings.keyBindings && typeof raw.settings.keyBindings === 'object') {
+        clean.settings.keyBindings = { ...clean.settings.keyBindings, ...raw.settings.keyBindings };
+      }
     }
 
     return clean;
@@ -341,9 +469,17 @@ class StorageManager {
       if (this.data.highScores[gameKey] !== undefined) {
         this.data.highScores[gameKey] = 0;
       }
+      if (this.data.recentRuns && this.data.recentRuns[gameKey]) {
+        this.data.recentRuns[gameKey] = [];
+      }
     } else {
       for (const k of Object.keys(this.data.highScores)) {
         this.data.highScores[k] = 0;
+      }
+      if (this.data.recentRuns) {
+        for (const k of Object.keys(this.data.recentRuns)) {
+          this.data.recentRuns[k] = [];
+        }
       }
     }
     this.save();
@@ -353,6 +489,7 @@ class StorageManager {
     this.data.quests = JSON.parse(JSON.stringify(INITIAL_DATA.quests));
     this.data.cyberLab = JSON.parse(JSON.stringify(INITIAL_DATA.cyberLab));
     this.data.stats = JSON.parse(JSON.stringify(INITIAL_DATA.stats));
+    this.data.gameProgression = JSON.parse(JSON.stringify(INITIAL_DATA.gameProgression));
     this.data.claimedRewards = [];
     this.save();
     if (this.onQuestUpdate) this.onQuestUpdate();
@@ -662,6 +799,230 @@ class StorageManager {
   setSetting(key, val) {
     this.data.settings[key] = val;
     this.save();
+  }
+
+  // --- GAME PROGRESSION & MASTERY ---
+
+  getGameProgression(gameKey) {
+    if (!this.data.gameProgression) {
+      this.data.gameProgression = JSON.parse(JSON.stringify(INITIAL_DATA.gameProgression));
+    }
+    if (!this.data.gameProgression[gameKey]) {
+      this.data.gameProgression[gameKey] = { level: 1, xp: 0, unlockedModes: ['standard'], milestonesClaimed: [] };
+    }
+    const prog = this.data.gameProgression[gameKey];
+    const currentLevel = Math.min(10, Math.max(1, prog.level || 1));
+    const nextLevel = Math.min(10, currentLevel + 1);
+    const currentThreshold = MASTERY_LEVEL_THRESHOLDS[currentLevel - 1] || 0;
+    const nextThreshold = MASTERY_LEVEL_THRESHOLDS[nextLevel - 1] || MASTERY_LEVEL_THRESHOLDS[MASTERY_LEVEL_THRESHOLDS.length - 1];
+    const span = Math.max(1, nextThreshold - currentThreshold);
+    const progressInLevel = Math.max(0, prog.xp - currentThreshold);
+    const progressPercent = currentLevel >= 10 ? 100 : Math.min(100, Math.floor((progressInLevel / span) * 100));
+
+    return {
+      level: currentLevel,
+      xp: prog.xp || 0,
+      currentThreshold,
+      nextThreshold,
+      progressPercent,
+      unlockedModes: prog.unlockedModes || ['standard'],
+      milestonesClaimed: prog.milestonesClaimed || []
+    };
+  }
+
+  addMasteryXp(gameKey, xpGained) {
+    if (typeof xpGained !== 'number' || xpGained <= 0) return { levelUp: false, oldLevel: 1, newLevel: 1, milestoneReward: 0 };
+    if (!this.data.gameProgression) {
+      this.data.gameProgression = JSON.parse(JSON.stringify(INITIAL_DATA.gameProgression));
+    }
+    if (!this.data.gameProgression[gameKey]) {
+      this.data.gameProgression[gameKey] = { level: 1, xp: 0, unlockedModes: ['standard'], milestonesClaimed: [] };
+    }
+    const prog = this.data.gameProgression[gameKey];
+    const oldLevel = prog.level || 1;
+    prog.xp = (prog.xp || 0) + Math.round(xpGained);
+
+    // Calculate new level from MASTERY_LEVEL_THRESHOLDS
+    let newLevel = 1;
+    for (let i = MASTERY_LEVEL_THRESHOLDS.length - 1; i >= 0; i--) {
+      if (prog.xp >= MASTERY_LEVEL_THRESHOLDS[i]) {
+        newLevel = i + 1;
+        break;
+      }
+    }
+    newLevel = Math.min(10, newLevel);
+    prog.level = newLevel;
+
+    let unlockedMode = null;
+    let milestoneReward = 0;
+
+    if (newLevel > oldLevel) {
+      // Check mode unlocks
+      if (newLevel >= 2 && !prog.unlockedModes.includes('timeAttack')) {
+        prog.unlockedModes.push('timeAttack');
+        unlockedMode = 'timeAttack';
+      }
+      if (newLevel >= 4 && !prog.unlockedModes.includes('oneLife')) {
+        prog.unlockedModes.push('oneLife');
+        unlockedMode = 'oneLife';
+      }
+      if (newLevel >= 5 && !prog.unlockedModes.includes('bossRush')) {
+        prog.unlockedModes.push('bossRush');
+        unlockedMode = 'bossRush';
+      }
+
+      // Check milestones
+      if (newLevel >= 3 && !prog.milestonesClaimed.includes(3)) {
+        prog.milestonesClaimed.push(3);
+        milestoneReward += 100;
+      }
+      if (newLevel >= 6 && !prog.milestonesClaimed.includes(6)) {
+        prog.milestonesClaimed.push(6);
+        milestoneReward += 250;
+      }
+      if (newLevel >= 10 && !prog.milestonesClaimed.includes(10)) {
+        prog.milestonesClaimed.push(10);
+        milestoneReward += 500;
+        this.unlockItem('titles', 'arcade_master');
+      }
+
+      if (milestoneReward > 0) {
+        this.addCredits(milestoneReward);
+      }
+    }
+
+    this.save();
+    return {
+      levelUp: newLevel > oldLevel,
+      oldLevel,
+      newLevel,
+      unlockedMode,
+      milestoneReward
+    };
+  }
+
+  isModeUnlocked(gameKey, mode) {
+    if (!mode || mode === 'standard') return true;
+    const prog = this.getGameProgression(gameKey);
+    return prog.unlockedModes.includes(mode);
+  }
+
+  // --- LOCAL ANALYTICS & RECENT RUNS ---
+
+  recordSessionAnalytics({ gameKey, score = 0, duration = 0, mode = 'standard', won = false, cause = 'hazard', upgradesPicked = [] }) {
+    if (!this.data.analytics) {
+      this.data.analytics = JSON.parse(JSON.stringify(INITIAL_DATA.analytics));
+    }
+    if (!this.data.recentRuns) {
+      this.data.recentRuns = JSON.parse(JSON.stringify(INITIAL_DATA.recentRuns));
+    }
+
+    const roundScore = Math.max(0, Math.floor(score));
+    const roundDuration = Math.max(0, Math.round(duration));
+
+    this.data.analytics.sessionsCount = (this.data.analytics.sessionsCount || 0) + 1;
+    this.data.analytics.totalPlayTime = (this.data.analytics.totalPlayTime || 0) + roundDuration;
+    this.data.analytics.totalScore = (this.data.analytics.totalScore || 0) + roundScore;
+
+    if (cause && typeof cause === 'string') {
+      this.data.analytics.deathCauses[cause] = (this.data.analytics.deathCauses[cause] || 0) + 1;
+    }
+
+    if (Array.isArray(upgradesPicked)) {
+      for (const u of upgradesPicked) {
+        if (typeof u === 'string') {
+          this.data.analytics.upgradePicks[u] = (this.data.analytics.upgradePicks[u] || 0) + 1;
+        }
+      }
+    }
+
+    if (gameKey && this.data.analytics.gameSessions && this.data.analytics.gameSessions[gameKey]) {
+      const gs = this.data.analytics.gameSessions[gameKey];
+      gs.runs = (gs.runs || 0) + 1;
+      gs.totalScore = (gs.totalScore || 0) + roundScore;
+      gs.totalTime = (gs.totalTime || 0) + roundDuration;
+      gs.maxScore = Math.max(gs.maxScore || 0, roundScore);
+      if (won) gs.completions = (gs.completions || 0) + 1;
+      if (cause === 'abandon') gs.abandons = (gs.abandons || 0) + 1;
+    }
+
+    const sessionEntry = {
+      gameKey,
+      score: roundScore,
+      duration: roundDuration,
+      mode,
+      won: !!won,
+      cause: cause || 'hazard',
+      date: Date.now()
+    };
+
+    if (!Array.isArray(this.data.analytics.recentSessions)) {
+      this.data.analytics.recentSessions = [];
+    }
+    this.data.analytics.recentSessions.push(sessionEntry);
+    if (this.data.analytics.recentSessions.length > 50) {
+      this.data.analytics.recentSessions = this.data.analytics.recentSessions.slice(-50);
+    }
+
+    if (gameKey && Array.isArray(this.data.recentRuns[gameKey])) {
+      this.data.recentRuns[gameKey].push({
+        score: roundScore,
+        duration: roundDuration,
+        date: Date.now(),
+        mode
+      });
+      if (this.data.recentRuns[gameKey].length > 10) {
+        this.data.recentRuns[gameKey] = this.data.recentRuns[gameKey].slice(-10);
+      }
+    }
+
+    this.save();
+  }
+
+  getRecentRuns(gameKey) {
+    if (!this.data.recentRuns || !Array.isArray(this.data.recentRuns[gameKey])) {
+      return [];
+    }
+    return [...this.data.recentRuns[gameKey]];
+  }
+
+  getAnalyticsSummary() {
+    const a = this.data.analytics || INITIAL_DATA.analytics;
+    const totalSessions = a.sessionsCount || 0;
+    const avgDuration = totalSessions > 0 ? Math.round(a.totalPlayTime / totalSessions) : 0;
+    const avgScore = totalSessions > 0 ? Math.round(a.totalScore / totalSessions) : 0;
+
+    let totalWins = 0;
+    let totalAbandons = 0;
+    for (const gs of Object.values(a.gameSessions || {})) {
+      totalWins += gs.completions || 0;
+      totalAbandons += gs.abandons || 0;
+    }
+    const completionRate = totalSessions > 0 ? Math.round((totalWins / totalSessions) * 100) : 0;
+
+    // Death causes sorted by frequency
+    const deathCausesSorted = Object.entries(a.deathCauses || {})
+      .map(([cause, count]) => ({ cause, count }))
+      .sort((x, y) => y.count - x.count);
+
+    // Top upgrades sorted by pick count
+    const topUpgradesSorted = Object.entries(a.upgradePicks || {})
+      .map(([upgrade, count]) => ({ upgrade, count }))
+      .sort((x, y) => y.count - x.count);
+
+    return {
+      totalSessions,
+      totalPlayTime: a.totalPlayTime || 0,
+      totalScore: a.totalScore || 0,
+      avgDuration,
+      avgScore,
+      totalWins,
+      totalAbandons,
+      completionRate,
+      deathCausesSorted,
+      topUpgradesSorted,
+      gameSessions: a.gameSessions || {}
+    };
   }
 }
 

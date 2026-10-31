@@ -8,6 +8,9 @@
   <link rel="stylesheet" href="./src/style.css">
 </head>
 <body class="theme-cyberpunk">
+  <!-- Smooth Arcade Loading Transition Curtain -->
+  <div class="arcade-curtain" id="arcade-curtain"></div>
+
   <!-- CRT Scanlines Overlay -->
   <div class="crt-overlay" id="crt-overlay"></div>
 
@@ -49,6 +52,10 @@
 
       <button class="control-btn" id="btn-toggle-crt" title="Toggle Retro CRT Scanlines">
         📺 CRT: ON
+      </button>
+
+      <button class="control-btn" id="btn-toggle-highcontrast" title="Toggle High-Contrast Accessibility Mode">
+        👁️ Contrast
       </button>
 
       <button class="control-btn" id="btn-open-profile" title="Global Player Profile & Save Management">
@@ -632,15 +639,35 @@
         </div>
       </div>
 
+      <!-- Performance History Trend Chart -->
+      <div style="display: flex; justify-content: space-between; align-items: center; margin: 12px 0 6px 0;">
+        <h3 style="font-size: 0.95rem; color: #00f3ff; text-transform: uppercase; letter-spacing: 1px; margin: 0;">📈 Performance History Trend</h3>
+        <select id="profile-history-game-select" style="background: rgba(0,0,0,0.6); color: #00f3ff; border: 1px solid rgba(0,243,255,0.4); border-radius: 4px; padding: 2px 8px; font-size: 0.75rem;">
+          <option value="cyberSurvivors">Cyber Survivors</option>
+          <option value="neonDash">Neon Dash</option>
+          <option value="quantumBreaker">Quantum Breaker</option>
+          <option value="astroPulse">Astro Pulse</option>
+          <option value="neonDrift">Neon Drift</option>
+          <option value="hexaTron">Hexa-Tron</option>
+          <option value="cyberPacman">Cyber Pacman</option>
+        </select>
+      </div>
+      <canvas id="profile-history-canvas" width="600" height="95" style="width: 100%; height: 95px; background: rgba(0,0,0,0.5); border: 1px solid rgba(0,243,255,0.25); border-radius: 6px; margin-bottom: 14px;"></canvas>
+
+      <!-- Game Mastery Progression Grid -->
+      <h3 style="font-size: 0.95rem; color: #ffe600; margin: 12px 0 8px 0; text-transform: uppercase; letter-spacing: 1px;">⭐ Game Mastery Progression (Lv 1-10)</h3>
+      <div id="profile-mastery-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; margin-bottom: 18px;"></div>
+
       <!-- Sector High Scores Mini-Table -->
       <h3 style="font-size: 0.95rem; color: #00f3ff; margin: 12px 0 8px 0; text-transform: uppercase; letter-spacing: 1px;">Sector Personal Bests</h3>
-      <div id="profile-scores-table" style="max-height: 140px; overflow-y: auto; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; margin-bottom: 18px; padding: 6px 12px;"></div>
+      <div id="profile-scores-table" style="max-height: 120px; overflow-y: auto; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; margin-bottom: 18px; padding: 6px 12px;"></div>
 
       <!-- Save Management Operations -->
-      <h3 style="font-size: 0.95rem; color: #ffe600; margin: 12px 0 8px 0; text-transform: uppercase; letter-spacing: 1px;">💾 Save Data & Reset Controls</h3>
+      <h3 style="font-size: 0.95rem; color: #ffe600; margin: 12px 0 8px 0; text-transform: uppercase; letter-spacing: 1px;">💾 Save Data & Telemetry Controls</h3>
       <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px;">
         <button class="control-btn" id="btn-export-save">📥 Export Save</button>
         <button class="control-btn" id="btn-open-import-modal">📤 Import Save</button>
+        <button class="control-btn" id="btn-open-analytics" style="color: #00f3ff;">📊 Analytics</button>
         <button class="control-btn" id="btn-reset-scores" style="color: #ffaa00;">🔄 Reset Scores</button>
         <button class="control-btn" id="btn-reset-progression" style="color: #ff5555;">⚠️ Reset Progress</button>
         <button class="control-btn" id="btn-reset-all" style="color: #ff0055;">💣 Factory Reset</button>
@@ -706,6 +733,69 @@
       <div class="modal-actions" style="margin-top: 20px;">
         <button class="play-btn gold" id="btn-start-tournament">🏆 Enter Tournament</button>
         <button class="control-btn" id="btn-close-tournament">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Developer Telemetry & Analytics Modal -->
+  <div class="modal-overlay" id="modal-analytics">
+    <div class="modal-box" style="max-width: 680px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+        <h2 class="modal-title cyan" style="margin: 0;">📊 DEVELOPER ANALYTICS</h2>
+        <span class="status-indicator" style="color: #00f3ff; font-weight: bold; border: 1px solid #00f3ff; padding: 2px 8px; border-radius: 4px;">LOCAL ONLY</span>
+      </div>
+      <p class="modal-subtitle">Internal gameplay balance telemetry: session durations, scores, win rates and upgrade distribution.</p>
+
+      <!-- Aggregate Metrics Grid -->
+      <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 16px;">
+        <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 6px; padding: 10px; text-align: center;">
+          <div style="font-size: 0.72rem; color: #94a3b8;">AVG DURATION</div>
+          <div id="analytics-stat-avg-duration" style="font-size: 1.25rem; font-weight: bold; color: #00f3ff; margin-top: 4px;">0s</div>
+        </div>
+        <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 6px; padding: 10px; text-align: center;">
+          <div style="font-size: 0.72rem; color: #94a3b8;">AVG SCORE</div>
+          <div id="analytics-stat-avg-score" style="font-size: 1.25rem; font-weight: bold; color: #ffe600; margin-top: 4px;">0</div>
+        </div>
+        <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 6px; padding: 10px; text-align: center;">
+          <div style="font-size: 0.72rem; color: #94a3b8;">COMPLETION RATE</div>
+          <div id="analytics-stat-win-rate" style="font-size: 1.25rem; font-weight: bold; color: #00ff88; margin-top: 4px;">0%</div>
+        </div>
+        <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 6px; padding: 10px; text-align: center;">
+          <div style="font-size: 0.72rem; color: #94a3b8;">TOTAL RUNS</div>
+          <div id="analytics-stat-total-runs" style="font-size: 1.25rem; font-weight: bold; color: #ff007f; margin-top: 4px;">0</div>
+        </div>
+      </div>
+
+      <!-- Death Causes and Top Upgrades Breakdown -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+        <div>
+          <h4 style="font-size: 0.85rem; color: #ff0055; margin-bottom: 6px; text-transform: uppercase;">Top Hazard Causes</h4>
+          <div id="analytics-death-causes" style="max-height: 130px; overflow-y: auto; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; padding: 6px 10px; font-size: 0.8rem; font-family: monospace;"></div>
+        </div>
+        <div>
+          <h4 style="font-size: 0.85rem; color: #00f3ff; margin-bottom: 6px; text-transform: uppercase;">Upgrade Pick Distribution</h4>
+          <div id="analytics-upgrade-picks" style="max-height: 130px; overflow-y: auto; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; padding: 6px 10px; font-size: 0.8rem; font-family: monospace;"></div>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button class="play-btn" id="btn-close-analytics">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Challenge Mode Selection Modal -->
+  <div class="modal-overlay" id="modal-challenge-mode">
+    <div class="modal-box" style="max-width: 580px;">
+      <h2 class="modal-title gold" id="challenge-game-title">SELECT CHALLENGE MODE</h2>
+      <p class="modal-subtitle">Choose your battle conditions. Higher mastery unlocks specialized endurance rules!</p>
+      
+      <div id="challenge-modes-list" style="display: flex; flex-direction: column; gap: 10px; margin: 18px 0;">
+        <!-- Dynamic Challenge Mode Cards -->
+      </div>
+
+      <div class="modal-actions">
+        <button class="control-btn" id="btn-cancel-challenge-mode">Cancel</button>
       </div>
     </div>
   </div>

@@ -335,20 +335,58 @@ export class CyberSurvivorsGame {
 
       if (dsq > 0) {
         const dist = Math.sqrt(dsq);
-        e.x += (edx / dist) * e.speed * dt;
-        e.y += (edy / dist) * e.speed * dt;
+        let moveAngle = Math.atan2(edy, edx);
+
+        // Advanced AI: Pincer flanking for rushers, cloaking dash for phantoms
+        if (e.type === 'rusher') {
+          // Arc around player's flanks
+          const flankOffset = Math.sin(this.gameTime * 2.5 + i) * 0.45;
+          moveAngle += flankOffset;
+        } else if (e.type === 'phantom') {
+          // Stealth cloaking & burst dash when within range
+          if (dist < 180) {
+            e.isDashing = true;
+            e.alpha = 1.0;
+            e.currentSpeed = e.speed * 1.5;
+          } else {
+            e.isDashing = false;
+            e.alpha = 0.25 + 0.25 * Math.sin(this.gameTime * 3);
+            e.currentSpeed = e.speed;
+          }
+        }
+
+        const effectiveSpeed = e.currentSpeed || e.speed;
+        e.x += Math.cos(moveAngle) * effectiveSpeed * dt;
+        e.y += Math.sin(moveAngle) * effectiveSpeed * dt;
 
         if (e.isBoss) {
           e.shootTimer = (e.shootTimer || 0) + dt;
+          e.shieldCycle = (e.shieldCycle || 0) + dt;
+
+          const isEnraged = e.hp < (e.maxHp * 0.5);
+          // Phase 2 Enraged Vulnerability Cycle: 3.5s shielded, 2.5s vulnerable
+          if (isEnraged) {
+            const cyclePos = e.shieldCycle % 6.0;
+            e.isVulnerable = cyclePos >= 3.5;
+          } else {
+            e.isVulnerable = true;
+          }
+
+          // Telegraphing attack 1s prior to blast
+          e.isTelegraphing = (e.shootTimer >= 2.0 && e.shootTimer < 3.0);
+          e.telegraphAngle = Math.atan2(this.player.y - e.y, this.player.x - e.x);
+
           if (e.shootTimer >= 3.0) {
             e.shootTimer = 0;
+            e.isTelegraphing = false;
             this.bossRingAttack(e);
           }
         }
 
         const hitDist = this.player.radius + e.radius;
         if (dsq < hitDist * hitDist) {
-          this.hitPlayer(e.damage || 15);
+          const dmg = (e.damage || 15) * (this.player.damageTakenMultiplier || 1.0);
+          this.hitPlayer(dmg);
         }
       }
     }
@@ -738,16 +776,32 @@ export class CyberSurvivorsGame {
   }
 
   hitEnemy(enemy, index, damage) {
-    enemy.hp -= damage;
-    this.particles.addFloatingText(`-${Math.floor(damage)}`, enemy.x, enemy.y - 10, {
-      color: '#fff',
-      size: 13,
+    let actualDamage = damage;
+    if (enemy.isBoss) {
+      if (enemy.isVulnerable === false) {
+        actualDamage *= 0.3; // Deflected by shield
+        this.particles.burst(enemy.x, enemy.y, 4, { color: '#00f0ff', life: 0.15 });
+      } else if (enemy.hp < (enemy.maxHp * 0.5)) {
+        actualDamage *= 1.4; // Critical weak point hit!
+      }
+    }
+
+    enemy.hp -= actualDamage;
+    this.particles.addFloatingText(`-${Math.floor(actualDamage)}`, enemy.x, enemy.y - 10, {
+      color: enemy.isBoss && !enemy.isVulnerable ? '#00f0ff' : '#fff',
+      size: actualDamage > damage ? 15 : 13,
       duration: 0.35
     });
 
     if (enemy.hp <= 0) {
       this.kills++;
       storage.recordEnemiesKilled(1);
+
+      // Nanite Siphon heal on kill
+      if (this.player.hasVampiricSiphon && Math.random() < 0.15) {
+        this.player.hp = Math.min(this.player.maxHp, this.player.hp + 2);
+        this.particles.addFloatingText('+2', this.player.x, this.player.y - 15, { color: '#00ff88', size: 12 });
+      }
 
       // Charge super meter
       this.superCharge = Math.min(this.superMax, this.superCharge + (enemy.isBoss ? 50 : (enemy.type === 'brute' ? 8 : 3)));
@@ -871,15 +925,18 @@ export class CyberSurvivorsGame {
 
   presentUpgradeChoices() {
     const allUpgrades = [
-      { id: 'blaster', title: 'Laser Volley', desc: 'Add +1 laser bolt & increase firing speed', icon: '⚡' },
-      { id: 'frost', title: 'Frost Nova', desc: 'Periodic sub-zero blast that freezes & shatters drones', icon: '❄️' },
-      { id: 'railgun', title: 'Plasma Railgun', desc: 'Devastating piercing laser beam that cuts through all lines', icon: '☄️' },
-      { id: 'orbs', title: 'Orbital Plasma', desc: 'Add spinning plasma shield orb around player', icon: '🪐' },
-      { id: 'lightning', title: 'Chain Lightning', desc: 'Call down storm arcs that fry groups of drones', icon: '🌩️' },
-      { id: 'shield', title: 'Energy Barrier', desc: 'Absorbs 40 damage and auto-recharges over time', icon: '🛡️' },
-      { id: 'speed', title: 'Thruster Boost', desc: 'Increase movement speed by +20%', icon: '🚀' },
-      { id: 'magnet', title: 'Quantum Magnet', desc: 'Expand gem attraction range by +50%', icon: '🧲' },
-      { id: 'heal', title: 'Emergency Repair', desc: 'Instantly restore +50 HP and increase Max HP', icon: '❤️' }
+      { id: 'blaster', title: `Laser Volley (Lvl ${this.player.blasterLevel} → ${this.player.blasterLevel + 1})`, desc: 'Add +1 laser bolt & increase firing speed. [⚡ Synergy with Orbs]', icon: '⚡' },
+      { id: 'frost', title: `Frost Nova (Lvl ${this.player.frostLevel || 0} → ${(this.player.frostLevel || 0) + 1})`, desc: 'Periodic blast freezing & shattering drones. [❄️ Synergy with Lightning]', icon: '❄️' },
+      { id: 'railgun', title: `Plasma Railgun (Lvl ${this.player.railgunLevel || 0} → ${(this.player.railgunLevel || 0) + 1})`, desc: 'Devastating piercing laser beam cutting through swarms.', icon: '☄️' },
+      { id: 'orbs', title: `Orbital Plasma (Lvl ${this.player.orbsCount} → ${Math.min(6, this.player.orbsCount + 1)})`, desc: 'Add spinning plasma shield orb around player. [🪐 Synergy with Blaster]', icon: '🪐' },
+      { id: 'lightning', title: `Chain Lightning (Lvl ${this.player.lightningLevel} → ${this.player.lightningLevel + 1})`, desc: 'Call down storm arcs frying swarms. [🌩️ Synergy with Frost]', icon: '🌩️' },
+      { id: 'shield', title: `Energy Barrier (Lvl ${this.player.shieldLevel} → ${this.player.shieldLevel + 1})`, desc: 'Absorbs damage and auto-recharges over time.', icon: '🛡️' },
+      { id: 'speed', title: 'Thruster Boost', desc: 'Increase movement speed by +20%.', icon: '🚀' },
+      { id: 'magnet', title: 'Quantum Magnet', desc: 'Expand gem attraction range by +50%.', icon: '🧲' },
+      { id: 'heal', title: 'Emergency Repair', desc: 'Instantly restore +50 HP and increase Max HP by +25.', icon: '❤️' },
+      { id: 'heavy_plating', title: 'Heavy Plating [Trade-Off]', desc: 'Trade-off: +50 Max HP and heal to full, but -12% Movement Speed.', icon: '🛡️⚖️', isTradeOff: true },
+      { id: 'overclock', title: 'Core Overclock [Trade-Off]', desc: 'Trade-off: +35% Weapons Fire Rate, but +15% Damage Taken.', icon: '⚡⚖️', isTradeOff: true },
+      { id: 'vampiric_siphon', title: 'Nanite Siphon [Trade-Off]', desc: 'Trade-off: Defeated drones have 15% chance to heal 2 HP, but -15 Max HP.', icon: '🩸⚖️', isTradeOff: true }
     ];
 
     // Check weapon evolution prerequisites
@@ -957,6 +1014,21 @@ export class CyberSurvivorsGame {
     } else if (id === 'heal') {
       this.player.maxHp += 25;
       this.player.hp = Math.min(this.player.maxHp, this.player.hp + 50);
+    } else if (id === 'heavy_plating') {
+      this.player.maxHp += 50;
+      this.player.hp = this.player.maxHp;
+      this.player.speed *= 0.88;
+      this.particles.addFloatingText('+50 HP / -12% SPEED', this.player.x, this.player.y - 25, { color: '#00ff88', size: 16 });
+    } else if (id === 'overclock') {
+      this.player.blasterCooldown *= 0.65;
+      this.player.lightningCooldown *= 0.65;
+      this.player.damageTakenMultiplier = (this.player.damageTakenMultiplier || 1.0) * 1.15;
+      this.particles.addFloatingText('FIRE RATE +35% / DMG TAKEN +15%', this.player.x, this.player.y - 25, { color: '#ffe600', size: 16 });
+    } else if (id === 'vampiric_siphon') {
+      this.player.hasVampiricSiphon = true;
+      this.player.maxHp = Math.max(30, this.player.maxHp - 15);
+      this.player.hp = Math.min(this.player.hp, this.player.maxHp);
+      this.particles.addFloatingText('NANITE SIPHON ON / -15 MAX HP', this.player.x, this.player.y - 25, { color: '#ff007f', size: 16 });
     }
   }
 
@@ -1086,15 +1158,47 @@ export class CyberSurvivorsGame {
     // 5. Enemies
     for (let i = 0; i < this.enemies.length; i++) {
       const e = this.enemies[i];
+      ctx.save();
+      if (e.type === 'phantom') {
+        ctx.globalAlpha = typeof e.alpha === 'number' ? e.alpha : 1.0;
+      }
       ctx.fillStyle = e.frozenTimer > 0 ? '#00f3ff' : e.color;
 
       if (e.isBoss) {
+        // Telegraphing warning line
+        if (e.isTelegraphing) {
+          ctx.save();
+          ctx.strokeStyle = 'rgba(255, 0, 85, 0.6)';
+          ctx.lineWidth = 2 + Math.sin(Date.now() / 60) * 1.5;
+          ctx.setLineDash([8, 6]);
+          ctx.beginPath();
+          ctx.moveTo(e.x, e.y);
+          ctx.lineTo(this.player.x, this.player.y);
+          ctx.stroke();
+          ctx.restore();
+        }
+
         ctx.beginPath();
         ctx.arc(e.x, e.y, e.radius, 0, Math.PI * 2);
         ctx.fill();
         ctx.strokeStyle = '#ffd700';
         ctx.lineWidth = 3;
         ctx.stroke();
+
+        // Boss Shield / Vulnerability Indicator
+        if (e.isVulnerable === false) {
+          ctx.strokeStyle = '#00f0ff';
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.arc(e.x, e.y, e.radius + 8, 0, Math.PI * 2);
+          ctx.stroke();
+        } else if (e.hp < (e.maxHp * 0.5)) {
+          ctx.strokeStyle = '#ff003c';
+          ctx.lineWidth = 2 + Math.sin(Date.now() / 80) * 1.5;
+          ctx.beginPath();
+          ctx.arc(e.x, e.y, e.radius + 6, 0, Math.PI * 2);
+          ctx.stroke();
+        }
 
         // Pulsing core
         ctx.fillStyle = '#ffffff';
@@ -1103,20 +1207,21 @@ export class CyberSurvivorsGame {
         ctx.fill();
 
         // Boss Health Bar & Title
-        const barWidth = 140;
+        const barWidth = 160;
         const hpPercent = Math.max(0, e.hp / e.maxHp);
         ctx.fillStyle = 'rgba(0,0,0,0.75)';
-        ctx.fillRect(e.x - barWidth / 2, e.y - e.radius - 20, barWidth, 7);
-        ctx.fillStyle = '#ff003c';
-        ctx.fillRect(e.x - barWidth / 2, e.y - e.radius - 20, barWidth * hpPercent, 7);
+        ctx.fillRect(e.x - barWidth / 2, e.y - e.radius - 22, barWidth, 8);
+        ctx.fillStyle = e.hp < (e.maxHp * 0.5) ? '#ff003c' : '#ffaa00';
+        ctx.fillRect(e.x - barWidth / 2, e.y - e.radius - 22, barWidth * hpPercent, 8);
         ctx.strokeStyle = '#ffd700';
         ctx.lineWidth = 1;
-        ctx.strokeRect(e.x - barWidth / 2, e.y - e.radius - 20, barWidth, 7);
+        ctx.strokeRect(e.x - barWidth / 2, e.y - e.radius - 22, barWidth, 8);
 
         ctx.fillStyle = '#ffd700';
         ctx.font = 'bold 10px sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText('MEGA DREADNOUGHT', e.x, e.y - e.radius - 24);
+        const phaseText = e.hp < (e.maxHp * 0.5) ? (e.isVulnerable ? '⚡ WEAK POINT EXPOSED!' : '🛡️ SHIELD RECHARGING') : 'PHASE 1: ASSAULT';
+        ctx.fillText(`MEGA DREADNOUGHT • ${phaseText}`, e.x, e.y - e.radius - 26);
       } else if (e.type === 'brute') {
         ctx.fillRect(e.x - e.radius, e.y - e.radius, e.radius * 2, e.radius * 2);
       } else {
@@ -1128,6 +1233,7 @@ export class CyberSurvivorsGame {
         ctx.closePath();
         ctx.fill();
       }
+      ctx.restore();
     }
 
     // 6. Player

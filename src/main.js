@@ -386,6 +386,59 @@ class ArcadeApp {
       this.btnCrt.textContent = `📺 CRT: ${isOff ? 'OFF' : 'ON'}`;
     });
 
+    // High Contrast Accessibility Toggle
+    const btnHighContrast = document.getElementById('btn-toggle-highcontrast');
+    const applyHighContrast = (enabled) => {
+      document.body.classList.toggle('theme-highcontrast', enabled);
+      if (btnHighContrast) {
+        btnHighContrast.textContent = enabled ? '👁️ Contrast: ON' : '👁️ Contrast: OFF';
+      }
+      storage.setSetting('highContrast', enabled);
+    };
+    applyHighContrast(storage.getSetting('highContrast') || false);
+    if (btnHighContrast) {
+      btnHighContrast.addEventListener('click', () => {
+        sound.init();
+        const current = storage.getSetting('highContrast') || false;
+        applyHighContrast(!current);
+      });
+    }
+
+    // Developer Analytics Modal
+    const btnAnalytics = document.getElementById('btn-open-analytics');
+    const btnCloseAnalytics = document.getElementById('btn-close-analytics');
+    const modalAnalytics = document.getElementById('modal-analytics');
+    if (btnAnalytics) {
+      btnAnalytics.addEventListener('click', () => {
+        sound.init();
+        this.renderAnalyticsModal();
+        if (modalAnalytics) modalAnalytics.style.display = 'flex';
+      });
+    }
+    if (btnCloseAnalytics && modalAnalytics) {
+      btnCloseAnalytics.addEventListener('click', () => {
+        modalAnalytics.style.display = 'none';
+      });
+    }
+
+    // Challenge Mode Modal Cancel
+    const btnCancelChallenge = document.getElementById('btn-cancel-challenge-mode');
+    const modalChallenge = document.getElementById('modal-challenge-mode');
+    if (btnCancelChallenge && modalChallenge) {
+      btnCancelChallenge.addEventListener('click', () => {
+        modalChallenge.style.display = 'none';
+      });
+    }
+
+    // Player Profile History Game Selector
+    const historySelect = document.getElementById('profile-history-game-select');
+    if (historySelect) {
+      historySelect.addEventListener('change', (e) => {
+        this.selectedHistoryGame = e.target.value;
+        this.renderHistoryChart(this.selectedHistoryGame);
+      });
+    }
+
     // Cyber Armory Shop
     const openArmory = () => {
       sound.init();
@@ -534,10 +587,17 @@ class ArcadeApp {
       });
     }
 
-    // Cyber Survivors Mech Chooser
-    document.getElementById('btn-play-survivors').addEventListener('click', () => {
-      this.modalMechSelect.style.display = 'flex';
-    });
+    // Play Buttons for all 7 games (with Challenge Mode Selector)
+    document.getElementById('btn-play-survivors').addEventListener('click', () => this.openChallengeModePicker('cyberSurvivors'));
+    document.getElementById('btn-play-dash').addEventListener('click', () => this.openChallengeModePicker('neonDash'));
+    document.getElementById('btn-play-breaker').addEventListener('click', () => this.openChallengeModePicker('quantumBreaker'));
+    document.getElementById('btn-play-shmup').addEventListener('click', () => this.openChallengeModePicker('astroPulse'));
+    const btnPlayDrift = document.getElementById('btn-play-drift');
+    if (btnPlayDrift) btnPlayDrift.addEventListener('click', () => this.openChallengeModePicker('neonDrift'));
+    const btnPlayTron = document.getElementById('btn-play-tron');
+    if (btnPlayTron) btnPlayTron.addEventListener('click', () => this.openChallengeModePicker('hexaTron'));
+    const btnPlayPacman = document.getElementById('btn-play-pacman');
+    if (btnPlayPacman) btnPlayPacman.addEventListener('click', () => this.openChallengeModePicker('cyberPacman'));
 
     document.querySelectorAll('.mech-card').forEach(card => {
       card.addEventListener('click', () => {
@@ -550,24 +610,12 @@ class ArcadeApp {
 
     this.btnLaunchMech.addEventListener('click', () => {
       this.modalMechSelect.style.display = 'none';
-      this.launchGame('cyberSurvivors', this.selectedMech);
+      this.launchGame('cyberSurvivors', this.selectedMech, this.pendingMode || 'standard');
     });
 
     this.btnCancelMech.addEventListener('click', () => {
       this.modalMechSelect.style.display = 'none';
     });
-
-    // Play Buttons for other games
-    document.getElementById('btn-play-dash').addEventListener('click', () => this.launchGame('neonDash'));
-    document.getElementById('btn-play-breaker').addEventListener('click', () => this.launchGame('quantumBreaker'));
-    document.getElementById('btn-play-shmup').addEventListener('click', () => this.launchGame('astroPulse'));
-    const btnPlayDrift = document.getElementById('btn-play-drift');
-    if (btnPlayDrift) btnPlayDrift.addEventListener('click', () => this.launchGame('neonDrift'));
-    const btnPlayTron = document.getElementById('btn-play-tron');
-    if (btnPlayTron) btnPlayTron.addEventListener('click', () => this.launchGame('hexaTron'));
-
-    const btnPlayPacman = document.getElementById('btn-play-pacman');
-    if (btnPlayPacman) btnPlayPacman.addEventListener('click', () => this.launchGame('cyberPacman'));
 
     // Navigation & Pause
     this.btnHomeLogo.addEventListener('click', () => this.returnToHub());
@@ -644,6 +692,11 @@ class ArcadeApp {
 
     window.addEventListener('keydown', (e) => {
       this.keyboardHeldKeys.add(e.code);
+      if (e.code === 'F9' || (e.ctrlKey && e.shiftKey && e.code === 'KeyD')) {
+        e.preventDefault();
+        this.toggleAnalyticsModal();
+        return;
+      }
       if (shouldCaptureKey(e)) e.preventDefault();
       if (e.code === 'Escape' || e.code === 'KeyP') {
         if (this.activeGame && this.activeGame.isRunning) {
@@ -1466,6 +1519,246 @@ class ArcadeApp {
         </div>
       `).join('');
     }
+
+    // Render Game Mastery Progress Grid (Levels 1-10)
+    const masteryGrid = document.getElementById('profile-mastery-grid');
+    if (masteryGrid) {
+      const games = ['cyberSurvivors', 'neonDash', 'quantumBreaker', 'astroPulse', 'neonDrift', 'hexaTron', 'cyberPacman'];
+      const gameIcons = { cyberSurvivors: '🛸', neonDash: '🚀', quantumBreaker: '💥', astroPulse: '🌠', neonDrift: '🏎️', hexaTron: '🏍️', cyberPacman: '👾' };
+      masteryGrid.innerHTML = games.map(k => {
+        const prog = storage.getGameProgression(k);
+        const meta = getGameMeta(k);
+        return `
+          <div style="background: rgba(15,23,42,0.7); border: 1px solid rgba(0,243,255,0.2); border-radius: 6px; padding: 8px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.75rem;">
+              <span style="color:#fff; font-weight:bold;">${gameIcons[k]} ${meta ? meta.title : k}</span>
+              <span style="color:#ffe600; font-weight:bold;">LV ${prog.level}</span>
+            </div>
+            <div style="height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; margin: 6px 0 4px 0; overflow: hidden;">
+              <div style="height: 100%; width: ${prog.progressPercent}%; background: linear-gradient(90deg, #00f3ff, #ffe600); border-radius: 3px;"></div>
+            </div>
+            <div style="display:flex; justify-content:space-between; font-size:0.65rem; color:#94a3b8;">
+              <span>${prog.xp} XP</span>
+              <span>${prog.progressPercent}%</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Render Performance Trend Line
+    this.renderHistoryChart(this.selectedHistoryGame || 'cyberSurvivors');
+  }
+
+  renderHistoryChart(gameKey) {
+    const canvas = document.getElementById('profile-history-canvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width;
+    const h = canvas.height;
+    ctx.clearRect(0, 0, w, h);
+
+    const runs = storage.getRecentRuns(gameKey);
+    if (!runs || runs.length === 0) {
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '12px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('NO RECENT RUNS RECORDED YET • PLAY A SESSION TO TRACK PERFORMANCE', w / 2, h / 2 + 4);
+      return;
+    }
+
+    const scores = runs.map(r => r.score);
+    const maxScore = Math.max(1, ...scores);
+    const minScore = Math.min(...scores);
+
+    // Draw horizontal grid lines
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+    ctx.lineWidth = 1;
+    for (let y = 15; y < h; y += 25) {
+      ctx.beginPath();
+      ctx.moveTo(35, y);
+      ctx.lineTo(w - 15, y);
+      ctx.stroke();
+    }
+
+    const paddingLeft = 40;
+    const paddingRight = 20;
+    const paddingTop = 15;
+    const paddingBottom = 18;
+    const plotW = w - paddingLeft - paddingRight;
+    const plotH = h - paddingTop - paddingBottom;
+
+    const points = scores.map((s, idx) => {
+      const x = scores.length === 1 ? paddingLeft + plotW / 2 : paddingLeft + (idx / (scores.length - 1)) * plotW;
+      const y = paddingTop + plotH - ((s - minScore) / Math.max(1, maxScore - minScore)) * (plotH - 10);
+      return { x, y, score: s };
+    });
+
+    // Draw glow line
+    ctx.strokeStyle = '#00f3ff';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    points.forEach((p, idx) => {
+      if (idx === 0) ctx.moveTo(p.x, p.y);
+      else ctx.lineTo(p.x, p.y);
+    });
+    ctx.stroke();
+
+    // Fill area under curve
+    ctx.fillStyle = 'rgba(0, 243, 255, 0.12)';
+    ctx.lineTo(points[points.length - 1].x, h - paddingBottom);
+    ctx.lineTo(points[0].x, h - paddingBottom);
+    ctx.closePath();
+    ctx.fill();
+
+    // Draw score nodes
+    points.forEach((p, idx) => {
+      ctx.fillStyle = '#00f3ff';
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 3.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      if (idx === 0 || idx === points.length - 1 || p.score === maxScore) {
+        ctx.fillStyle = '#ffe600';
+        ctx.font = 'bold 9px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(`${p.score}`, p.x, p.y - 6);
+      }
+    });
+  }
+
+  toggleAnalyticsModal() {
+    const modal = document.getElementById('modal-analytics');
+    if (!modal) return;
+    if (modal.style.display === 'flex') {
+      modal.style.display = 'none';
+    } else {
+      this.renderAnalyticsModal();
+      modal.style.display = 'flex';
+    }
+  }
+
+  renderAnalyticsModal() {
+    const summary = storage.getAnalyticsSummary();
+    const elAvgDur = document.getElementById('analytics-stat-avg-duration');
+    const elAvgScore = document.getElementById('analytics-stat-avg-score');
+    const elWinRate = document.getElementById('analytics-stat-win-rate');
+    const elTotalRuns = document.getElementById('analytics-stat-total-runs');
+    const elHazards = document.getElementById('analytics-death-causes');
+    const elUpgrades = document.getElementById('analytics-upgrade-picks');
+
+    if (elAvgDur) elAvgDur.textContent = `${summary.avgDuration}s`;
+    if (elAvgScore) elAvgScore.textContent = summary.avgScore.toLocaleString();
+    if (elWinRate) elWinRate.textContent = `${summary.completionRate}%`;
+    if (elTotalRuns) elTotalRuns.textContent = summary.totalSessions.toLocaleString();
+
+    if (elHazards) {
+      if (summary.deathCausesSorted.length === 0) {
+        elHazards.innerHTML = '<span style="color:#64748b;">No hazard telemetries logged</span>';
+      } else {
+        elHazards.innerHTML = summary.deathCausesSorted.map(d => `
+          <div style="display:flex; justify-content:space-between; padding:2px 0;">
+            <span style="color:#f87171;">${d.cause}</span>
+            <span style="color:#cbd5e1; font-weight:bold;">${d.count}x</span>
+          </div>
+        `).join('');
+      }
+    }
+
+    if (elUpgrades) {
+      if (summary.topUpgradesSorted.length === 0) {
+        elUpgrades.innerHTML = '<span style="color:#64748b;">No upgrade picks logged</span>';
+      } else {
+        elUpgrades.innerHTML = summary.topUpgradesSorted.map(u => `
+          <div style="display:flex; justify-content:space-between; padding:2px 0;">
+            <span style="color:#38bdf8;">${u.upgrade}</span>
+            <span style="color:#cbd5e1; font-weight:bold;">${u.count} picks</span>
+          </div>
+        `).join('');
+      }
+    }
+  }
+
+  openChallengeModePicker(gameKey) {
+    const modal = document.getElementById('modal-challenge-mode');
+    const list = document.getElementById('challenge-modes-list');
+    const title = document.getElementById('challenge-game-title');
+    if (!modal || !list) {
+      this.launchGame(gameKey);
+      return;
+    }
+
+    const meta = getGameMeta(gameKey);
+    const prog = storage.getGameProgression(gameKey);
+    if (title) title.textContent = `${meta ? meta.title : gameKey} - SELECT MODE`;
+    list.innerHTML = '';
+
+    const allModes = ['standard', 'timeAttack', 'oneLife', 'bossRush'];
+    const modeIcons = { standard: '🎮', timeAttack: '⏱️', oneLife: '💀', bossRush: '👾' };
+    const modeNames = {
+      standard: 'Standard Arcade',
+      timeAttack: 'Time Attack (3 Min)',
+      oneLife: 'One-Life Hardcore (1 HP)',
+      bossRush: 'Apex Boss Rush'
+    };
+    const modeDescs = {
+      standard: 'Balanced arcade rules & progression.',
+      timeAttack: '3-minute countdown! Multiplier ramps up every 30s.',
+      oneLife: '1 HP, zero shields. Any contact terminates the run.',
+      bossRush: 'Immediate apex boss encounter wave!'
+    };
+    const unlockLvs = { standard: 1, timeAttack: 2, oneLife: 4, bossRush: 5 };
+
+    for (const m of allModes) {
+      const isUnlocked = prog.unlockedModes.includes(m);
+      const requiredLv = unlockLvs[m];
+      const card = document.createElement('div');
+      card.style.cssText = `
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: ${isUnlocked ? 'rgba(0, 243, 255, 0.08)' : 'rgba(255, 255, 255, 0.03)'};
+        border: 1px solid ${isUnlocked ? 'rgba(0, 243, 255, 0.3)' : 'rgba(255, 255, 255, 0.1)'};
+        border-radius: 8px;
+        padding: 12px 16px;
+        cursor: ${isUnlocked ? 'pointer' : 'not-allowed'};
+        opacity: ${isUnlocked ? '1' : '0.55'};
+        transition: all 0.2s ease;
+      `;
+
+      card.innerHTML = `
+        <div>
+          <div style="font-weight: bold; color: ${isUnlocked ? '#00f3ff' : '#94a3b8'}; font-size: 1rem;">
+            ${modeIcons[m]} ${modeNames[m]}
+          </div>
+          <div style="font-size: 0.8rem; color: #cbd5e1; margin-top: 2px;">
+            ${modeDescs[m]}
+          </div>
+        </div>
+        <div>
+          ${isUnlocked
+            ? `<button class="play-btn" style="padding: 6px 14px; font-size: 0.85rem;">LAUNCH</button>`
+            : `<span style="font-size: 0.75rem; color: #f59e0b; border: 1px solid rgba(245,158,11,0.4); padding: 3px 6px; border-radius: 4px;">🔒 MASTERY LV ${requiredLv}</span>`
+          }
+        </div>
+      `;
+
+      if (isUnlocked) {
+        card.addEventListener('click', () => {
+          modal.style.display = 'none';
+          this.pendingMode = m;
+          if (gameKey === 'cyberSurvivors' && m === 'standard') {
+            this.modalMechSelect.style.display = 'flex';
+          } else {
+            this.launchGame(gameKey, this.selectedMech, m);
+          }
+        });
+      }
+
+      list.appendChild(card);
+    }
+
+    modal.style.display = 'flex';
   }
 
   promptSaveExport(payload) {
@@ -1552,6 +1845,8 @@ class ArcadeApp {
       { id: 'cyan', name: 'Electric Cyan', desc: 'Sleek standard pulsing cyber trail', cost: 0, color: '#00f3ff' },
       { id: 'neon_pink', name: 'Hot Pink Neon', desc: 'Vibrant cyberpunk magenta thruster glow', cost: 50, color: '#ff007b' },
       { id: 'gold', name: 'Golden Plasma', desc: 'Blazing gilded flare particles', cost: 100, color: '#ffe600' },
+      { id: 'matrix_green', name: 'Matrix Phosphor', desc: 'Emerald mainframe scanning particle trail', cost: 120, color: '#00ff66' },
+      { id: 'void_purple', name: 'Void Ultraviolet', desc: 'Cosmic ultraviolet particle exhaust', cost: 160, color: '#a855f7' },
       { id: 'rainbow', name: 'Rainbow Prism', desc: 'Dynamic spectrum trail cycling colors', cost: 200, color: 'linear-gradient(90deg, #ff0055, #ffe600, #00ff88, #00f3ff)' }
     ];
 
@@ -1604,7 +1899,8 @@ class ArcadeApp {
     const themes = [
       { id: 'cyberpunk', name: 'Cyberpunk 2077', desc: 'Classic electric cyan & neon pink aesthetic', cost: 0 },
       { id: 'vaporwave', name: '1984 Vaporwave', desc: 'Dreamy retro magenta, purple & sunset cyan', cost: 75 },
-      { id: 'matrix', name: 'Matrix Terminal', desc: 'Dark retro phosphor green mainframe theme', cost: 150 }
+      { id: 'matrix', name: 'Matrix Terminal', desc: 'Dark retro phosphor green mainframe theme', cost: 150 },
+      { id: 'highcontrast', name: 'High Contrast Pro', desc: 'Accessibility-first stark black & white high contrast', cost: 50 }
     ];
 
     this.shopThemesList.innerHTML = '';
@@ -1655,138 +1951,191 @@ class ArcadeApp {
     }
   }
 
-  launchGame(gameKey, mechClass = 'specter') {
-    sound.init();
-    this.activeGameKey = gameKey;
-    this.activeGame = this.games[gameKey];
-    this.isPaused = false;
-    this.lastTime = performance.now();
-
-    document.body.classList.add('in-game');
-    this.lobbyView.style.display = 'none';
-    this.gameView.style.display = 'flex';
-    this.modalGameOver.style.display = 'none';
-    this.modalPause.style.display = 'none';
-    this.modalUpgrade.style.display = 'none';
-    this.particles.clear();
-
-    // Auto-enter native fullscreen on mobile for true immersive arcade view
-    if (window.innerWidth <= 860 && fullscreenSupported() && !isFullscreen()) {
-      enterFullscreen();
+  showCurtain(callback) {
+    const curtain = document.getElementById('arcade-curtain');
+    if (!curtain) {
+      if (callback) callback();
+      return;
     }
+    curtain.classList.add('active');
+    setTimeout(() => {
+      if (callback) callback();
+      setTimeout(() => {
+        curtain.classList.remove('active');
+      }, 140);
+    }, 180);
+  }
 
-    const lblPrimary = document.getElementById('lbl-touch-primary');
-    const lblSub = document.getElementById('lbl-touch-sub');
-    const lblSuper = document.getElementById('lbl-touch-super');
-    const hintText = document.getElementById('deck-hint-text');
+  launchGame(gameKey, mechClass = 'specter', mode = 'standard') {
+    this.showCurtain(() => {
+      sound.init();
+      this.activeGameKey = gameKey;
+      this.currentMode = mode;
+      this.activeGame = this.games[gameKey];
+      this.isPaused = false;
+      this.lastTime = performance.now();
+      this.timeAttackTimer = mode === 'timeAttack' ? 180 : null;
 
-    const dpadCluster = document.getElementById('deck-dpad');
-    const joystickCluster = document.getElementById('deck-joystick');
-    const sliderCluster = document.getElementById('deck-slider');
-    const sliderVUp = document.getElementById('slider-v-up-wrap');
-    const sliderVDown = document.getElementById('slider-v-down-wrap');
-    const sliderLabel = document.getElementById('slider-sublabel');
-    const btnModeToggle = document.getElementById('btn-deck-mode-toggle');
-    const lblModeText = document.getElementById('lbl-deck-mode-text');
-    const lblModeIcon = document.getElementById('lbl-deck-mode-icon');
+      document.body.classList.add('in-game');
+      this.lobbyView.style.display = 'none';
+      this.gameView.style.display = 'flex';
+      this.modalGameOver.style.display = 'none';
+      this.modalPause.style.display = 'none';
+      this.modalUpgrade.style.display = 'none';
+      this.particles.clear();
 
-    const setDeckMode = (mode) => {
-      if (dpadCluster) dpadCluster.style.display = mode === 'dpad' ? 'flex' : 'none';
-      if (joystickCluster) joystickCluster.style.display = mode === 'joystick' ? 'flex' : 'none';
-      if (sliderCluster) sliderCluster.style.display = mode === 'slider' ? 'flex' : 'none';
-    };
+      // Auto-enter native fullscreen on mobile for true immersive arcade view
+      if (window.innerWidth <= 860 && fullscreenSupported() && !isFullscreen()) {
+        enterFullscreen();
+      }
 
-    if (btnModeToggle && !this._modeToggleWired) {
-      this._modeToggleWired = true;
-      btnModeToggle.addEventListener('click', (e) => {
-        e.preventDefault();
-        sound.init();
-        if (navigator.vibrate) navigator.vibrate(10);
-        const curMode = localStorage.getItem('neonpulse_pacman_control') || 'buttons';
-        const nextMode = curMode === 'buttons' ? 'joystick' : 'buttons';
-        localStorage.setItem('neonpulse_pacman_control', nextMode);
-        if (this.activeGameKey === 'cyberPacman') {
-          applyPacmanDeck();
+      const lblPrimary = document.getElementById('lbl-touch-primary');
+      const lblSub = document.getElementById('lbl-touch-sub');
+      const lblSuper = document.getElementById('lbl-touch-super');
+      const hintText = document.getElementById('deck-hint-text');
+
+      const dpadCluster = document.getElementById('deck-dpad');
+      const joystickCluster = document.getElementById('deck-joystick');
+      const sliderCluster = document.getElementById('deck-slider');
+      const sliderVUp = document.getElementById('slider-v-up-wrap');
+      const sliderVDown = document.getElementById('slider-v-down-wrap');
+      const sliderLabel = document.getElementById('slider-sublabel');
+      const btnModeToggle = document.getElementById('btn-deck-mode-toggle');
+      const lblModeText = document.getElementById('lbl-deck-mode-text');
+      const lblModeIcon = document.getElementById('lbl-deck-mode-icon');
+
+      const setDeckMode = (m) => {
+        if (dpadCluster) dpadCluster.style.display = m === 'dpad' ? 'flex' : 'none';
+        if (joystickCluster) joystickCluster.style.display = m === 'joystick' ? 'flex' : 'none';
+        if (sliderCluster) sliderCluster.style.display = m === 'slider' ? 'flex' : 'none';
+      };
+
+      if (btnModeToggle && !this._modeToggleWired) {
+        this._modeToggleWired = true;
+        btnModeToggle.addEventListener('click', (e) => {
+          e.preventDefault();
+          sound.init();
+          if (navigator.vibrate) navigator.vibrate(10);
+          const curMode = localStorage.getItem('neonpulse_pacman_control') || 'buttons';
+          const nextMode = curMode === 'buttons' ? 'joystick' : 'buttons';
+          localStorage.setItem('neonpulse_pacman_control', nextMode);
+          if (this.activeGameKey === 'cyberPacman') {
+            applyPacmanDeck();
+          }
+        });
+      }
+
+      const applyPacmanDeck = () => {
+        const m = localStorage.getItem('neonpulse_pacman_control') || 'buttons';
+        if (m === 'joystick') {
+          setDeckMode('joystick');
+          if (lblModeIcon) lblModeIcon.textContent = '🎛️';
+          if (lblModeText) lblModeText.textContent = 'D-PAD';
+          if (hintText) hintText.textContent = '🕹️ CENTER JOYSTICK: STEER | 🅰️ EMP';
+        } else {
+          setDeckMode('dpad');
+          if (lblModeIcon) lblModeIcon.textContent = '🕹️';
+          if (lblModeText) lblModeText.textContent = 'STICK';
+          if (hintText) hintText.textContent = '🕹️ CENTER D-PAD: STEER | 🅰️ EMP';
         }
-      });
-    }
+      };
 
-    const applyPacmanDeck = () => {
-      const mode = localStorage.getItem('neonpulse_pacman_control') || 'buttons';
-      if (mode === 'joystick') {
-        setDeckMode('joystick');
-        if (lblModeIcon) lblModeIcon.textContent = '🎛️';
-        if (lblModeText) lblModeText.textContent = 'D-PAD';
-        if (hintText) hintText.textContent = '🕹️ CENTER JOYSTICK: STEER | 🅰️ EMP';
-      } else {
-        setDeckMode('dpad');
-        if (lblModeIcon) lblModeIcon.textContent = '🕹️';
-        if (lblModeText) lblModeText.textContent = 'STICK';
-        if (hintText) hintText.textContent = '🕹️ CENTER D-PAD: STEER | 🅰️ EMP';
+      const meta = getGameMeta(gameKey);
+      if (meta) {
+        const modeSuffix = mode !== 'standard' ? ` [${mode.toUpperCase()}]` : '';
+        this.hudGameName.textContent = gameKey === 'cyberSurvivors'
+          ? `Cyber Survivors (${mechClass.toUpperCase()})${modeSuffix}`
+          : `${meta.title}${modeSuffix}`;
+        this.hudHpContainer.style.display = meta.hud.hp ? 'flex' : 'none';
+        this.hudSuperContainer.style.display = meta.hud.super ? 'flex' : 'none';
+        if (meta.hud.superText && this.hudSuperText) {
+          this.hudSuperText.textContent = meta.hud.superText;
+        }
+        this.instructionsEl.innerHTML = meta.instructions;
+        if (lblPrimary) lblPrimary.textContent = meta.primaryLabel;
+        if (lblSub) lblSub.textContent = meta.subLabel;
+        if (lblSuper) lblSuper.textContent = meta.superLabel;
+        if (hintText) hintText.textContent = meta.hintText;
+
+        if (meta.controlMode === 'toggle') {
+          if (btnModeToggle) btnModeToggle.style.display = 'flex';
+          applyPacmanDeck();
+        } else {
+          if (btnModeToggle) btnModeToggle.style.display = 'none';
+          setDeckMode(meta.controlMode);
+        }
       }
-    };
 
-    const meta = getGameMeta(gameKey);
-    if (meta) {
-      this.hudGameName.textContent = gameKey === 'cyberSurvivors'
-        ? `Cyber Survivors (${mechClass.toUpperCase()})`
-        : meta.title;
-      this.hudHpContainer.style.display = meta.hud.hp ? 'flex' : 'none';
-      this.hudSuperContainer.style.display = meta.hud.super ? 'flex' : 'none';
-      if (meta.hud.superText && this.hudSuperText) {
-        this.hudSuperText.textContent = meta.hud.superText;
+      if (gameKey === 'quantumBreaker') {
+        if (sliderVUp) sliderVUp.style.display = 'none';
+        if (sliderVDown) sliderVDown.style.display = 'none';
+        if (sliderLabel) sliderLabel.textContent = 'PADDLE SLIDER';
+        if (this.sliderKnob) this.sliderKnob.style.left = '50%';
+        if (this.sliderFill) this.sliderFill.style.width = '50%';
       }
-      this.instructionsEl.innerHTML = meta.instructions;
-      if (lblPrimary) lblPrimary.textContent = meta.primaryLabel;
-      if (lblSub) lblSub.textContent = meta.subLabel;
-      if (lblSuper) lblSuper.textContent = meta.superLabel;
-      if (hintText) hintText.textContent = meta.hintText;
 
-      if (meta.controlMode === 'toggle') {
-        if (btnModeToggle) btnModeToggle.style.display = 'flex';
-        applyPacmanDeck();
-      } else {
-        if (btnModeToggle) btnModeToggle.style.display = 'none';
-        setDeckMode(meta.controlMode);
+      if (gameKey === 'cyberSurvivors') {
+        this.activeGame.init(mechClass);
+      } else if (gameKey === 'neonDrift' || gameKey === 'hexaTron') {
+        this.activeGame.start();
+      } else if (this.activeGame.init) {
+        this.activeGame.init();
       }
-    }
 
-    if (gameKey === 'quantumBreaker') {
-      if (sliderVUp) sliderVUp.style.display = 'none';
-      if (sliderVDown) sliderVDown.style.display = 'none';
-      if (sliderLabel) sliderLabel.textContent = 'PADDLE SLIDER';
-      if (this.sliderKnob) this.sliderKnob.style.left = '50%';
-      if (this.sliderFill) this.sliderFill.style.width = '50%';
-    }
-
-    if (gameKey === 'cyberSurvivors') {
-      this.activeGame.init(mechClass);
-    } else if (gameKey === 'neonDrift' || gameKey === 'hexaTron') {
-      this.activeGame.start();
-    } else if (this.activeGame.init) {
-      this.activeGame.init();
-    }
+      // Apply challenge mode modifications
+      if (mode === 'oneLife') {
+        if (this.activeGame.player) {
+          this.activeGame.player.hp = 1;
+          this.activeGame.player.maxHp = 1;
+          this.activeGame.player.shieldHp = 0;
+        }
+        if (this.activeGame.lives !== undefined) {
+          this.activeGame.lives = 1;
+        }
+      } else if (mode === 'bossRush') {
+        if (gameKey === 'cyberSurvivors') {
+          this.activeGame.gameTime = 59.5;
+        } else if (gameKey === 'astroPulse') {
+          this.activeGame.gameTime = 59.5;
+        } else if (gameKey === 'quantumBreaker') {
+          this.activeGame.initStage(6);
+        }
+      }
+    });
   }
 
   returnToHub() {
-    document.body.classList.remove('in-game');
-    if (this.activeGame) {
-      if (this.activeGame.destroy) this.activeGame.destroy();
-      this.activeGame.isRunning = false;
-      this.activeGame = null;
-    }
-    this.physicsAccumulator = 0;
-    sound.stopBgm();
-    this.gameView.style.display = 'none';
-    this.lobbyView.style.display = 'flex';
-    this.modalPause.style.display = 'none';
-    this.modalGameOver.style.display = 'none';
-    this.modalUpgrade.style.display = 'none';
-    this.modalInitials.style.display = 'none';
-    this.isSliderActive = false;
-    if (this.joystickKnob) this.joystickKnob.style.transform = 'translate(-50%, -50%)';
-    this.updateLobbyScores();
-    this.updateCreditsDisplay();
+    this.showCurtain(() => {
+      document.body.classList.remove('in-game');
+      if (this.activeGame) {
+        // Record abandon in analytics telemetry
+        if (this.activeGame.isRunning) {
+          storage.recordSessionAnalytics({
+            gameKey: this.activeGameKey,
+            score: this.activeGame.score || 0,
+            duration: this.activeGame.gameTime || 0,
+            mode: this.currentMode || 'standard',
+            won: false,
+            cause: 'abandon'
+          });
+        }
+        if (this.activeGame.destroy) this.activeGame.destroy();
+        this.activeGame.isRunning = false;
+        this.activeGame = null;
+      }
+      this.physicsAccumulator = 0;
+      sound.stopBgm();
+      this.gameView.style.display = 'none';
+      this.lobbyView.style.display = 'flex';
+      this.modalPause.style.display = 'none';
+      this.modalGameOver.style.display = 'none';
+      this.modalUpgrade.style.display = 'none';
+      this.modalInitials.style.display = 'none';
+      this.isSliderActive = false;
+      if (this.joystickKnob) this.joystickKnob.style.transform = 'translate(-50%, -50%)';
+      this.updateLobbyScores();
+      this.updateCreditsDisplay();
+    });
   }
 
   // Keep the canvas backing store matched to how big (and how dense) the screen shows it.
@@ -1943,6 +2292,31 @@ class ArcadeApp {
       statsHtml += `
         <div class="stat-row"><span>STAGE REACHED:</span><span class="stat-val">${data.stage}/5</span></div>
         <div class="stat-row"><span>MAX COMBO:</span><span class="stat-val">${data.maxCombo}x</span></div>
+      `;
+    }
+
+    if (!isReplaySession && this.activeGameKey) {
+      const xpEarned = Math.max(15, Math.floor((data.score || 0) * 0.1) + ((data.time || 0) * 2));
+      const masteryResult = storage.addMasteryXp(this.activeGameKey, xpEarned);
+      if (masteryResult.levelUp) {
+        this.showToast('⭐', 'MASTERY LEVEL UP', `${this.activeGameKey} Level ${masteryResult.newLevel}!${masteryResult.unlockedMode ? ` Mode unlocked: ${masteryResult.unlockedMode}` : ''}`);
+      }
+
+      storage.recordSessionAnalytics({
+        gameKey: this.activeGameKey,
+        score: data.score || 0,
+        duration: data.time || (data.distance ? Math.round(data.distance / 50) : 30),
+        mode: this.currentMode || 'standard',
+        won: Boolean(data.isRecord || (data.score && data.score > 1000)),
+        cause: data.cause || 'hazard',
+        upgradesPicked: data.upgradesPicked || []
+      });
+
+      statsHtml += `
+        <div class="stat-row">
+          <span>MASTERY XP:</span>
+          <span class="stat-val" style="color:var(--neon-cyan);">+${xpEarned} XP (LV ${storage.getGameProgression(this.activeGameKey).level})</span>
+        </div>
       `;
     }
 
@@ -2139,6 +2513,19 @@ class ArcadeApp {
         if (this.playtimeTimer >= 10) {
           storage.recordPlayTime(this.playtimeTimer);
           this.playtimeTimer = 0;
+        }
+
+        // Time Attack Challenge Mode Countdown
+        if (this.currentMode === 'timeAttack' && this.timeAttackTimer !== null) {
+          this.timeAttackTimer -= dt;
+          if (this.timeAttackTimer <= 0) {
+            this.timeAttackTimer = null;
+            if (this.activeGame.gameOver) {
+              this.activeGame.gameOver();
+            } else {
+              this.handleGameOver({ score: this.activeGame.score || 0, won: true });
+            }
+          }
         }
       }
 

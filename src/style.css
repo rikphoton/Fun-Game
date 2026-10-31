@@ -2170,18 +2170,119 @@ canvas {
   vertical-align: middle;
 }
 
-.badge-verified {
-  display: inline-block;
-  font-size: 0.68rem;
-  font-weight: 800;
-  color: var(--neon-green);
-  background: rgba(0, 255, 136, 0.15);
-  border: 1px solid rgba(0, 255, 136, 0.4);
-  border-radius: 4px;
-  padding: 1px 6px;
-  margin-left: 6px;
-  text-shadow: 0 0 6px rgba(0, 255, 136, 0.4);
-  vertical-align: middle;
+/* --- Accessibility: Keyboard Navigation Focus Rings --- */
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+a:focus-visible,
+div[tabindex]:focus-visible {
+  outline: 2px solid var(--neon-cyan) !important;
+  outline-offset: 3px !important;
 }
+
+/* --- High-Contrast Accessibility Theme --- */
+body.theme-highcontrast {
+  --bg-dark: #000000;
+  --bg-card: #050505;
+  --neon-cyan: #00ffff;
+  --neon-pink: #ff0055;
+  --neon-yellow: #ffff00;
+  --neon-purple: #cc00ff;
+  --neon-green: #00ff00;
+  --text-main: #ffffff;
+  --text-muted: #dddddd;
+}
+
+body.theme-highcontrast * {
+  text-shadow: none !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+}
+
+body.theme-highcontrast .game-card,
+body.theme-highcontrast .modal-box,
+body.theme-highcontrast .control-btn,
+body.theme-highcontrast .play-btn {
+  border: 2px solid #ffffff !important;
+}
+
+/* --- Smooth Arcade Loading Transition Curtain --- */
+.arcade-curtain {
+  position: fixed;
+  inset: 0;
+  background: #000;
+  z-index: 99999;
+  pointer-events: none;
+  opacity: 0;
+  transform: scaleY(0);
+  transform-origin: top;
+  transition: opacity 0.22s ease, transform 0.22s ease;
+}
+
+.arcade-curtain.active {
+  opacity: 1;
+  transform: scaleY(1);
+  pointer-events: all;
+}
+
+/* --- Upgrade Card Synergy & Trade-off Badges --- */
+.upgrade-synergy-badge {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--neon-cyan);
+  background: rgba(0, 243, 255, 0.15);
+  border: 1px solid var(--neon-cyan);
+  border-radius: 4px;
+  padding: 2px 6px;
+  margin-top: 4px;
+}
+
+.upgrade-tradeoff-badge {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #ffaa00;
+  background: rgba(255, 170, 0, 0.15);
+  border: 1px solid #ffaa00;
+  border-radius: 4px;
+  padding: 2px 6px;
+  margin-top: 4px;
+}
+
+/* --- Challenge Mode Badges & Selectors --- */
+.challenge-mode-badge {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+}
+
+.mode-badge-standard {
+  background: rgba(0, 243, 255, 0.15);
+  border: 1px solid var(--neon-cyan);
+  color: var(--neon-cyan);
+}
+
+.mode-badge-timeattack {
+  background: rgba(255, 230, 0, 0.15);
+  border: 1px solid var(--neon-yellow);
+  color: var(--neon-yellow);
+}
+
+.mode-badge-onelife {
+  background: rgba(255, 0, 85, 0.15);
+  border: 1px solid var(--neon-pink);
+  color: var(--neon-pink);
+}
+
+.mode-badge-bossrush {
+  background: rgba(168, 85, 247, 0.15);
+  border: 1px solid var(--neon-purple);
+  color: var(--neon-purple);
+}
+
 
 

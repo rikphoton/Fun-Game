@@ -377,6 +377,32 @@ export class AstroPulseGame {
       e.x += e.vx * dt;
       e.y += e.vy * dt;
 
+      // Bounce boss off screen sides
+      if (e.isMothership) {
+        if (e.x - e.radius < 40) { e.x = 40 + e.radius; e.vx = Math.abs(e.vx); }
+        if (e.x + e.radius > this.width - 40) { e.x = this.width - 40 - e.radius; e.vx = -Math.abs(e.vx); }
+        if (e.y > 140) { e.y = 140; e.vy = 0; }
+
+        // Phase 2 Mega Beam weapon with telegraphing
+        if (e.hp < (e.maxHp * 0.5)) {
+          e.beamTimer = (e.beamTimer || 0) + dt;
+          if (e.beamTimer >= 3.0 && e.beamTimer < 4.2) {
+            e.isChargingBeam = true;
+          } else if (e.beamTimer >= 4.2) {
+            e.isChargingBeam = false;
+            e.beamTimer = 0;
+            // Fire massive beam
+            this.particles.shake(12, 0.4);
+            sound.playLaser('heavy');
+            // Check if player is directly below beam
+            if (Math.abs(this.player.x - e.x) < 32) {
+              this.hitPlayer(28);
+            }
+            this.particles.addShockwave(e.x, e.y + 40, '#ff003c', 200, 0.3);
+          }
+        }
+      }
+
       // Enemy firing
       if (e.canShoot) {
         e.shootTimer = (e.shootTimer || 0) + dt;
@@ -813,20 +839,48 @@ export class AstroPulseGame {
       ctx.fillStyle = e.color;
 
       if (e.isMothership) {
+        // Telegraphing vertical beam line
+        if (e.isChargingBeam) {
+          ctx.save();
+          ctx.strokeStyle = 'rgba(255, 0, 60, 0.7)';
+          ctx.lineWidth = 4 + Math.sin(Date.now() / 50) * 2;
+          ctx.setLineDash([10, 6]);
+          ctx.beginPath();
+          ctx.moveTo(e.x, e.y + e.radius);
+          ctx.lineTo(e.x, this.height);
+          ctx.stroke();
+          ctx.restore();
+        }
+
         ctx.beginPath();
         ctx.arc(e.x, e.y, e.radius, 0, Math.PI * 2);
         ctx.fill();
-        ctx.strokeStyle = '#fff';
-        ctx.lineWidth = 2;
+        ctx.strokeStyle = e.hp < (e.maxHp * 0.5) ? '#ff003c' : '#00f3ff';
+        ctx.lineWidth = 3;
         ctx.stroke();
 
-        // Boss Health Bar
-        const barWidth = 140;
+        // Pulsing boss core
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(e.x, e.y, e.radius * 0.35 + Math.sin(Date.now() / 100) * 2, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Boss Health Bar & Title
+        const barWidth = 160;
         const hpPercent = Math.max(0, e.hp / e.maxHp);
-        ctx.fillStyle = 'rgba(0,0,0,0.6)';
-        ctx.fillRect(e.x - barWidth / 2, e.y - e.radius - 16, barWidth, 6);
-        ctx.fillStyle = '#ff003c';
-        ctx.fillRect(e.x - barWidth / 2, e.y - e.radius - 16, barWidth * hpPercent, 6);
+        ctx.fillStyle = 'rgba(0,0,0,0.75)';
+        ctx.fillRect(e.x - barWidth / 2, e.y - e.radius - 22, barWidth, 7);
+        ctx.fillStyle = e.hp < (e.maxHp * 0.5) ? '#ff003c' : '#ffaa00';
+        ctx.fillRect(e.x - barWidth / 2, e.y - e.radius - 22, barWidth * hpPercent, 7);
+        ctx.strokeStyle = '#ffd700';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(e.x - barWidth / 2, e.y - e.radius - 22, barWidth, 7);
+
+        ctx.fillStyle = '#ffd700';
+        ctx.font = 'bold 10px sans-serif';
+        ctx.textAlign = 'center';
+        const phaseLabel = e.hp < (e.maxHp * 0.5) ? (e.isChargingBeam ? '⚠️ CHARGING MEGA BEAM!' : 'PHASE 2: BEAM OVERDRIVE') : 'PHASE 1: FLAK MATRIX';
+        ctx.fillText(`MOTHERSHIP • ${phaseLabel}`, e.x, e.y - e.radius - 26);
       } else {
         // Starfighter triangle
         ctx.beginPath();

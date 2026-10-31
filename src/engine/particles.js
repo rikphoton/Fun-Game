@@ -31,6 +31,9 @@ export class ParticleSystem {
   }
 
   shake(intensity = 8, duration = 0.25) {
+    if (typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      return;
+    }
     this.shakeIntensity = Math.max(this.shakeIntensity, intensity);
     this.shakeDuration = Math.max(this.shakeDuration, duration);
   }

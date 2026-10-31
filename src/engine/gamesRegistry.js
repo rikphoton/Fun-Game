@@ -1,4 +1,31 @@
 // NeonPulse Arcade - Central Game Metadata Registry
+export const CHALLENGE_MODES = {
+  standard: {
+    key: 'standard',
+    name: 'Standard Arcade',
+    desc: 'Classic rules, balanced difficulty, standard progression.',
+    icon: '🎮'
+  },
+  timeAttack: {
+    key: 'timeAttack',
+    name: 'Time Attack (3m)',
+    desc: '3-minute countdown! Multiplier ramps up every 30 seconds.',
+    icon: '⏱️'
+  },
+  oneLife: {
+    key: 'oneLife',
+    name: 'One-Life Hardcore',
+    desc: 'High stakes! 1 HP with zero starting shields. One touch equals death.',
+    icon: '💀'
+  },
+  bossRush: {
+    key: 'bossRush',
+    name: 'Boss Rush',
+    desc: 'Bypass early waves straight into elite boss encounters.',
+    icon: '👾'
+  }
+};
+
 export const GAMES_METADATA = {
   cyberSurvivors: {
     key: 'cyberSurvivors',

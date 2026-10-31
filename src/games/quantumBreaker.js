@@ -440,6 +440,15 @@ export class QuantumBreakerGame {
       storage.recordCombo(this.maxComboThisRun);
     }
 
+    if (brick.isBoss) {
+      // Phase 2 retaliatory pulse shockwave when Core is under 50% HP
+      if (brick.hp < (brick.maxHp * 0.5)) {
+        this.particles.shake(6, 0.2);
+        this.particles.addShockwave(brick.x + brick.width / 2, brick.y + brick.height / 2, '#00f3ff', 140, 0.25);
+        sound.playLaser('heavy');
+      }
+    }
+
     const points = (100 * this.combo);
     this.score += points;
     storage.addCredits(1); // 1 credit per brick hit
@@ -638,12 +647,28 @@ export class QuantumBreakerGame {
       ctx.fillRect(b.x, b.y, b.width, b.height);
 
       if (b.isBoss) {
+        const hpPercent = Math.max(0, b.hp / b.maxHp);
+        const isPhase2 = b.hp < (b.maxHp * 0.5);
+        ctx.fillStyle = isPhase2 ? (Math.floor(Date.now() / 150) % 2 === 0 ? '#ff003c' : '#00f0ff') : b.color;
+        ctx.fillRect(b.x, b.y, b.width, b.height);
+
+        // Core Boss Health Bar
+        const barW = b.width;
+        ctx.fillStyle = 'rgba(0,0,0,0.7)';
+        ctx.fillRect(b.x, b.y - 14, barW, 6);
+        ctx.fillStyle = isPhase2 ? '#ff003c' : '#00ff88';
+        ctx.fillRect(b.x, b.y - 14, barW * hpPercent, 6);
+        ctx.strokeStyle = '#ffd700';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(b.x, b.y - 14, barW, 6);
+
         ctx.fillStyle = '#fff';
-        ctx.font = 'bold 14px "Outfit", sans-serif';
+        ctx.font = 'bold 12px "Outfit", sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(`CORE [${b.hp}/${b.maxHp}]`, b.x + b.width / 2, b.y + b.height / 2);
-        ctx.strokeStyle = '#ffe600';
+        const bossText = isPhase2 ? `CORE OVERLOAD [${b.hp}/${b.maxHp}]` : `QUANTUM CORE [${b.hp}/${b.maxHp}]`;
+        ctx.fillText(bossText, b.x + b.width / 2, b.y + b.height / 2);
+        ctx.strokeStyle = isPhase2 ? '#ff003c' : '#ffe600';
         ctx.lineWidth = 2;
         ctx.strokeRect(b.x, b.y, b.width, b.height);
       } else if (b.isExplosive) {

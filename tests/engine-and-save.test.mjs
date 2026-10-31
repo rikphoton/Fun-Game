@@ -539,3 +539,116 @@ test('NeonDash PRNG cosmetic stream does not desynchronize gameplay hazard rolls
     assert.equal(gameA.obstacles[i].y, gameB.obstacles[i].y);
   }
 });
+
+test('Game progression calculates mastery levels, unlocks challenge modes and milestone rewards', () => {
+  storage.resetProgression();
+
+  const initialProg = storage.getGameProgression('cyberSurvivors');
+  assert.equal(initialProg.level, 1);
+  assert.deepEqual(initialProg.unlockedModes, ['standard']);
+
+  // Level 1 -> 2: requires 200 XP, unlocks 'timeAttack'
+  const resLvl2 = storage.addMasteryXp('cyberSurvivors', 250);
+  assert.equal(resLvl2.levelUp, true);
+  assert.equal(resLvl2.newLevel, 2);
+  assert.equal(resLvl2.unlockedMode, 'timeAttack');
+  assert.ok(storage.isModeUnlocked('cyberSurvivors', 'timeAttack'));
+  assert.equal(storage.isModeUnlocked('cyberSurvivors', 'oneLife'), false);
+
+  // Level 2 -> 4: requires 900 XP, awards Level 3 milestone (+100 credits) and unlocks 'oneLife'
+  const creditsBefore = storage.getCredits();
+  const resLvl4 = storage.addMasteryXp('cyberSurvivors', 700); // total 950 XP
+  assert.equal(resLvl4.levelUp, true);
+  assert.equal(resLvl4.newLevel, 4);
+  assert.ok(storage.isModeUnlocked('cyberSurvivors', 'oneLife'));
+  assert.equal(storage.getCredits(), creditsBefore + 100);
+
+  // Level 4 -> 5: requires 1400 XP, unlocks 'bossRush'
+  const resLvl5 = storage.addMasteryXp('cyberSurvivors', 500); // total 1450 XP
+  assert.equal(resLvl5.newLevel, 5);
+  assert.ok(storage.isModeUnlocked('cyberSurvivors', 'bossRush'));
+
+  // Max Level 10: unlocks 'arcade_master' title
+  storage.addMasteryXp('cyberSurvivors', 6000); // over 6500 XP
+  const maxProg = storage.getGameProgression('cyberSurvivors');
+  assert.equal(maxProg.level, 10);
+  assert.ok(storage.hasItem('titles', 'arcade_master'));
+});
+
+test('Local analytics records sessions, computes averages and bounds recent runs', () => {
+  storage.resetProgression();
+
+  // Log 15 sessions for neonDash (should be bounded to 10 in recentRuns)
+  for (let i = 1; i <= 15; i++) {
+    storage.recordSessionAnalytics({
+      gameKey: 'neonDash',
+      score: i * 100,
+      duration: 30 + i,
+      mode: 'standard',
+      won: i % 2 === 0,
+      cause: i % 3 === 0 ? 'spike_hazard' : 'pit_fall',
+      upgradesPicked: ['speed', 'magnet']
+    });
+  }
+
+  const runs = storage.getRecentRuns('neonDash');
+  assert.equal(runs.length, 10, 'recentRuns must clamp to last 10 entries');
+  assert.equal(runs[runs.length - 1].score, 1500, 'Last run should be the most recent');
+
+  const summary = storage.getAnalyticsSummary();
+  assert.ok(summary.totalSessions >= 15);
+  assert.ok(summary.avgDuration > 0);
+  assert.ok(summary.avgScore > 0);
+  assert.ok(summary.deathCausesSorted.length > 0);
+  assert.ok(summary.topUpgradesSorted.length > 0);
+});
+
+test('CyberSurvivors boss battle multi-phase vulnerability window and trade-offs operate accurately', () => {
+  const dummyCanvas = { getContext: () => ({ fillRect: () => {}, beginPath: () => {}, arc: () => {} }), addEventListener: () => {}, width: 800, height: 600 };
+  const dummyParticles = { particles: [], burst: () => {}, shockwave: () => {}, shake: () => {}, explode: () => {}, spawn: () => {}, addFloatingText: () => {} };
+  const game = new CyberSurvivorsGame(dummyCanvas, dummyParticles, { onScoreUpdate: () => {}, onGameOver: () => {} });
+  game.reset();
+
+  // Test Trade-off upgrades
+  const baseSpeed = game.player.speed;
+  const baseMaxHp = game.player.maxHp;
+  game.applyUpgrade('heavy_plating');
+  assert.ok(game.player.maxHp > baseMaxHp, 'Heavy Plating should increase max HP');
+  assert.ok(game.player.speed < baseSpeed, 'Heavy Plating should reduce movement speed as a trade-off');
+
+  game.applyUpgrade('vampiric_siphon');
+  assert.equal(game.player.hasVampiricSiphon, true);
+
+  // Test Boss Dreadnought Phase 2 vulnerability
+  game.spawnBoss();
+  const boss = game.enemies.find(e => e.isBoss);
+  assert.ok(boss, 'Dreadnought boss should spawn');
+
+  // When shielded in Phase 2
+  boss.hp = 1000; // < 50% maxHp
+  boss.isVulnerable = false;
+  const hpBeforeDeflect = boss.hp;
+  game.hitEnemy(boss, 0, 100);
+  // Shield deflects 70% of damage -> 30 dmg taken
+  assert.equal(boss.hp, hpBeforeDeflect - 30);
+
+  // When vulnerable in Phase 2
+  boss.isVulnerable = true;
+  const hpBeforeExposed = boss.hp;
+  game.hitEnemy(boss, 0, 100);
+  // Vulnerable weak point amplifies damage by 1.4x -> 140 dmg taken
+  assert.equal(boss.hp, hpBeforeExposed - 140);
+});
+
+test('High-contrast accessibility setting and keybindings persist through storage', () => {
+  storage.setSetting('highContrast', true);
+  assert.equal(storage.getSetting('highContrast'), true);
+
+  const exported = storage.exportSaveData();
+  storage.resetSettings();
+  assert.equal(storage.getSetting('highContrast'), false);
+
+  const importResult = storage.importSaveData(exported);
+  assert.equal(importResult.success, true);
+  assert.equal(storage.getSetting('highContrast'), true);
+});
