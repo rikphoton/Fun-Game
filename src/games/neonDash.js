@@ -21,10 +21,21 @@ export class NeonDashGame {
   reset() {
     this.isRunning = false;
     this.isPaused = false;
+    this.gameTime = 0;
     this.score = 0;
     this.distance = 0;
     this.speed = 360;
     this.starsCollected = 0;
+    this.currentSector = 1;
+
+    // Run Replay Recording
+    this.recording = {
+      seed: Math.floor(Math.random() * 100000),
+      inputs: []
+    };
+    this.isReplay = false;
+    this.replayInputs = [];
+    this.replayInputIndex = 0;
 
     // Streak Multiplier & Fever
     this.starStreak = 0;
@@ -56,7 +67,25 @@ export class NeonDashGame {
   init() {
     this.reset();
     this.isRunning = true;
-    sound.startBgm(storage.getSetting('bgmTrack') || 'synthwave');
+    if (typeof window !== 'undefined' && (window.AudioContext || window.webkitAudioContext)) {
+      sound.startBgm(storage.getSetting('bgmTrack') || 'synthwave');
+    }
+  }
+
+  start() {
+    this.init();
+  }
+
+  pause() {
+    this.isPaused = true;
+  }
+
+  resume() {
+    this.isPaused = false;
+  }
+
+  destroy() {
+    this.isRunning = false;
   }
 
   initBackground() {
@@ -74,6 +103,10 @@ export class NeonDashGame {
 
   handleAction() {
     if (!this.isRunning || this.isPaused) return;
+
+    if (!this.isReplay) {
+      this.recording.inputs.push({ t: Math.round(this.gameTime * 100) / 100 });
+    }
 
     if (this.player.onGround) {
       // Normal Gravity Flip
@@ -124,9 +157,38 @@ export class NeonDashGame {
   update(dt) {
     if (!this.isRunning || this.isPaused) return;
 
-    this.speed = Math.min(700, 360 + (this.distance / 120) * 16);
+    this.gameTime += dt;
+
+    // Process replay automated inputs if in replay mode
+    if (this.isReplay && this.replayInputs && this.replayInputIndex < this.replayInputs.length) {
+      const nextInput = this.replayInputs[this.replayInputIndex];
+      if (this.gameTime >= nextInput.t) {
+        this.handleAction();
+        this.replayInputIndex++;
+      }
+    }
+
+    this.speed = Math.min(720, 360 + (this.distance / 120) * 16);
     this.distance += this.speed * dt * 0.1;
     this.score = Math.floor(this.distance + this.starsCollected * 50 * this.multiplier);
+
+    // Progressive Sector System
+    let newSector = 1;
+    if (this.distance >= 700) newSector = 3;
+    else if (this.distance >= 300) newSector = 2;
+
+    if (newSector !== this.currentSector) {
+      this.currentSector = newSector;
+      const sectorNames = { 2: 'SECTOR 2: NEON GRID', 3: 'SECTOR 3: QUANTUM SINGULARITY' };
+      const sectorColors = { 2: '#ff00aa', 3: '#9d4edd' };
+      sound.playLevelUp();
+      this.particles.shake(8, 0.3);
+      this.particles.addFloatingText(sectorNames[newSector] || 'NEW SECTOR', this.width / 2, 200, {
+        color: sectorColors[newSector] || '#ffe600',
+        size: 22,
+        duration: 1.6
+      });
+    }
 
     // Multiplier calculation & Fever state
     if (this.isFever) {
@@ -392,13 +454,40 @@ export class NeonDashGame {
     const isRecord = storage.saveHighScore('neonDash', this.score);
     storage.recordGamePlayed();
 
+    // Store replay if highest score or if no replay exists
+    if (!this.isReplay && this.recording.inputs.length > 0) {
+      storage.data.neonDashReplay = {
+        score: this.score,
+        distance: Math.floor(this.distance),
+        date: new Date().toLocaleDateString(),
+        ...this.recording
+      };
+      storage.save();
+    }
+
     this.callbacks.onGameOver({
       score: this.score,
       distance: Math.floor(this.distance),
       stars: this.starsCollected,
       multiplier: `${this.multiplier}x`,
-      isRecord
+      isRecord,
+      hasReplay: !!storage.data.neonDashReplay
     });
+  }
+
+  startReplay(recData = null) {
+    const replay = recData || storage.data.neonDashReplay;
+    if (!replay) return false;
+    this.reset();
+    this.isReplay = true;
+    this.replayInputs = replay.inputs || [];
+    this.replayInputIndex = 0;
+    this.isRunning = true;
+    if (typeof window !== 'undefined' && (window.AudioContext || window.webkitAudioContext)) {
+      sound.startBgm(storage.getSetting('bgmTrack') || 'synthwave');
+    }
+    this.particles.addFloatingText('▶ REPLAY PLAYBACK', this.width / 2, 80, { color: '#00f3ff', size: 20 });
+    return true;
   }
 
   draw() {

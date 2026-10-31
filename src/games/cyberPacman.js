@@ -154,6 +154,22 @@ export class CyberPacmanGame {
     sound.announce('Grid Infiltrator Online');
   }
 
+  start() {
+    this.init();
+  }
+
+  pause() {
+    this.isPaused = true;
+  }
+
+  resume() {
+    this.isPaused = false;
+  }
+
+  destroy() {
+    this.isRunning = false;
+  }
+
   startStage(stageNumber) {
     this.stage = stageNumber;
     this.buildGrid();

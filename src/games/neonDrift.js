@@ -186,6 +186,18 @@ export class NeonDriftGame {
     this.isRunning = false;
   }
 
+  pause() {
+    this.isPaused = true;
+  }
+
+  resume() {
+    this.isPaused = false;
+  }
+
+  destroy() {
+    this.isRunning = false;
+  }
+
   setTouchAction(action, active) {
     if (action === 'nitro') this.touchNitro = active;
     if (action === 'drift') this.touchDrift = active;

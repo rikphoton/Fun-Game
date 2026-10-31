@@ -21,10 +21,12 @@ export class QuantumBreakerGame {
     this.score = 0;
     this.lives = 3;
     this.stage = 1;
-    this.maxStages = 5;
+    this.maxStages = 6;
     this.combo = 0;
     this.maxComboThisRun = 0;
     this.isExploding = false;
+    this.barrierActive = false;
+    this.barrierTimer = 0;
 
     // Paddle
     this.paddle = {
@@ -58,6 +60,22 @@ export class QuantumBreakerGame {
     this.reset();
     this.isRunning = true;
     sound.startBgm(storage.getSetting('bgmTrack') || 'synthwave');
+  }
+
+  start() {
+    this.init();
+  }
+
+  pause() {
+    this.isPaused = true;
+  }
+
+  resume() {
+    this.isPaused = false;
+  }
+
+  destroy() {
+    this.isRunning = false;
   }
 
   spawnInitialBall() {
@@ -152,7 +170,7 @@ export class QuantumBreakerGame {
           this.bricks.push(createBrick(r, c, hp, color, isExp));
         }
       }
-    } else {
+    } else if (stageNum === 5) {
       // Stage 5: The Matrix Core
       for (let r = 0; r < 7; r++) {
         for (let c = 0; c < 11; c++) {
@@ -161,6 +179,30 @@ export class QuantumBreakerGame {
           const color = isExp ? '#ff003c' : '#00ff88';
           this.bricks.push(createBrick(r, c, hp, color, isExp));
         }
+      }
+    } else {
+      // Stage 6: The Quantum Core Boss Stage
+      sound.announce('Warning: Quantum Core Boss Encounter!');
+      this.particles.shake(10, 0.4);
+      this.particles.addFloatingText('⚠️ QUANTUM CORE BOSS ⚠️', this.width / 2, 180, { color: '#ff003c', size: 24 });
+
+      // Core Boss Brick
+      const offsetX = (this.width - (11 * (brickWidth + padding) - padding)) / 2;
+      this.bricks.push({
+        x: offsetX + 3 * (brickWidth + padding),
+        y: startY + 2 * (brickHeight + padding),
+        width: (brickWidth + padding) * 5 - padding,
+        height: brickHeight * 2 + padding,
+        hp: 45,
+        maxHp: 45,
+        color: '#ff0055',
+        isBoss: true
+      });
+
+      // Orbiting Defense Barrier Bricks
+      for (let c = 1; c < 10; c++) {
+        this.bricks.push(createBrick(0, c, 3, '#a855f7'));
+        this.bricks.push(createBrick(5, c, 2, '#00f3ff', c === 5));
       }
     }
   }
@@ -595,7 +637,16 @@ export class QuantumBreakerGame {
       ctx.fillStyle = b.color;
       ctx.fillRect(b.x, b.y, b.width, b.height);
 
-      if (b.isExplosive) {
+      if (b.isBoss) {
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 14px "Outfit", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(`CORE [${b.hp}/${b.maxHp}]`, b.x + b.width / 2, b.y + b.height / 2);
+        ctx.strokeStyle = '#ffe600';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(b.x, b.y, b.width, b.height);
+      } else if (b.isExplosive) {
         ctx.fillStyle = '#fff';
         ctx.font = 'bold 12px sans-serif';
         ctx.textAlign = 'center';

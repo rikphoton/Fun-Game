@@ -72,6 +72,22 @@ export class AstroPulseGame {
     sound.announce('Astro Pulse Initiated!');
   }
 
+  start() {
+    this.init();
+  }
+
+  pause() {
+    this.isPaused = true;
+  }
+
+  resume() {
+    this.isPaused = false;
+  }
+
+  destroy() {
+    this.isRunning = false;
+  }
+
   initStarfield() {
     this.stars = [];
     for (let i = 0; i < 70; i++) {
@@ -510,7 +526,7 @@ export class AstroPulseGame {
 
   spawnEnemyWave() {
     const roll = Math.random();
-    if (roll < 0.6) {
+    if (roll < 0.45) {
       // 3 V-Formation Scouts
       const startX = 100 + Math.random() * (this.width - 200);
       for (let i = -1; i <= 1; i++) {
@@ -528,6 +544,22 @@ export class AstroPulseGame {
           shootTimer: Math.random() * 1.5
         });
       }
+    } else if (roll < 0.75) {
+      // Stealth Cloaker
+      this.enemies.push({
+        x: 80 + Math.random() * (this.width - 160),
+        y: -35,
+        vx: (Math.random() * 2 - 1) * 70,
+        vy: 110,
+        radius: 15,
+        hp: 55,
+        maxHp: 55,
+        color: '#9d4edd',
+        isCloaked: true,
+        canShoot: true,
+        shootInterval: 1.8,
+        shootTimer: 0.8
+      });
     } else {
       // Heavy Cruiser
       this.enemies.push({

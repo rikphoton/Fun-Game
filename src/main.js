@@ -141,6 +141,32 @@ class ArcadeApp {
     this.initialsRankInfo = document.getElementById('initials-rank-info');
     this.btnSubmitInitials = document.getElementById('btn-submit-initials');
     this.pendingScoreData = null;
+
+    // Player Profile Elements
+    this.btnOpenProfile = document.getElementById('btn-open-profile');
+    this.modalPlayerProfile = document.getElementById('modal-player-profile');
+    this.btnCloseProfile = document.getElementById('btn-close-profile');
+    this.btnExportSave = document.getElementById('btn-export-save');
+    this.btnOpenImportModal = document.getElementById('btn-open-import-modal');
+    this.modalImportSave = document.getElementById('modal-import-save');
+    this.importSaveTextarea = document.getElementById('import-save-textarea');
+    this.btnSubmitImport = document.getElementById('btn-submit-import');
+    this.btnCancelImport = document.getElementById('btn-cancel-import');
+    this.btnResetScores = document.getElementById('btn-reset-scores');
+    this.btnResetProgression = document.getElementById('btn-reset-progression');
+    this.btnResetAll = document.getElementById('btn-reset-all');
+
+    // Tournament Elements
+    this.btnOpenTournament = document.getElementById('btn-open-tournament');
+    this.modalTournament = document.getElementById('modal-tournament');
+    this.btnCloseTournament = document.getElementById('btn-close-tournament');
+    this.btnStartTournament = document.getElementById('btn-start-tournament');
+    this.isTournament = false;
+    this.tournamentScores = [];
+    this.tournamentStage = 0;
+
+    // Replay Element
+    this.btnWatchReplay = document.getElementById('btn-watch-replay');
   }
 
   initGames() {
@@ -386,6 +412,122 @@ class ArcadeApp {
     this.btnCloseAchievements.addEventListener('click', () => {
       this.modalAchievements.style.display = 'none';
     });
+
+    // Player Profile Modal & Save Management
+    if (this.btnOpenProfile) {
+      this.btnOpenProfile.addEventListener('click', () => {
+        sound.init();
+        this.renderPlayerProfile();
+        this.modalPlayerProfile.style.display = 'flex';
+      });
+    }
+    if (this.btnCloseProfile) {
+      this.btnCloseProfile.addEventListener('click', () => {
+        this.modalPlayerProfile.style.display = 'none';
+      });
+    }
+
+    if (this.btnExportSave) {
+      this.btnExportSave.addEventListener('click', () => {
+        const payload = storage.exportSaveData();
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(payload)
+            .then(() => this.showToast('✅ Save data copied to clipboard!'))
+            .catch(() => this.promptSaveExport(payload));
+        } else {
+          this.promptSaveExport(payload);
+        }
+      });
+    }
+
+    if (this.btnOpenImportModal) {
+      this.btnOpenImportModal.addEventListener('click', () => {
+        if (this.importSaveTextarea) this.importSaveTextarea.value = '';
+        this.modalImportSave.style.display = 'flex';
+      });
+    }
+    if (this.btnCancelImport) {
+      this.btnCancelImport.addEventListener('click', () => {
+        this.modalImportSave.style.display = 'none';
+      });
+    }
+    if (this.btnSubmitImport) {
+      this.btnSubmitImport.addEventListener('click', () => {
+        const raw = this.importSaveTextarea ? this.importSaveTextarea.value.trim() : '';
+        if (!raw) return;
+        const res = storage.importSaveData(raw);
+        if (res.success) {
+          this.modalImportSave.style.display = 'none';
+          this.renderPlayerProfile();
+          this.updateLobbyScores();
+          this.updateCreditsDisplay();
+          this.showToast('🎉 Save data imported successfully!');
+        } else {
+          alert(`Save import error: ${res.error}`);
+        }
+      });
+    }
+
+    if (this.btnResetScores) {
+      this.btnResetScores.addEventListener('click', () => {
+        if (confirm('Reset high scores across all arcade sectors? (Credits & upgrades will remain)')) {
+          storage.resetGameScores();
+          this.updateLobbyScores();
+          this.renderPlayerProfile();
+          this.showToast('High scores reset to zero.');
+        }
+      });
+    }
+    if (this.btnResetProgression) {
+      this.btnResetProgression.addEventListener('click', () => {
+        if (confirm('Reset quest progression & Cyber Lab upgrades? (Cosmetics & scores will remain)')) {
+          storage.resetProgression();
+          this.renderPlayerProfile();
+          this.showToast('Progression reset.');
+        }
+      });
+    }
+    if (this.btnResetAll) {
+      this.btnResetAll.addEventListener('click', () => {
+        if (confirm('⚠️ WARNING: Complete Factory Reset? All arcade scores, credits and unlocks will be wiped!')) {
+          storage.resetAll();
+          this.updateLobbyScores();
+          this.updateCreditsDisplay();
+          this.renderPlayerProfile();
+          this.showToast('Factory reset complete.');
+        }
+      });
+    }
+
+    // Tournament Modal
+    if (this.btnOpenTournament) {
+      this.btnOpenTournament.addEventListener('click', () => {
+        sound.init();
+        this.renderTournamentStatus();
+        this.modalTournament.style.display = 'flex';
+      });
+    }
+    if (this.btnCloseTournament) {
+      this.btnCloseTournament.addEventListener('click', () => {
+        this.modalTournament.style.display = 'none';
+      });
+    }
+    if (this.btnStartTournament) {
+      this.btnStartTournament.addEventListener('click', () => {
+        this.modalTournament.style.display = 'none';
+        this.startTournamentGauntlet();
+      });
+    }
+
+    // Watch Replay
+    if (this.btnWatchReplay) {
+      this.btnWatchReplay.addEventListener('click', () => {
+        this.modalGameOver.style.display = 'none';
+        if (this.activeGame && this.activeGame.startReplay) {
+          this.activeGame.startReplay();
+        }
+      });
+    }
 
     // Cyber Survivors Mech Chooser
     document.getElementById('btn-play-survivors').addEventListener('click', () => {
@@ -1245,6 +1387,81 @@ class ArcadeApp {
 
   // --- DAILY QUESTS & BOUNTIES RENDERER ---
 
+  // --- PLAYER PROFILE & TOURNAMENT GAUNTLET ---
+
+  renderPlayerProfile() {
+    const stats = storage.getProfileStats();
+    const badge = document.getElementById('profile-level-badge');
+    const xpText = document.getElementById('profile-xp-text');
+    const xpFill = document.getElementById('profile-xp-fill');
+    const statGames = document.getElementById('profile-stat-games');
+    const statPlaytime = document.getElementById('profile-stat-playtime');
+    const statScore = document.getElementById('profile-stat-score');
+    const statTrophies = document.getElementById('profile-stat-trophies');
+    const scoresTable = document.getElementById('profile-scores-table');
+
+    if (badge) badge.textContent = `LVL ${stats.playerLevel} OPERATIVE`;
+    if (xpText) xpText.textContent = `LEVEL ${stats.playerLevel} (${stats.completionPercent}% PROGRESS)`;
+    if (xpFill) xpFill.style.width = `${Math.min(100, Math.max(5, stats.completionPercent))}%`;
+    if (statGames) statGames.textContent = stats.gamesPlayed.toLocaleString();
+
+    // Format playtime
+    const m = Math.floor(stats.totalPlayTime / 60);
+    const h = Math.floor(m / 60);
+    const playtimeStr = h > 0 ? `${h}h ${m % 60}m` : `${m}m`;
+    if (statPlaytime) statPlaytime.textContent = playtimeStr;
+
+    if (statScore) statScore.textContent = stats.totalScore.toLocaleString();
+    if (statTrophies) statTrophies.textContent = `${stats.achievementsUnlocked} / ${stats.totalAchievements}`;
+
+    if (scoresTable) {
+      const gameLabels = {
+        cyberSurvivors: '🛸 Cyber Survivors',
+        neonDash: '🚀 Neon Dash',
+        quantumBreaker: '💥 Quantum Breaker',
+        astroPulse: '🌠 Astro Pulse',
+        neonDrift: '🏎️ Neon Drift',
+        hexaTron: '🏍️ Hexa-Tron',
+        cyberPacman: '👾 Cyber Pacman'
+      };
+      scoresTable.innerHTML = Object.entries(stats.highScores).map(([key, sc]) => `
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 0.85rem;">
+          <span style="color: #cbd5e1;">${gameLabels[key] || key}</span>
+          <span style="color: #00f3ff; font-family: monospace; font-weight: bold;">${sc.toLocaleString()} PTS</span>
+        </div>
+      `).join('');
+    }
+  }
+
+  promptSaveExport(payload) {
+    prompt('Copy your complete save data payload below:', payload);
+  }
+
+  renderTournamentStatus() {
+    const pb = storage.data.tournamentPB || 0;
+    const pbEl = document.getElementById('tournament-pb-score');
+    const tierEl = document.getElementById('tournament-rank-tier');
+    if (pbEl) pbEl.textContent = `${pb.toLocaleString()} PTS`;
+    if (tierEl) {
+      let tier = 'UNRANKED';
+      let col = '#94a3b8';
+      if (pb >= 12000) { tier = '👑 APEX GRANDMASTER'; col = '#ffd700'; }
+      else if (pb >= 8000) { tier = '🥇 GOLD OPERATIVE'; col = '#ffe600'; }
+      else if (pb >= 4500) { tier = '🥈 SILVER OPERATIVE'; col = '#00f3ff'; }
+      else if (pb > 0) { tier = '🥉 BRONZE OPERATIVE'; col = '#cd7f32'; }
+      tierEl.textContent = tier;
+      tierEl.style.color = col;
+    }
+  }
+
+  startTournamentGauntlet() {
+    this.isTournament = true;
+    this.tournamentScores = [];
+    this.tournamentStage = 1;
+    this.showToast('🏆 TOURNAMENT GAUNTLET STARTED! Stage 1: Neon Dash');
+    this.launchGame('neonDash');
+  }
+
   renderQuests() {
     this.updateCreditsDisplay();
     const quests = storage.data.quests;
@@ -1572,9 +1789,11 @@ class ArcadeApp {
   returnToHub() {
     document.body.classList.remove('in-game');
     if (this.activeGame) {
+      if (this.activeGame.destroy) this.activeGame.destroy();
       this.activeGame.isRunning = false;
       this.activeGame = null;
     }
+    this.physicsAccumulator = 0;
     sound.stopBgm();
     this.gameView.style.display = 'none';
     this.lobbyView.style.display = 'flex';
@@ -1622,6 +1841,7 @@ class ArcadeApp {
       if (game && game.isRunning && !this.isPaused && !game.isPaused) {
         this.togglePause();
       }
+      this.physicsAccumulator = 0;
     };
 
     document.addEventListener('visibilitychange', () => {
@@ -1630,6 +1850,7 @@ class ArcadeApp {
         sound.suspend();
       } else {
         this.lastTime = performance.now();
+        this.physicsAccumulator = 0;
         sound.resume();
       }
     });
@@ -1644,6 +1865,13 @@ class ArcadeApp {
     this.modalPause.style.display = this.isPaused ? 'flex' : 'none';
     if (!this.isPaused) {
       this.lastTime = performance.now();
+      this.physicsAccumulator = 0;
+      sound.resume();
+      if (this.activeGame.resume) this.activeGame.resume();
+    } else {
+      this.physicsAccumulator = 0;
+      sound.suspend();
+      if (this.activeGame.pause) this.activeGame.pause();
     }
   }
 
@@ -1726,7 +1954,42 @@ class ArcadeApp {
     this.updateLobbyScores();
     this.updateCreditsDisplay();
 
+    // Toggle Watch Replay button visibility
+    if (this.btnWatchReplay) {
+      this.btnWatchReplay.style.display = (this.activeGameKey === 'neonDash' && data.hasReplay) ? 'inline-block' : 'none';
+    }
+
     if (data.isRecord) sound.announce('New Record!');
+
+    // Handle Arcade Tournament progression
+    if (this.isTournament) {
+      this.tournamentScores.push(data.score);
+      if (this.tournamentStage === 1) {
+        this.tournamentStage = 2;
+        this.modalGameOver.style.display = 'none';
+        this.showToast(`✅ STAGE 1 FINISHED! Score: ${data.score}. Moving to Stage 2: Cyber Survivors!`);
+        setTimeout(() => this.launchGame('cyberSurvivors', this.selectedMech), 600);
+        return;
+      } else if (this.tournamentStage === 2) {
+        this.tournamentStage = 3;
+        this.modalGameOver.style.display = 'none';
+        this.showToast(`✅ STAGE 2 FINISHED! Score: ${data.score}. Moving to Final Stage: Quantum Breaker!`);
+        setTimeout(() => this.launchGame('quantumBreaker'), 600);
+        return;
+      } else {
+        // Tournament Finished!
+        this.isTournament = false;
+        const totalTournamentScore = this.tournamentScores.reduce((a, b) => a + b, 0);
+        if (totalTournamentScore > (storage.data.tournamentPB || 0)) {
+          storage.data.tournamentPB = totalTournamentScore;
+          storage.save();
+        }
+        storage.addCredits(200);
+        sound.playLevelUp();
+        sound.announce('Tournament Complete! Outstanding Performance!');
+        this.showToast(`🎉 TOURNAMENT COMPLETE! Total Score: ${totalTournamentScore.toLocaleString()} PTS (+200 NC)`);
+      }
+    }
 
     // Check for Top-10 Leaderboard High Score qualification
     if (data.score > 0 && leaderboard.isHighScore(this.activeGameKey, data.score)) {
@@ -1844,9 +2107,12 @@ class ArcadeApp {
   }
 
   loop(currentTime) {
+    if (!this.lastTime) this.lastTime = currentTime;
     const rawDt = (currentTime - this.lastTime) / 1000;
-    const dt = Math.min(0.05, Math.max(0.001, rawDt));
     this.lastTime = currentTime;
+
+    // Prevent sudden huge leaps from frame drops, tab suspension or GC pauses
+    const dt = Math.min(Math.max(0.001, rawDt), 0.1);
 
     // Poll Gamepad every frame
     gamepad.poll();
@@ -1854,9 +2120,31 @@ class ArcadeApp {
     if (this.activeGame && this.activeGame.isRunning) {
       this.handleGamepadInput();
 
+      // Track active gameplay time for Global Player Profile
       if (!this.isPaused && !this.activeGame.isPaused) {
-        this.activeGame.update(dt);
-        this.particles.update(dt);
+        this.playtimeTimer = (this.playtimeTimer || 0) + dt;
+        if (this.playtimeTimer >= 10) {
+          storage.recordPlayTime(this.playtimeTimer);
+          this.playtimeTimer = 0;
+        }
+      }
+
+      if (!this.isPaused && !this.activeGame.isPaused) {
+        // Fixed-timestep physics simulation (60Hz = ~0.016667s) with up to 4 sub-steps
+        // Guarantees consistent physics, collision accuracy and speeds on 60Hz, 120Hz, 144Hz & mobile
+        const FIXED_STEP = 1 / 60;
+        this.physicsAccumulator = (this.physicsAccumulator || 0) + dt;
+
+        let steps = 0;
+        while (this.physicsAccumulator >= FIXED_STEP && steps < 4) {
+          this.activeGame.update(FIXED_STEP);
+          this.particles.update(FIXED_STEP);
+          this.physicsAccumulator -= FIXED_STEP;
+          steps++;
+        }
+        if (this.physicsAccumulator > FIXED_STEP * 2) {
+          this.physicsAccumulator = 0;
+        }
 
         if (this.activeGameKey === 'quantumBreaker' && this.activeGame.paddle && this.sliderKnob && !this.isSliderActive) {
           const halfWidth = this.activeGame.paddle.width / 2;
@@ -1868,6 +2156,8 @@ class ArcadeApp {
             if (this.sliderFill) this.sliderFill.style.width = `${pct}%`;
           }
         }
+      } else {
+        this.physicsAccumulator = 0;
       }
 
       const shake = this.particles.getShakeOffset();
@@ -1879,6 +2169,8 @@ class ArcadeApp {
       this.particles.draw(this.ctx);
 
       this.ctx.restore();
+    } else {
+      this.physicsAccumulator = 0;
     }
 
     requestAnimationFrame((t) => this.loop(t));

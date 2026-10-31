@@ -43,6 +43,14 @@
         📺 CRT: ON
       </button>
 
+      <button class="control-btn" id="btn-open-profile" title="Global Player Profile & Save Management">
+        👤 Profile
+      </button>
+
+      <button class="control-btn" id="btn-open-tournament" title="Arcade Tournament Gauntlet">
+        ⚡ Tournament
+      </button>
+
       <button class="control-btn" id="btn-open-leaderboards" title="Local Hall of Fame (saved on this device)">
         🏆 Hall of Fame
       </button>
@@ -479,6 +487,7 @@
       <div class="modal-stats" id="go-stats"></div>
       <div class="modal-actions">
         <button class="play-btn" id="btn-restart-game">🔄 Play Again</button>
+        <button class="control-btn" id="btn-watch-replay" style="display: none;">📽️ Watch Replay</button>
         <button class="control-btn" id="btn-go-hub">🏠 Return to Hub</button>
       </div>
     </div>
@@ -571,6 +580,124 @@
 
       <div class="modal-actions" style="justify-content: center; margin-top: 20px;">
         <button class="play-btn gold" id="btn-submit-initials">💾 SUBMIT SCORE</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Global Player Profile Modal -->
+  <div class="modal-overlay" id="modal-player-profile">
+    <div class="modal-box" style="max-width: 680px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+        <h2 class="modal-title cyan" style="margin: 0;">👤 OPERATIVE PROFILE</h2>
+        <span class="status-indicator" id="profile-level-badge" style="color: #00f3ff; font-weight: bold; border: 1px solid #00f3ff; padding: 2px 8px; border-radius: 4px;">LVL 1 OPERATIVE</span>
+      </div>
+      <p class="modal-subtitle">Comprehensive arcade records, combat statistics and cloud save sync</p>
+
+      <!-- Player Progress Bar -->
+      <div style="margin: 14px 0 18px 0; background: rgba(0,0,0,0.5); border: 1px solid rgba(0,243,255,0.3); border-radius: 8px; padding: 12px;">
+        <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 6px;">
+          <span style="color: #94a3b8;">EXPERIENCE PROGRESS</span>
+          <span id="profile-xp-text" style="color: #00f3ff; font-weight: bold;">0 / 100 XP</span>
+        </div>
+        <div style="height: 10px; background: rgba(255,255,255,0.1); border-radius: 5px; overflow: hidden;">
+          <div id="profile-xp-fill" style="width: 10%; height: 100%; background: linear-gradient(90deg, #00f3ff, #ff00aa); border-radius: 5px; transition: width 0.3s;"></div>
+        </div>
+      </div>
+
+      <!-- Quick Stats Grid -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 18px;">
+        <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 6px; padding: 10px; text-align: center;">
+          <div style="font-size: 0.75rem; color: #94a3b8;">GAMES PLAYED</div>
+          <div id="profile-stat-games" style="font-size: 1.3rem; font-weight: bold; color: #00f3ff; margin-top: 4px;">0</div>
+        </div>
+        <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 6px; padding: 10px; text-align: center;">
+          <div style="font-size: 0.75rem; color: #94a3b8;">TOTAL PLAYTIME</div>
+          <div id="profile-stat-playtime" style="font-size: 1.3rem; font-weight: bold; color: #ffe600; margin-top: 4px;">0m</div>
+        </div>
+        <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 6px; padding: 10px; text-align: center;">
+          <div style="font-size: 0.75rem; color: #94a3b8;">TOTAL SCORE</div>
+          <div id="profile-stat-score" style="font-size: 1.3rem; font-weight: bold; color: #ff007f; margin-top: 4px;">0</div>
+        </div>
+        <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 6px; padding: 10px; text-align: center;">
+          <div style="font-size: 0.75rem; color: #94a3b8;">TROPHIES</div>
+          <div id="profile-stat-trophies" style="font-size: 1.3rem; font-weight: bold; color: #00ff88; margin-top: 4px;">0 / 20</div>
+        </div>
+      </div>
+
+      <!-- Sector High Scores Mini-Table -->
+      <h3 style="font-size: 0.95rem; color: #00f3ff; margin: 12px 0 8px 0; text-transform: uppercase; letter-spacing: 1px;">Sector Personal Bests</h3>
+      <div id="profile-scores-table" style="max-height: 140px; overflow-y: auto; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; margin-bottom: 18px; padding: 6px 12px;"></div>
+
+      <!-- Save Management Operations -->
+      <h3 style="font-size: 0.95rem; color: #ffe600; margin: 12px 0 8px 0; text-transform: uppercase; letter-spacing: 1px;">💾 Save Data & Reset Controls</h3>
+      <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px;">
+        <button class="control-btn" id="btn-export-save">📥 Export Save</button>
+        <button class="control-btn" id="btn-open-import-modal">📤 Import Save</button>
+        <button class="control-btn" id="btn-reset-scores" style="color: #ffaa00;">🔄 Reset Scores</button>
+        <button class="control-btn" id="btn-reset-progression" style="color: #ff5555;">⚠️ Reset Progress</button>
+        <button class="control-btn" id="btn-reset-all" style="color: #ff0055;">💣 Factory Reset</button>
+      </div>
+
+      <div class="modal-actions" style="margin-top: 18px;">
+        <button class="play-btn" id="btn-close-profile">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Save Import Dialog Modal -->
+  <div class="modal-overlay" id="modal-import-save">
+    <div class="modal-box" style="max-width: 520px;">
+      <h2 class="modal-title gold">📤 IMPORT SAVE DATA</h2>
+      <p class="modal-subtitle">Paste your exported save JSON string below to restore progress:</p>
+      <textarea id="import-save-textarea" style="width: 100%; height: 140px; background: rgba(0,0,0,0.6); color: #00f3ff; border: 1px solid rgba(0,243,255,0.4); border-radius: 6px; padding: 8px; font-family: monospace; font-size: 0.8rem; resize: none; margin-bottom: 12px;" placeholder="Paste JSON save payload here..."></textarea>
+      <div class="modal-actions">
+        <button class="play-btn gold" id="btn-submit-import">Restore Save</button>
+        <button class="control-btn" id="btn-cancel-import">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Arcade Tournament Modal -->
+  <div class="modal-overlay" id="modal-tournament">
+    <div class="modal-box" style="max-width: 660px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+        <h2 class="modal-title gold" style="margin: 0;">⚡ ARCADE TRIATHLON</h2>
+        <span class="status-indicator" style="color: #ffe600; font-weight: bold; border: 1px solid #ffe600; padding: 2px 8px; border-radius: 4px;">SEASON 1</span>
+      </div>
+      <p class="modal-subtitle">3-Stage consecutive endurance gauntlet. Your scores across all 3 sectors combine into a global tournament standing!</p>
+
+      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 16px 0;">
+        <div style="background: rgba(0,243,255,0.08); border: 1px solid rgba(0,243,255,0.3); border-radius: 6px; padding: 10px; text-align: center;">
+          <div style="font-size: 0.75rem; color: #00f3ff; font-weight: bold;">STAGE 1</div>
+          <div style="font-size: 1.1rem; margin: 6px 0;">🚀 Neon Dash</div>
+          <div style="font-size: 0.75rem; color: #94a3b8;">Distance Sprint</div>
+        </div>
+        <div style="background: rgba(255,0,85,0.08); border: 1px solid rgba(255,0,85,0.3); border-radius: 6px; padding: 10px; text-align: center;">
+          <div style="font-size: 0.75rem; color: #ff0055; font-weight: bold;">STAGE 2</div>
+          <div style="font-size: 1.1rem; margin: 6px 0;">🛸 Cyber Survivors</div>
+          <div style="font-size: 0.75rem; color: #94a3b8;">60s Swarm Rush</div>
+        </div>
+        <div style="background: rgba(0,255,136,0.08); border: 1px solid rgba(0,255,136,0.3); border-radius: 6px; padding: 10px; text-align: center;">
+          <div style="font-size: 0.75rem; color: #00ff88; font-weight: bold;">STAGE 3</div>
+          <div style="font-size: 1.1rem; margin: 6px 0;">💥 Quantum Breaker</div>
+          <div style="font-size: 0.75rem; color: #94a3b8;">Brick Demolition</div>
+        </div>
+      </div>
+
+      <div style="background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; padding: 12px; margin-bottom: 16px;">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+          <span style="color: #94a3b8;">PERSONAL BEST TOURNAMENT RECORD:</span>
+          <span id="tournament-pb-score" style="color: #ffe600; font-weight: bold;">0 PTS</span>
+        </div>
+        <div style="display: flex; justify-content: space-between;">
+          <span style="color: #94a3b8;">TOURNAMENT RANK:</span>
+          <span id="tournament-rank-tier" style="color: #00f3ff; font-weight: bold;">UNRANKED</span>
+        </div>
+      </div>
+
+      <div class="modal-actions" style="margin-top: 20px;">
+        <button class="play-btn gold" id="btn-start-tournament">🏆 Enter Tournament</button>
+        <button class="control-btn" id="btn-close-tournament">Close</button>
       </div>
     </div>
   </div>

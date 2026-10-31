@@ -1,8 +1,15 @@
-// Local Storage persistence for high scores, stats, Cyber Armory, Cyber Lab & Daily Quests
+// Local Storage persistence for high scores, stats, Cyber Armory, Cyber Lab, Daily Quests & Player Profile
 
-const STORAGE_KEY = 'neonpulse_arcade_v3';
+export const SAVE_VERSION = 4;
+export const STORAGE_KEY_V4 = 'neonpulse_arcade_v4';
+export const STORAGE_BACKUP_KEY = 'neonpulse_arcade_v4_backup';
+export const STORAGE_KEY_LEGACY = 'neonpulse_arcade_v3';
 
 const INITIAL_DATA = {
+  version: SAVE_VERSION,
+  createdAt: Date.now(),
+  updatedAt: Date.now(),
+  claimedRewards: [],
   highScores: {
     cyberSurvivors: 0,
     neonDash: 0,
@@ -14,6 +21,8 @@ const INITIAL_DATA = {
   },
   stats: {
     gamesPlayed: 0,
+    totalPlayTime: 0,
+    playedGames: [],
     enemiesKilled: 0,
     gemsCollected: 0,
     maxSurvivorsLevel: 1,
@@ -22,12 +31,15 @@ const INITIAL_DATA = {
     maxCombo: 0,
     shmupBossesKilled: 0,
     driftDistance: 0,
-    tronRivalKills: 0
+    tronRivalKills: 0,
+    pacmanPelletsEaten: 0,
+    pacmanGhostsEaten: 0
   },
   neonCredits: 200,
   inventory: {
     trails: ['cyan'],
-    themes: ['cyberpunk']
+    themes: ['cyberpunk'],
+    mechs: ['specter']
   },
   equipped: {
     trail: 'cyan',
@@ -49,33 +61,39 @@ const INITIAL_DATA = {
     { id: 'quest_tron', title: 'Grid Gladiator', desc: 'Eliminate 4 Rivals in Hexa-Tron', current: 0, target: 4, reward: 100, claimed: false, icon: '🏍️' }
   ],
   achievements: {
-    first_game: { id: 'first_game', title: 'Arcade Initiate', desc: 'Play your first game', unlocked: false, icon: '🎮' },
-    drone_hunter: { id: 'drone_hunter', title: 'Drone Hunter', desc: 'Defeat 50 cyber drones', unlocked: false, icon: '⚡' },
-    level_ten: { id: 'level_ten', title: 'Apex Survivor', desc: 'Reach Level 10 in Cyber Survivors', unlocked: false, icon: '🛡️' },
-    gravity_champ: { id: 'gravity_champ', title: 'Gravity Bender', desc: 'Reach 300 score in Neon Dash', unlocked: false, icon: '🚀' },
-    brick_wrecker: { id: 'brick_wrecker', title: 'Quantum Breaker', desc: 'Shatter 50 bricks', unlocked: false, icon: '💥' },
-    combo_god: { id: 'combo_god', title: 'Combo Maestro', desc: 'Achieve a 15x Combo in Quantum Breaker', unlocked: false, icon: '🔥' },
-    star_ace: { id: 'star_ace', title: 'Star Fleet Ace', desc: 'Destroy the Mothership in Astro Pulse', unlocked: false, icon: '🌠' },
-    speed_demon: { id: 'speed_demon', title: 'Speed Demon', desc: 'Reach 250 km/h in Neon Drift', unlocked: false, icon: '🏎️' },
-    highway_legend: { id: 'highway_legend', title: 'Highway Legend', desc: 'Travel 3,000 meters in Neon Drift', unlocked: false, icon: '🛣️' },
-    grid_master: { id: 'grid_master', title: 'Grid Master', desc: 'Survive as the Last Operative Standing in Hexa-Tron', unlocked: false, icon: '🏍️' },
-    dreadnought_slayer: { id: 'dreadnought_slayer', title: 'Dreadnought Slayer', desc: 'Destroy the Mega Dreadnought in Cyber Survivors', unlocked: false, icon: '👾' },
-    multiball_mayhem: { id: 'multiball_mayhem', title: 'Multi-Ball Mayhem', desc: 'Command 6 or more balls at once in Quantum Breaker', unlocked: false, icon: '💥' },
-    tech_master: { id: 'tech_master', title: 'Cyber Engineer', desc: 'Upgrade any tech in the Cyber Lab', unlocked: false, icon: '🧬' },
-    bounty_hunter: { id: 'bounty_hunter', title: 'Bounty Hunter', desc: 'Complete and claim a daily quest', unlocked: false, icon: '🎯' },
-    arcade_master: { id: 'arcade_master', title: 'All-Star Champion', desc: 'Score over 1,000 in all games', unlocked: false, icon: '👑' }
+    first_game: { id: 'first_game', title: 'Arcade Initiate', desc: 'Play your first game', unlocked: false, icon: '🎮', category: 'General' },
+    arcade_beginner: { id: 'arcade_beginner', title: 'Arcade Explorer', desc: 'Play all seven arcade games', unlocked: false, icon: '🕹️', category: 'General' },
+    drone_hunter: { id: 'drone_hunter', title: 'Drone Hunter', desc: 'Defeat 50 cyber drones', unlocked: false, icon: '⚡', category: 'Combat' },
+    level_ten: { id: 'level_ten', title: 'Apex Survivor', desc: 'Reach Level 10 in Cyber Survivors', unlocked: false, icon: '🛡️', category: 'Combat' },
+    survivor_veteran: { id: 'survivor_veteran', title: 'Iron Will', desc: 'Survive for over 5 minutes in Cyber Survivors', unlocked: false, icon: '⏱️', category: 'Combat' },
+    gravity_champ: { id: 'gravity_champ', title: 'Gravity Bender', desc: 'Reach 300 score in Neon Dash', unlocked: false, icon: '🚀', category: 'Arcade' },
+    brick_wrecker: { id: 'brick_wrecker', title: 'Quantum Breaker', desc: 'Shatter 50 bricks', unlocked: false, icon: '💥', category: 'Arcade' },
+    combo_god: { id: 'combo_god', title: 'Combo Maestro', desc: 'Achieve a 15x Combo in Quantum Breaker', unlocked: false, icon: '🔥', category: 'Arcade' },
+    star_ace: { id: 'star_ace', title: 'Star Fleet Ace', desc: 'Destroy the Mothership in Astro Pulse', unlocked: false, icon: '🌠', category: 'Combat' },
+    speed_demon: { id: 'speed_demon', title: 'Speed Demon', desc: 'Reach 250 km/h in Neon Drift', unlocked: false, icon: '🏎️', category: 'Racing' },
+    highway_legend: { id: 'highway_legend', title: 'Highway Legend', desc: 'Travel 3,000 meters in Neon Drift', unlocked: false, icon: '🛣️', category: 'Racing' },
+    grid_master: { id: 'grid_master', title: 'Grid Master', desc: 'Survive as the Last Operative Standing in Hexa-Tron', unlocked: false, icon: '🏍️', category: 'Grid' },
+    pacman_ghostbuster: { id: 'pacman_ghostbuster', title: 'Cyber Ghostbuster', desc: 'Chomp 16 ghosts in Cyber Pacman', unlocked: false, icon: '👻', category: 'Arcade' },
+    collector: { id: 'collector', title: 'Master Collector', desc: 'Unlock 6 tech upgrades or custom cosmetics', unlocked: false, icon: '💎', category: 'Progression' },
+    dreadnought_slayer: { id: 'dreadnought_slayer', title: 'Dreadnought Slayer', desc: 'Destroy the Mega Dreadnought in Cyber Survivors', unlocked: false, icon: '👾', category: 'Combat' },
+    multiball_mayhem: { id: 'multiball_mayhem', title: 'Multi-Ball Mayhem', desc: 'Command 6 or more balls at once in Quantum Breaker', unlocked: false, icon: '💥', category: 'Arcade' },
+    tech_master: { id: 'tech_master', title: 'Cyber Engineer', desc: 'Upgrade any tech in the Cyber Lab', unlocked: false, icon: '🧬', category: 'Progression' },
+    bounty_hunter: { id: 'bounty_hunter', title: 'Bounty Hunter', desc: 'Complete and claim a daily quest', unlocked: false, icon: '🎯', category: 'General' },
+    score_centurion: { id: 'score_centurion', title: 'All-Rounder', desc: 'Score 500+ in at least 4 different games', unlocked: false, icon: '⭐', category: 'Mastery' },
+    arcade_master: { id: 'arcade_master', title: 'All-Star Champion', desc: 'Score over 1,000 in all games', unlocked: false, icon: '👑', category: 'Mastery' }
   },
   settings: {
     sfxVolume: 0.6,
     bgmVolume: 0.4,
     crtFilter: true,
     bgmTrack: 'synthwave',
-    announcerEnabled: true
+    announcerEnabled: true,
+    reducedMotion: false,
+    haptics: true
   }
 };
 
-// Keep saved quest progress by quest id. (The old check required exactly 4 saved quests, but the
-// game defines 6, so progress was thrown away on every page load.) New quests added in later
+// Keep saved quest progress by quest id. New quests added in later
 // versions are appended with fresh progress, and removed quests are dropped.
 export function mergeQuests(saved) {
   const defaults = INITIAL_DATA.quests;
@@ -94,42 +112,236 @@ class StorageManager {
     this.onAchievementUnlock = null;
     this.onCreditsChange = null;
     this.onQuestUpdate = null;
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('pagehide', () => this.save());
+      window.addEventListener('beforeunload', () => this.save());
+    }
+  }
+
+  validateAndSanitize(raw) {
+    if (!raw || typeof raw !== 'object') {
+      return JSON.parse(JSON.stringify(INITIAL_DATA));
+    }
+    const clean = JSON.parse(JSON.stringify(INITIAL_DATA));
+    clean.version = SAVE_VERSION;
+    clean.updatedAt = Date.now();
+
+    // High Scores
+    if (raw.highScores && typeof raw.highScores === 'object') {
+      for (const [k, v] of Object.entries(raw.highScores)) {
+        if (typeof v === 'number' && Number.isFinite(v) && v >= 0) {
+          clean.highScores[k] = Math.floor(v);
+        }
+      }
+    }
+
+    // Stats
+    if (raw.stats && typeof raw.stats === 'object') {
+      for (const [k, v] of Object.entries(raw.stats)) {
+        if (typeof v === 'number' && Number.isFinite(v) && v >= 0) {
+          clean.stats[k] = Math.floor(v);
+        }
+      }
+      if (Array.isArray(raw.stats.playedGames)) {
+        clean.stats.playedGames = raw.stats.playedGames.filter(x => typeof x === 'string');
+      }
+    }
+
+    // Credits
+    if (typeof raw.neonCredits === 'number' && Number.isFinite(raw.neonCredits) && raw.neonCredits >= 0) {
+      clean.neonCredits = Math.floor(raw.neonCredits);
+    }
+
+    // Cyber Lab
+    if (raw.cyberLab && typeof raw.cyberLab === 'object') {
+      for (const [k, v] of Object.entries(raw.cyberLab)) {
+        if (typeof v === 'number' && Number.isFinite(v) && v >= 0) {
+          clean.cyberLab[k] = Math.min(5, Math.floor(v));
+        }
+      }
+    }
+
+    // Quests
+    clean.quests = mergeQuests(raw.quests);
+
+    // Inventory
+    if (raw.inventory && typeof raw.inventory === 'object') {
+      if (Array.isArray(raw.inventory.trails)) {
+        clean.inventory.trails = Array.from(new Set([...clean.inventory.trails, ...raw.inventory.trails.filter(x => typeof x === 'string')]));
+      }
+      if (Array.isArray(raw.inventory.themes)) {
+        clean.inventory.themes = Array.from(new Set([...clean.inventory.themes, ...raw.inventory.themes.filter(x => typeof x === 'string')]));
+      }
+      if (Array.isArray(raw.inventory.mechs)) {
+        clean.inventory.mechs = Array.from(new Set([...clean.inventory.mechs, ...raw.inventory.mechs.filter(x => typeof x === 'string')]));
+      }
+    }
+
+    // Equipped
+    if (raw.equipped && typeof raw.equipped === 'object') {
+      if (typeof raw.equipped.trail === 'string') clean.equipped.trail = raw.equipped.trail;
+      if (typeof raw.equipped.theme === 'string') clean.equipped.theme = raw.equipped.theme;
+      if (typeof raw.equipped.mech === 'string') clean.equipped.mech = raw.equipped.mech;
+    }
+
+    // Achievements
+    if (raw.achievements && typeof raw.achievements === 'object') {
+      for (const [k, v] of Object.entries(raw.achievements)) {
+        if (clean.achievements[k] && v && typeof v === 'object' && v.unlocked) {
+          clean.achievements[k].unlocked = true;
+        }
+      }
+    }
+
+    // Claimed rewards
+    if (Array.isArray(raw.claimedRewards)) {
+      clean.claimedRewards = raw.claimedRewards.filter(x => typeof x === 'string');
+    }
+
+    // Settings
+    if (raw.settings && typeof raw.settings === 'object') {
+      if (typeof raw.settings.sfxVolume === 'number') clean.settings.sfxVolume = Math.max(0, Math.min(1, raw.settings.sfxVolume));
+      if (typeof raw.settings.bgmVolume === 'number') clean.settings.bgmVolume = Math.max(0, Math.min(1, raw.settings.bgmVolume));
+      if (typeof raw.settings.crtFilter === 'boolean') clean.settings.crtFilter = raw.settings.crtFilter;
+      if (typeof raw.settings.bgmTrack === 'string') clean.settings.bgmTrack = raw.settings.bgmTrack;
+      if (typeof raw.settings.announcerEnabled === 'boolean') clean.settings.announcerEnabled = raw.settings.announcerEnabled;
+      if (typeof raw.settings.reducedMotion === 'boolean') clean.settings.reducedMotion = raw.settings.reducedMotion;
+      if (typeof raw.settings.haptics === 'boolean') clean.settings.haptics = raw.settings.haptics;
+    }
+
+    return clean;
   }
 
   load() {
+    let raw = null;
+    let needsSave = false;
+
+    // 1. Try v4 primary save
     try {
-      const stored = localStorage.getItem(STORAGE_KEY);
+      const stored = localStorage.getItem(STORAGE_KEY_V4);
       if (stored) {
-        const parsed = JSON.parse(stored);
-        return {
-          ...INITIAL_DATA,
-          ...parsed,
-          highScores: { ...INITIAL_DATA.highScores, ...(parsed.highScores || {}) },
-          stats: { ...INITIAL_DATA.stats, ...(parsed.stats || {}) },
-          cyberLab: { ...INITIAL_DATA.cyberLab, ...(parsed.cyberLab || {}) },
-          quests: mergeQuests(parsed.quests),
-          inventory: {
-            trails: parsed.inventory?.trails || ['cyan'],
-            themes: parsed.inventory?.themes || ['cyberpunk']
-          },
-          equipped: { ...INITIAL_DATA.equipped, ...(parsed.equipped || {}) },
-          achievements: { ...INITIAL_DATA.achievements, ...(parsed.achievements || {}) },
-          settings: { ...INITIAL_DATA.settings, ...(parsed.settings || {}) }
-        };
+        raw = JSON.parse(stored);
       }
     } catch (e) {
-      console.warn('LocalStorage load error:', e);
+      console.warn('LocalStorage v4 parse error, attempting backup recovery:', e);
+      try {
+        const backup = localStorage.getItem(STORAGE_BACKUP_KEY);
+        if (backup) {
+          raw = JSON.parse(backup);
+          needsSave = true;
+        }
+      } catch (err) {
+        console.warn('Backup recovery failed:', err);
+      }
     }
-    return JSON.parse(JSON.stringify(INITIAL_DATA));
+
+    // 2. If no v4 data, migrate from legacy formats (v3, v2, v1)
+    if (!raw) {
+      const legacyKeys = [STORAGE_KEY_LEGACY, 'neonpulse_arcade_v2', 'neonpulse_arcade'];
+      for (const lk of legacyKeys) {
+        try {
+          const legacyStored = localStorage.getItem(lk);
+          if (legacyStored) {
+            raw = JSON.parse(legacyStored);
+            needsSave = true;
+            break;
+          }
+        } catch (e) {
+          // continue checking other legacy keys
+        }
+      }
+    }
+
+    const sanitized = this.validateAndSanitize(raw);
+    if (needsSave) {
+      this.data = sanitized;
+      this.save();
+    }
+    return sanitized;
   }
 
   save() {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(this.data));
+      this.data.updatedAt = Date.now();
+      const serialized = JSON.stringify(this.data);
+      // Write backup first
+      localStorage.setItem(STORAGE_BACKUP_KEY, serialized);
+      // Write v4 primary
+      localStorage.setItem(STORAGE_KEY_V4, serialized);
+      // Mirror to legacy v3 key for backward-compatibility with tests & existing bookmarks
+      localStorage.setItem(STORAGE_KEY_LEGACY, serialized);
     } catch (e) {
       console.warn('LocalStorage save error:', e);
     }
   }
+
+  // --- SAVE DATA IMPORT / EXPORT & BACKUP RECOVERY ---
+
+  exportSaveData() {
+    const payload = {
+      app: 'NeonPulseArcade',
+      version: SAVE_VERSION,
+      exportedAt: new Date().toISOString(),
+      data: this.data
+    };
+    return JSON.stringify(payload, null, 2);
+  }
+
+  importSaveData(input) {
+    try {
+      let parsed = typeof input === 'string' ? JSON.parse(input) : input;
+      const rawData = (parsed && parsed.data && parsed.app === 'NeonPulseArcade') ? parsed.data : parsed;
+      if (!rawData || typeof rawData !== 'object') {
+        return { success: false, error: 'Invalid save data format' };
+      }
+      this.data = this.validateAndSanitize(rawData);
+      this.save();
+      if (this.onCreditsChange) this.onCreditsChange(this.data.neonCredits);
+      if (this.onQuestUpdate) this.onQuestUpdate();
+      return { success: true, version: this.data.version };
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  }
+
+  // --- SEPARATE RESET OPTIONS ---
+
+  resetGameScores(gameKey = null) {
+    if (gameKey) {
+      if (this.data.highScores[gameKey] !== undefined) {
+        this.data.highScores[gameKey] = 0;
+      }
+    } else {
+      for (const k of Object.keys(this.data.highScores)) {
+        this.data.highScores[k] = 0;
+      }
+    }
+    this.save();
+  }
+
+  resetProgression() {
+    this.data.quests = JSON.parse(JSON.stringify(INITIAL_DATA.quests));
+    this.data.cyberLab = JSON.parse(JSON.stringify(INITIAL_DATA.cyberLab));
+    this.data.stats = JSON.parse(JSON.stringify(INITIAL_DATA.stats));
+    this.data.claimedRewards = [];
+    this.save();
+    if (this.onQuestUpdate) this.onQuestUpdate();
+  }
+
+  resetSettings() {
+    this.data.settings = JSON.parse(JSON.stringify(INITIAL_DATA.settings));
+    this.save();
+  }
+
+  resetAll() {
+    this.data = JSON.parse(JSON.stringify(INITIAL_DATA));
+    this.save();
+    if (this.onCreditsChange) this.onCreditsChange(this.data.neonCredits);
+    if (this.onQuestUpdate) this.onQuestUpdate();
+  }
+
+  // --- CREDITS & UPGRADES ---
 
   getCredits() {
     return this.data.neonCredits || 0;
@@ -174,13 +386,22 @@ class StorageManager {
   }
 
   upgradeLab(id, cost) {
-    if (this.getLabLevel(id) < 3 && this.spendCredits(cost)) {
+    if (this.getLabLevel(id) < 5 && this.spendCredits(cost)) {
       this.data.cyberLab[id] = (this.data.cyberLab[id] || 0) + 1;
       this.unlockAchievement('tech_master');
+      this.checkCollectorAchievement();
       this.save();
       return true;
     }
     return false;
+  }
+
+  checkCollectorAchievement() {
+    const totalTech = Object.values(this.data.cyberLab).reduce((a, b) => a + b, 0);
+    const totalCosmetics = (this.data.inventory.trails?.length || 0) + (this.data.inventory.themes?.length || 0);
+    if (totalTech + totalCosmetics >= 6) {
+      this.unlockAchievement('collector');
+    }
   }
 
   // --- DAILY QUESTS & BOUNTIES ---
@@ -201,7 +422,16 @@ class StorageManager {
   claimQuest(questId) {
     const q = this.data.quests.find(item => item.id === questId);
     if (q && q.current >= q.target && !q.claimed) {
+      // Prevent duplicate reward claims
+      const rewardKey = `quest_${questId}`;
+      if (this.data.claimedRewards && this.data.claimedRewards.includes(rewardKey)) {
+        q.claimed = true;
+        this.save();
+        return 0;
+      }
       q.claimed = true;
+      if (!this.data.claimedRewards) this.data.claimedRewards = [];
+      this.data.claimedRewards.push(rewardKey);
       this.addCredits(q.reward);
       this.unlockAchievement('bounty_hunter');
       this.save();
@@ -221,6 +451,7 @@ class StorageManager {
     if (!this.hasItem(category, id)) {
       if (!this.data.inventory[category]) this.data.inventory[category] = [];
       this.data.inventory[category].push(id);
+      this.checkCollectorAchievement();
       this.save();
     }
   }
@@ -248,8 +479,52 @@ class StorageManager {
     return false;
   }
 
-  recordGamePlayed() {
+  // --- PLAYER PROFILE & STATS TRACKING ---
+
+  getProfileStats() {
+    const scores = this.data.highScores;
+    const totalScore = Object.values(scores).reduce((a, b) => a + (typeof b === 'number' ? b : 0), 0);
+    const achievementsList = Object.values(this.data.achievements);
+    const unlockedCount = achievementsList.filter(a => a.unlocked).length;
+    const totalAch = achievementsList.length;
+
+    // Player level progression curve based on score + credits + games
+    const xp = (totalScore * 0.1) + this.getCredits() + (this.data.stats.gamesPlayed * 50);
+    const playerLevel = Math.max(1, Math.floor(1 + Math.sqrt(xp / 120)));
+
+    return {
+      version: this.data.version,
+      gamesPlayed: this.data.stats.gamesPlayed || 0,
+      totalPlayTime: this.data.stats.totalPlayTime || 0,
+      totalScore,
+      highScores: { ...scores },
+      playerLevel,
+      neonCredits: this.getCredits(),
+      achievementsUnlocked: unlockedCount,
+      totalAchievements: totalAch,
+      completionPercent: totalAch > 0 ? Math.round((unlockedCount / totalAch) * 100) : 0,
+      stats: { ...this.data.stats }
+    };
+  }
+
+  recordPlayTime(seconds) {
+    if (typeof seconds === 'number' && seconds > 0) {
+      this.data.stats.totalPlayTime = (this.data.stats.totalPlayTime || 0) + Math.round(seconds);
+      this.save();
+    }
+  }
+
+  recordGamePlayed(gameKey) {
     this.data.stats.gamesPlayed = (this.data.stats.gamesPlayed || 0) + 1;
+    if (gameKey) {
+      if (!Array.isArray(this.data.stats.playedGames)) this.data.stats.playedGames = [];
+      if (!this.data.stats.playedGames.includes(gameKey)) {
+        this.data.stats.playedGames.push(gameKey);
+      }
+      if (this.data.stats.playedGames.length >= 7) {
+        this.unlockAchievement('arcade_beginner');
+      }
+    }
     this.unlockAchievement('first_game');
     this.addCredits(25);
     this.save();
@@ -307,12 +582,35 @@ class StorageManager {
     this.save();
   }
 
+  recordPacmanGhostEaten(count = 1) {
+    this.data.stats.pacmanGhostsEaten = (this.data.stats.pacmanGhostsEaten || 0) + count;
+    if (this.data.stats.pacmanGhostsEaten >= 16) {
+      this.unlockAchievement('pacman_ghostbuster');
+    }
+    this.save();
+  }
+
   checkAchievements() {
     const scores = this.data.highScores;
     if (scores.neonDash >= 300) {
       this.unlockAchievement('gravity_champ');
     }
-    if (scores.cyberSurvivors >= 1000 && scores.neonDash >= 1000 && scores.quantumBreaker >= 1000 && scores.astroPulse >= 1000) {
+    let qualifyingCount = 0;
+    for (const s of Object.values(scores)) {
+      if (s >= 500) qualifyingCount++;
+    }
+    if (qualifyingCount >= 4) {
+      this.unlockAchievement('score_centurion');
+    }
+    if (
+      scores.cyberSurvivors >= 1000 &&
+      scores.neonDash >= 1000 &&
+      scores.quantumBreaker >= 1000 &&
+      scores.astroPulse >= 1000 &&
+      scores.neonDrift >= 1000 &&
+      scores.hexaTron >= 1000 &&
+      scores.cyberPacman >= 1000
+    ) {
       this.unlockAchievement('arcade_master');
     }
   }

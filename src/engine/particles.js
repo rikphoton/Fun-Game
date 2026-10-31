@@ -7,7 +7,27 @@ export class ParticleSystem {
     this.shockwaves = [];
     this.shakeIntensity = 0;
     this.shakeDuration = 0;
-    this.maxParticles = 120; // Hard cap to prevent lag spikes
+    this.maxParticles = this._detectAdaptiveLimit();
+    this.particlePool = [];
+  }
+
+  _detectAdaptiveLimit() {
+    if (typeof window !== 'undefined') {
+      const isMobile = typeof window.innerWidth === 'number' && window.innerWidth <= 860;
+      const isWeakCpu = typeof navigator !== 'undefined' && navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4;
+      if (isMobile || isWeakCpu) return 60;
+    }
+    return 140;
+  }
+
+  acquireParticle() {
+    return this.particlePool.pop() || {};
+  }
+
+  releaseParticle(p) {
+    if (this.particlePool.length < 200) {
+      this.particlePool.push(p);
+    }
   }
 
   shake(intensity = 8, duration = 0.25) {
@@ -33,6 +53,7 @@ export class ParticleSystem {
       p.life -= dt;
       if (p.life <= 0) {
         this.particles.splice(i, 1);
+        this.releaseParticle(p);
         continue;
       }
 
@@ -97,46 +118,51 @@ export class ParticleSystem {
 
     for (let i = 0; i < actualCount; i++) {
       if (this.particles.length >= this.maxParticles) {
-        this.particles.shift(); // Drop oldest particle if limit reached
+        const oldest = this.particles.shift(); // Drop oldest particle if limit reached
+        if (oldest) this.releaseParticle(oldest);
       }
 
       const angle = Math.random() * Math.PI * 2;
       const speed = minSpeed + Math.random() * (maxSpeed - minSpeed);
       const chosenColor = colors ? colors[Math.floor(Math.random() * colors.length)] : color;
 
-      this.particles.push({
-        x,
-        y,
-        vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed,
-        size: minSize + Math.random() * (maxSize - minSize),
-        maxLife: life * (0.8 + Math.random() * 0.4),
-        life: life * (0.8 + Math.random() * 0.4),
-        color: chosenColor,
-        gravity,
-        shape,
-        rotation: Math.random() * Math.PI,
-        spin: (Math.random() * 2 - 1) * 6
-      });
+      const p = this.acquireParticle();
+      p.x = x;
+      p.y = y;
+      p.vx = Math.cos(angle) * speed;
+      p.vy = Math.sin(angle) * speed;
+      p.size = minSize + Math.random() * (maxSize - minSize);
+      p.maxLife = life * (0.8 + Math.random() * 0.4);
+      p.life = p.maxLife;
+      p.color = chosenColor;
+      p.gravity = gravity;
+      p.shape = shape;
+      p.rotation = Math.random() * Math.PI;
+      p.spin = (Math.random() * 2 - 1) * 6;
+
+      this.particles.push(p);
     }
   }
 
   spawn(x, y, vx = 0, vy = 0, color = '#00f0ff', size = 3, life = 0.4) {
     if (this.particles.length >= this.maxParticles) {
-      this.particles.shift();
+      const oldest = this.particles.shift();
+      if (oldest) this.releaseParticle(oldest);
     }
-    this.particles.push({
-      x,
-      y,
-      vx,
-      vy,
-      size,
-      maxLife: life,
-      life,
-      color,
-      shape: 'circle',
-      gravity: 0
-    });
+    const p = this.acquireParticle();
+    p.x = x;
+    p.y = y;
+    p.vx = vx;
+    p.vy = vy;
+    p.size = size;
+    p.maxLife = life;
+    p.life = life;
+    p.color = color;
+    p.shape = 'circle';
+    p.gravity = 0;
+    p.rotation = 0;
+    p.spin = 0;
+    this.particles.push(p);
   }
 
   explode(x, y, color = '#ff007f', count = 20) {
@@ -230,6 +256,9 @@ export class ParticleSystem {
   }
 
   clear() {
+    for (let i = 0; i < this.particles.length; i++) {
+      this.releaseParticle(this.particles[i]);
+    }
     this.particles = [];
     this.floatingTexts = [];
     this.shockwaves = [];

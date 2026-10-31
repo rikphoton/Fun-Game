@@ -123,6 +123,22 @@ export class CyberSurvivorsGame {
     sound.startBgm(storage.getSetting('bgmTrack') || 'synthwave');
   }
 
+  start(mechClass) {
+    this.init(mechClass);
+  }
+
+  pause() {
+    this.isPaused = true;
+  }
+
+  resume() {
+    this.isPaused = false;
+  }
+
+  destroy() {
+    this.isRunning = false;
+  }
+
   triggerSuperAbility() {
     if (this.superCharge < this.superMax || !this.isRunning || this.isPaused) return;
 
@@ -564,26 +580,28 @@ export class CyberSurvivorsGame {
     for (let i = 0; i < numShots; i++) {
       const spread = (i - (numShots - 1) / 2) * 0.16;
       const angle = baseAngle + spread;
+      const isTachyon = !!this.player.evolvedTachyon;
       this.bullets.push({
         x: px,
         y: py,
-        vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed,
-        radius: 4,
-        color: this.player.color,
-        damage: 30 + (this.player.blasterLevel * 4),
-        pierce: this.player.blasterLevel >= 4 ? 2 : 1,
+        vx: Math.cos(angle) * (isTachyon ? speed * 1.25 : speed),
+        vy: Math.sin(angle) * (isTachyon ? speed * 1.25 : speed),
+        radius: isTachyon ? 6 : 4,
+        color: isTachyon ? '#00f0ff' : this.player.color,
+        damage: isTachyon ? 55 + (this.player.blasterLevel * 5) : 30 + (this.player.blasterLevel * 4),
+        pierce: isTachyon ? 4 : (this.player.blasterLevel >= 4 ? 2 : 1),
         life: 1.6,
         isEnemy: false
       });
     }
 
-    sound.playLaser('normal');
+    sound.playLaser(this.player.evolvedTachyon ? 'heavy' : 'normal');
   }
 
   castChainLightning() {
     if (this.enemies.length === 0) return;
-    const count = Math.min(this.enemies.length, 2 + this.player.lightningLevel * 2);
+    const isBlizzard = !!this.player.evolvedBlizzard;
+    const count = Math.min(this.enemies.length, isBlizzard ? 8 : (2 + this.player.lightningLevel * 2));
 
     for (let i = 0; i < count; i++) {
       const target = this.enemies[i];
@@ -592,37 +610,44 @@ export class CyberSurvivorsGame {
         y: target.y,
         vx: 0,
         vy: 0,
-        size: 5,
-        color: '#ffe600',
-        maxLife: 0.15,
-        life: 0.15,
+        size: isBlizzard ? 8 : 5,
+        color: isBlizzard ? '#00f0ff' : '#ffe600',
+        maxLife: 0.18,
+        life: 0.18,
         shape: 'spark'
       });
+      if (isBlizzard) {
+        target.frozenTimer = 2.5; // Arctic freeze
+      }
       this.hitEnemy(target, i, 45 + this.player.lightningLevel * 15);
     }
 
-    this.particles.shake(4, 0.15);
+    this.particles.shake(isBlizzard ? 7 : 4, 0.15);
     sound.playLaser('heavy');
   }
 
   bossRingAttack(boss) {
-    const bulletsCount = 10;
-    const speed = 160;
+    const isEnraged = boss.hp < (boss.maxHp * 0.5);
+    const bulletsCount = isEnraged ? 16 : 10;
+    const speed = isEnraged ? 210 : 160;
     for (let i = 0; i < bulletsCount; i++) {
-      const angle = (i * Math.PI * 2) / bulletsCount;
+      const angle = (i * Math.PI * 2) / bulletsCount + (isEnraged ? Math.sin(this.gameTime * 2) * 0.3 : 0);
       this.bullets.push({
         x: boss.x,
         y: boss.y,
         vx: Math.cos(angle) * speed,
         vy: Math.sin(angle) * speed,
-        radius: 6,
-        color: '#ff0055',
-        damage: 16,
-        life: 3.0,
+        radius: isEnraged ? 7 : 6,
+        color: isEnraged ? '#ff003c' : '#ff0055',
+        damage: isEnraged ? 22 : 16,
+        life: 3.2,
         isEnemy: true
       });
     }
     sound.playLaser('heavy');
+    if (isEnraged) {
+      this.particles.shake(6, 0.25);
+    }
   }
 
   spawnEnemy() {
@@ -643,14 +668,28 @@ export class CyberSurvivorsGame {
     let color = '#ff0055';
     let damage = 12;
 
-    if (typeRoll > 0.85 && this.gameTime > 25) {
+    if (typeRoll > 0.88 && this.gameTime > 25) {
       type = 'brute';
       hp = 110 + Math.floor(this.gameTime * 1.4);
       speed = 60;
       radius = 16;
       color = '#ffe600';
       damage = 22;
-    } else if (typeRoll > 0.65 && this.gameTime > 15) {
+    } else if (typeRoll > 0.72 && this.gameTime > 15) {
+      type = 'phantom';
+      hp = 35 + Math.floor(this.gameTime * 0.4);
+      speed = 135;
+      radius = 9;
+      color = '#a855f7';
+      damage = 14;
+    } else if (typeRoll > 0.58 && this.gameTime > 20) {
+      type = 'bomber';
+      hp = 26;
+      speed = 150;
+      radius = 11;
+      color = '#ff3333';
+      damage = 24;
+    } else if (typeRoll > 0.42 && this.gameTime > 10) {
       type = 'rusher';
       hp = 22;
       speed = 165;
@@ -735,6 +774,10 @@ export class CyberSurvivorsGame {
         storage.addCredits(150); // Massive credit bonus
         storage.unlockAchievement('dreadnought_slayer');
         sound.announce('Mega Dreadnought Destroyed!');
+      } else if (enemy.type === 'bomber') {
+        this.particles.addShockwave(enemy.x, enemy.y, '#ff3333', 60, 0.25);
+        const pDist = Math.hypot(this.player.x - enemy.x, this.player.y - enemy.y);
+        if (pDist < 60) this.hitPlayer(12);
       }
 
       // Drop Gem
@@ -839,8 +882,32 @@ export class CyberSurvivorsGame {
       { id: 'heal', title: 'Emergency Repair', desc: 'Instantly restore +50 HP and increase Max HP', icon: '❤️' }
     ];
 
-    const shuffled = [...allUpgrades].sort(() => Math.random() - 0.5).slice(0, 3);
-    this.callbacks.onLevelUpChoice(shuffled, (chosenUpgradeId) => {
+    // Check weapon evolution prerequisites
+    if (this.player.blasterLevel >= 2 && this.player.orbsCount >= 2 && !this.player.evolvedTachyon) {
+      allUpgrades.unshift({
+        id: 'evo_tachyon',
+        title: '⭐ EVOLVE: Tachyon Matrix',
+        desc: 'Fusion of Laser & Orbs: Piercing Tachyon beams and orbital plasma overdrive',
+        icon: '🌟',
+        isEvolution: true
+      });
+    }
+
+    if (this.player.lightningLevel >= 2 && this.player.frostLevel >= 1 && !this.player.evolvedBlizzard) {
+      allUpgrades.unshift({
+        id: 'evo_blizzard',
+        title: '⭐ EVOLVE: Blizzard Storm',
+        desc: 'Fusion of Storm & Frost: Chained arctic lightning that permanently freezes swarms',
+        icon: '⚡❄️',
+        isEvolution: true
+      });
+    }
+
+    const evolutions = allUpgrades.filter(u => u.isEvolution);
+    const standard = allUpgrades.filter(u => !u.isEvolution).sort(() => Math.random() - 0.5);
+    const choices = [...evolutions, ...standard].slice(0, 3);
+
+    this.callbacks.onLevelUpChoice(choices, (chosenUpgradeId) => {
       this.applyUpgrade(chosenUpgradeId);
       this.isPaused = false;
       if (this.player.xp >= this.player.xpToNextLevel) {
@@ -852,7 +919,20 @@ export class CyberSurvivorsGame {
   }
 
   applyUpgrade(id) {
-    if (id === 'blaster') {
+    if (id === 'evo_tachyon') {
+      this.player.evolvedTachyon = true;
+      this.player.blasterLevel += 2;
+      this.player.orbsCount = Math.min(6, this.player.orbsCount + 2);
+      this.player.orbsSpeed *= 1.4;
+      this.particles.shake(10, 0.3);
+      sound.announce('Tachyon Matrix Activated!');
+    } else if (id === 'evo_blizzard') {
+      this.player.evolvedBlizzard = true;
+      this.player.lightningLevel += 2;
+      this.player.frostLevel += 2;
+      this.particles.shake(10, 0.3);
+      sound.announce('Blizzard Storm Online!');
+    } else if (id === 'blaster') {
       this.player.blasterLevel++;
       this.player.blasterCooldown = Math.max(0.16, this.player.blasterCooldown * 0.88);
     } else if (id === 'frost') {

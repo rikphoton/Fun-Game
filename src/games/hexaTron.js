@@ -137,6 +137,18 @@ export class HexaTronGame {
     this.isRunning = false;
   }
 
+  pause() {
+    this.isPaused = true;
+  }
+
+  resume() {
+    this.isPaused = false;
+  }
+
+  destroy() {
+    this.isRunning = false;
+  }
+
   initRound() {
     const baseSpeed = 190 + Math.min(80, this.round * 15);
 
