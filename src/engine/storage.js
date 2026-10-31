@@ -1,4 +1,5 @@
 // Local Storage persistence for high scores, stats, Cyber Armory, Cyber Lab, Daily Quests & Player Profile
+import { VALID_GAME_KEYS } from './gamesRegistry.js';
 
 export const SAVE_VERSION = 4;
 export const STORAGE_KEY_V4 = 'neonpulse_arcade_v4';
@@ -58,7 +59,8 @@ const INITIAL_DATA = {
     { id: 'quest_breaker', title: 'Demolition Wave', desc: 'Shatter 30 Bricks in Quantum Breaker', current: 0, target: 30, reward: 75, claimed: false, icon: '💥' },
     { id: 'quest_shmup', title: 'Star Fleet Ace', desc: 'Score 1,000 Points in Astro Pulse', current: 0, target: 1000, reward: 100, claimed: false, icon: '🌠' },
     { id: 'quest_drift', title: 'Highway Phantom', desc: 'Score 1,500 Points in Neon Drift', current: 0, target: 1500, reward: 100, claimed: false, icon: '🏎️' },
-    { id: 'quest_tron', title: 'Grid Gladiator', desc: 'Eliminate 4 Rivals in Hexa-Tron', current: 0, target: 4, reward: 100, claimed: false, icon: '🏍️' }
+    { id: 'quest_tron', title: 'Grid Gladiator', desc: 'Eliminate 4 Rivals in Hexa-Tron', current: 0, target: 4, reward: 100, claimed: false, icon: '🏍️' },
+    { id: 'quest_pacman', title: 'Data Chomp', desc: 'Neutralize 6 Rogue Drones in Cyber Pacman', current: 0, target: 6, reward: 100, claimed: false, icon: '👾' }
   ],
   achievements: {
     first_game: { id: 'first_game', title: 'Arcade Initiate', desc: 'Play your first game', unlocked: false, icon: '🎮', category: 'General' },
@@ -128,7 +130,6 @@ class StorageManager {
     clean.updatedAt = Date.now();
 
     // High Scores (Validated against whitelist of games and realistic limits)
-    const VALID_GAME_KEYS = ['cyberSurvivors', 'neonDash', 'quantumBreaker', 'astroPulse', 'neonDrift', 'hexaTron', 'cyberPacman'];
     const MAX_SCORE = 99999999;
     if (raw.highScores && typeof raw.highScores === 'object') {
       for (const [k, v] of Object.entries(raw.highScores)) {

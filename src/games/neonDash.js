@@ -18,9 +18,17 @@ export class NeonDashGame {
     this.reset();
   }
 
-  // Mulberry32 deterministic 32-bit PRNG
+  // Mulberry32 deterministic 32-bit PRNG for gameplay hazards & obstacles
   prng() {
     let t = (this._seedState += 0x6d2b79f5);
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  }
+
+  // Independent deterministic PRNG stream for cosmetics & parallax
+  prngCosmetic() {
+    let t = (this._cosmeticSeedState += 0x6d2b79f5);
     t = Math.imul(t ^ (t >>> 15), t | 1);
     t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
@@ -36,11 +44,12 @@ export class NeonDashGame {
     this.starsCollected = 0;
     this.currentSector = 1;
 
-    // Seeded deterministic PRNG
+    // Seeded deterministic PRNG streams
     const seed = (customSeed !== null && customSeed !== undefined)
       ? (Number(customSeed) >>> 0)
       : Math.floor(Math.random() * 1000000);
     this._seedState = seed;
+    this._cosmeticSeedState = (seed ^ 0xa5a5a5a5) >>> 0;
 
     // Run Replay Recording
     this.recording = {
@@ -107,10 +116,10 @@ export class NeonDashGame {
     for (let x = 0; x < this.width + 200; x += 60) {
       this.backgroundBuildings.push({
         x,
-        width: 40 + this.prng() * 35,
-        height: 120 + this.prng() * 180,
-        color: this.prng() < 0.5 ? '#15092a' : '#1f0d3d',
-        windowColor: this.prng() < 0.5 ? '#ff0055' : '#00f3ff'
+        width: 40 + this.prngCosmetic() * 35,
+        height: 120 + this.prngCosmetic() * 180,
+        color: this.prngCosmetic() < 0.5 ? '#15092a' : '#1f0d3d',
+        windowColor: this.prngCosmetic() < 0.5 ? '#ff0055' : '#00f3ff'
       });
     }
   }
@@ -255,12 +264,12 @@ export class NeonDashGame {
     }
 
     // Custom Particle Trail
-    if (Math.random() < 0.45) {
+    if (this.prngCosmetic() < 0.45) {
       const equippedTrail = storage.getEquipped('trail') || 'cyan';
       let trailColor = this.player.gravityDir === 1 ? '#00f3ff' : '#ff00aa';
       if (equippedTrail === 'rainbow') {
         const colors = ['#ff0055', '#ffe600', '#00ff88', '#00f3ff', '#a855f7'];
-        trailColor = colors[Math.floor(Math.random() * colors.length)];
+        trailColor = colors[Math.floor(this.prngCosmetic() * colors.length)];
       } else if (equippedTrail === 'gold') {
         trailColor = '#ffe600';
       } else if (equippedTrail === 'neon_pink') {
@@ -269,9 +278,9 @@ export class NeonDashGame {
 
       this.particles.particles.push({
         x: this.player.x - 12,
-        y: this.player.y + (Math.random() * 8 - 4),
-        vx: -this.speed * 0.4 + (Math.random() * 30 - 15),
-        vy: (Math.random() * 2 - 1) * 30,
+        y: this.player.y + (this.prngCosmetic() * 8 - 4),
+        vx: -this.speed * 0.4 + (this.prngCosmetic() * 30 - 15),
+        vy: (this.prngCosmetic() * 2 - 1) * 30,
         size: 3,
         color: trailColor,
         maxLife: 0.2,
@@ -286,7 +295,7 @@ export class NeonDashGame {
       b.x -= this.speed * 0.25 * dt;
       if (b.x + b.width < 0) {
         b.x = this.width + 40;
-        b.height = 100 + Math.random() * 200;
+        b.height = 100 + this.prngCosmetic() * 200;
       }
     }
 

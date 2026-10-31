@@ -82,12 +82,29 @@ class GamepadController {
   }
 
   poll() {
-    if (this.gamepadIndex === null) return this.state;
+    const gamepads = (typeof navigator !== 'undefined' && navigator.getGamepads) ? navigator.getGamepads() : [];
 
-    const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+    // If no controller was assigned, opportunistically check if any connected controller exists
+    if (this.gamepadIndex === null) {
+      for (let i = 0; i < gamepads.length; i++) {
+        if (gamepads[i] && gamepads[i].connected !== false) {
+          this.gamepadIndex = i;
+          this.isConnected = true;
+          this.name = (gamepads[i].id && gamepads[i].id.split('(')[0].trim()) || 'Wireless Controller';
+          if (this.onStatusChange) this.onStatusChange(true, this.name);
+          break;
+        }
+      }
+      if (this.gamepadIndex === null) return this.state;
+    }
+
     const gp = gamepads[this.gamepadIndex];
 
-    if (!gp) return this.state;
+    // Handle stale state / missed disconnection event
+    if (!gp || gp.connected === false) {
+      this.handleDisconnect(this.gamepadIndex);
+      return this.state;
+    }
 
     this.prevState = { ...this.state };
 

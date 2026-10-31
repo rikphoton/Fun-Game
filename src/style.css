@@ -2146,3 +2146,42 @@ canvas {
   display: inline-block;
 }
 
+/* --- Hall of Fame Badges: Demo vs Verified --- */
+.lb-row-player {
+  background: rgba(0, 243, 255, 0.12) !important;
+  box-shadow: inset 3px 0 0 var(--neon-cyan);
+}
+
+.lb-row-demo {
+  opacity: 0.82;
+}
+
+.badge-demo {
+  display: inline-block;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #94a3b8;
+  background: rgba(148, 163, 184, 0.15);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  border-radius: 4px;
+  padding: 1px 5px;
+  margin-left: 6px;
+  letter-spacing: 0.5px;
+  vertical-align: middle;
+}
+
+.badge-verified {
+  display: inline-block;
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: var(--neon-green);
+  background: rgba(0, 255, 136, 0.15);
+  border: 1px solid rgba(0, 255, 136, 0.4);
+  border-radius: 4px;
+  padding: 1px 6px;
+  margin-left: 6px;
+  text-shadow: 0 0 6px rgba(0, 255, 136, 0.4);
+  vertical-align: middle;
+}
+
+

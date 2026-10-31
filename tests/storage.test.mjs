@@ -5,27 +5,30 @@ import { installBrowserMocks } from './helpers/browser-mocks.mjs';
 const ls = installBrowserMocks();
 const { storage, mergeQuests } = await import('../src/engine/storage.js');
 
-test('new players start with 6 quests and 200 credits', () => {
-  assert.equal(storage.data.quests.length, 6);
+test('new players start with 7 quests and 200 credits', () => {
+  assert.equal(storage.data.quests.length, 7);
   assert.equal(storage.getCredits(), 200);
 });
 
-test('mergeQuests keeps progress for all 6 quests (regression: it used to reset every load)', () => {
+test('mergeQuests keeps progress for all 7 quests (regression: it used to reset every load)', () => {
   const fresh = mergeQuests(undefined);
   fresh[0].current = 25;
   fresh[1].claimed = true;
   const back = mergeQuests(JSON.parse(JSON.stringify(fresh)));
   assert.equal(back[0].current, 25);
   assert.equal(back[1].claimed, true);
+  assert.equal(back.length, 7);
 });
 
 test('mergeQuests upgrades an old 4-quest save without losing progress', () => {
   const fresh = mergeQuests(undefined);
   fresh[0].current = 10;
   const upgraded = mergeQuests(fresh.slice(0, 4));
-  assert.equal(upgraded.length, 6);
+  assert.equal(upgraded.length, 7);
   assert.equal(upgraded[0].current, 10);
   assert.equal(upgraded[5].current, 0);
+  assert.equal(upgraded[6].id, 'quest_pacman');
+  assert.equal(upgraded[6].current, 0);
 });
 
 test('mergeQuests clamps corrupt progress values', () => {
@@ -65,4 +68,28 @@ test('high scores only ever go up', () => {
   assert.equal(storage.saveHighScore('neonDash', 500), true);
   assert.equal(storage.saveHighScore('neonDash', 400), false);
   assert.equal(storage.getHighScore('neonDash'), 500);
+});
+
+test('Cyber Pacman quest tracks ghost drone defeats, persists, and claims reward', () => {
+  const pacmanQuest = storage.data.quests.find((x) => x.id === 'quest_pacman');
+  assert.ok(pacmanQuest, 'quest_pacman must exist in storage quests');
+  assert.equal(pacmanQuest.claimed, false);
+
+  // Initial progression update
+  storage.updateQuestProgress('quest_pacman', 3);
+  assert.equal(pacmanQuest.current, 3);
+
+  // Update to exceed target -> clamped to target
+  storage.updateQuestProgress('quest_pacman', 10);
+  assert.equal(pacmanQuest.current, pacmanQuest.target);
+
+  // Claim reward
+  const creditsBefore = storage.getCredits();
+  const reward = storage.claimQuest('quest_pacman');
+  assert.equal(reward, pacmanQuest.reward);
+  assert.equal(storage.getCredits(), creditsBefore + pacmanQuest.reward);
+  assert.equal(pacmanQuest.claimed, true);
+
+  // Cannot double-claim
+  assert.equal(storage.claimQuest('quest_pacman'), 0);
 });

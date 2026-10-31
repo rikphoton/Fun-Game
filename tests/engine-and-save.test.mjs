@@ -20,6 +20,7 @@ const { HexaTronGame } = await import('../src/games/hexaTron.js');
 const { CyberPacmanGame } = await import('../src/games/cyberPacman.js');
 const { leaderboard } = await import('../src/engine/leaderboard.js');
 const { gamepad } = await import('../src/engine/gamepad.js');
+const { GAMES_METADATA, VALID_GAME_KEYS, getGameMeta } = await import('../src/engine/gamesRegistry.js');
 
 test('Storage is versioned and maintains rolling backup', () => {
   storage.saveHighScore('cyberSurvivors', 8888);
@@ -473,5 +474,68 @@ test('All seven games initialize, pause, resume and destroy cleanly', () => {
 
     if (g.destroy) g.destroy();
     assert.equal(g.isRunning, false, 'Game should be stopped after destroy');
+  }
+});
+
+test('Central games registry contains all seven arcade games and valid metadata', () => {
+  assert.equal(VALID_GAME_KEYS.length, 7);
+  for (const key of VALID_GAME_KEYS) {
+    const meta = getGameMeta(key);
+    assert.ok(meta, `Metadata for ${key} must exist`);
+    assert.equal(meta.key, key);
+    assert.ok(meta.title, 'Title must exist');
+    assert.ok(meta.primaryLabel, 'Primary label must exist');
+    assert.ok(meta.hintText, 'Hint text must exist');
+  }
+});
+
+test('Gamepad poll gracefully handles null controller and missed disconnect without getting stuck', () => {
+  // Simulate active buttons on gamepad before disconnect
+  gamepad.gamepadIndex = 0;
+  gamepad.isConnected = true;
+  gamepad.state.left = true;
+  gamepad.state.action = true;
+
+  // Mock navigator.getGamepads returning empty/disconnected
+  const origGetGamepads = navigator.getGamepads;
+  navigator.getGamepads = () => [];
+
+  const polled = gamepad.poll();
+  assert.equal(polled.left, false, 'Left direction must reset to false on missed disconnect');
+  assert.equal(polled.action, false, 'Action button must reset to false on missed disconnect');
+  assert.equal(gamepad.isConnected, false);
+  assert.equal(gamepad.gamepadIndex, null);
+
+  navigator.getGamepads = origGetGamepads;
+});
+
+test('NeonDash PRNG cosmetic stream does not desynchronize gameplay hazard rolls', () => {
+  const dummyCanvas = { getContext: () => ({ fillRect: () => {}, beginPath: () => {}, arc: () => {} }), addEventListener: () => {}, width: 800, height: 600 };
+  const dummyParticles = { particles: [], burst: () => {}, shockwave: () => {}, shake: () => {}, explode: () => {}, spawn: () => {}, addFloatingText: () => {} };
+
+  const gameA = new NeonDashGame(dummyCanvas, dummyParticles, { onScoreUpdate: () => {}, onGameOver: () => {} });
+  const gameB = new NeonDashGame(dummyCanvas, dummyParticles, { onScoreUpdate: () => {}, onGameOver: () => {} });
+
+  const seed = 771122;
+  gameA.reset(seed);
+  gameB.reset(seed);
+
+  // In Game A, simulate 100 cosmetic particle trail rolls
+  for (let i = 0; i < 100; i++) {
+    gameA.prngCosmetic();
+  }
+  // In Game B, no cosmetic rolls occurred
+
+  // Now both games spawn 10 hazard waves
+  for (let i = 0; i < 10; i++) {
+    gameA.spawnHazardWave();
+    gameB.spawnHazardWave();
+  }
+
+  // Gameplay obstacle positions and types must match 100% identically!
+  assert.equal(gameA.obstacles.length, gameB.obstacles.length);
+  for (let i = 0; i < gameA.obstacles.length; i++) {
+    assert.equal(gameA.obstacles[i].type, gameB.obstacles[i].type);
+    assert.equal(gameA.obstacles[i].y, gameB.obstacles[i].y);
   }
 });

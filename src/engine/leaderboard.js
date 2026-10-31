@@ -1,6 +1,7 @@
 // NeonPulse Arcade - Local Hall of Fame (scores are stored in this browser only)
 import { sound } from './audio.js';
 import { localDateString } from './compat.js';
+import { VALID_GAME_KEYS } from './gamesRegistry.js';
 
 const STORAGE_KEY_LB = 'neonpulse_leaderboards_v1';
 
@@ -150,8 +151,7 @@ class LeaderboardManager {
   }
 
   addScore(gameKey, tag, score) {
-    const VALID_GAMES = ['cyberSurvivors', 'neonDash', 'quantumBreaker', 'astroPulse', 'neonDrift', 'hexaTron', 'cyberPacman'];
-    if (!VALID_GAMES.includes(gameKey)) return -1;
+    if (!VALID_GAME_KEYS.includes(gameKey)) return -1;
 
     const numScore = Math.floor(Number(score));
     if (!Number.isFinite(numScore) || numScore <= 0 || numScore > 99999999) return -1;

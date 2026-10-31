@@ -14,6 +14,7 @@ import { HexaTronGame } from './games/hexaTron.js';
 import { CyberPacmanGame } from './games/cyberPacman.js';
 import { leaderboard } from './engine/leaderboard.js';
 import { gamepad } from './engine/gamepad.js';
+import { getGameMeta } from './engine/gamesRegistry.js';
 
 class ArcadeApp {
   constructor() {
@@ -23,6 +24,8 @@ class ArcadeApp {
 
     this.activeGameKey = null;
     this.activeGame = null;
+    this.keyboardHeldKeys = new Set();
+    this.touchHeldKeys = new Set();
     this.selectedMech = storage.getEquipped('mech') || 'specter';
     this.lastTime = performance.now();
     this.isPaused = false;
@@ -640,6 +643,7 @@ class ArcadeApp {
     };
 
     window.addEventListener('keydown', (e) => {
+      this.keyboardHeldKeys.add(e.code);
       if (shouldCaptureKey(e)) e.preventDefault();
       if (e.code === 'Escape' || e.code === 'KeyP') {
         if (this.activeGame && this.activeGame.isRunning) {
@@ -653,6 +657,7 @@ class ArcadeApp {
     });
 
     window.addEventListener('keyup', (e) => {
+      this.keyboardHeldKeys.delete(e.code);
       // Firefox activates a focused button on Space *keyup*, so block it here too.
       if (shouldCaptureKey(e)) e.preventDefault();
       if (this.activeGame && this.activeGame.handleKeyUp) {
@@ -661,6 +666,8 @@ class ArcadeApp {
     });
 
     window.addEventListener('blur', () => {
+      this.keyboardHeldKeys.clear();
+      this.touchHeldKeys.clear();
       if (this.activeGame) {
         this.activeGame.keys = {};
         if (this.activeGame.pointer) this.activeGame.pointer.active = false;
@@ -743,6 +750,8 @@ class ArcadeApp {
       if (navigator.vibrate) navigator.vibrate(8);
       const el = document.getElementById(btnDef.id);
       if (el) el.classList.add('pressed');
+      this.touchHeldKeys.add(btnDef.code);
+      if (btnDef.altCode) this.touchHeldKeys.add(btnDef.altCode);
 
       if (!this.activeGame) return;
 
@@ -767,6 +776,8 @@ class ArcadeApp {
     const releaseDirection = (btnDef) => {
       const el = document.getElementById(btnDef.id);
       if (el) el.classList.remove('pressed');
+      this.touchHeldKeys.delete(btnDef.code);
+      if (btnDef.altCode) this.touchHeldKeys.delete(btnDef.altCode);
 
       if (!this.activeGame) return;
 
@@ -1073,6 +1084,7 @@ class ArcadeApp {
     if (btnTouchA) {
       const triggerActionA = (press) => {
         if (press) {
+          this.touchHeldKeys.add('Space');
           sound.init();
           if (navigator.vibrate) navigator.vibrate(12);
           btnTouchA.classList.add('pressed');
@@ -1090,6 +1102,7 @@ class ArcadeApp {
             this.activeGame.triggerSuperAbility();
           }
         } else {
+          this.touchHeldKeys.delete('Space');
           btnTouchA.classList.remove('pressed');
           if (!this.activeGame) return;
           if (this.activeGame.keys) {
@@ -1109,6 +1122,7 @@ class ArcadeApp {
     if (btnTouchNitro) {
       const triggerActionNitro = (press) => {
         if (press) {
+          this.touchHeldKeys.add('ShiftLeft');
           sound.init();
           if (navigator.vibrate) navigator.vibrate(10);
           btnTouchNitro.classList.add('pressed');
@@ -1126,6 +1140,7 @@ class ArcadeApp {
           }
           if (this.activeGame.triggerPhaseJump) this.activeGame.triggerPhaseJump();
         } else {
+          this.touchHeldKeys.delete('ShiftLeft');
           btnTouchNitro.classList.remove('pressed');
           if (!this.activeGame) return;
           if (this.activeGame.keys) {
@@ -1148,6 +1163,7 @@ class ArcadeApp {
     if (btnTouchSuper) {
       const triggerActionSuper = (press) => {
         if (press) {
+          this.touchHeldKeys.add('KeyE');
           sound.init();
           if (navigator.vibrate) navigator.vibrate(20);
           btnTouchSuper.classList.add('pressed');
@@ -1169,6 +1185,7 @@ class ArcadeApp {
             this.activeGame.triggerPhaseJump();
           }
         } else {
+          this.touchHeldKeys.delete('KeyE');
           btnTouchSuper.classList.remove('pressed');
           if (!this.activeGame) return;
           if (this.activeGame.keys) {
@@ -1251,15 +1268,17 @@ class ArcadeApp {
       if (connected) {
         this.showToast('🎮', 'GAMEPAD CONNECTED', `${name} ready for action!`);
       } else {
-        this.showToast('🔌', 'GAMEPAD DISCONNECTED', 'Switched back to keyboard/mouse');
+        this.showToast('🔌', 'GAMEPAD DISCONNECTED', 'Switched back to keyboard/touch');
         if (this.activeGame && this.activeGame.keys) {
-          this.activeGame.keys['ArrowLeft'] = false;
-          this.activeGame.keys['ArrowRight'] = false;
-          this.activeGame.keys['ArrowUp'] = false;
-          this.activeGame.keys['ArrowDown'] = false;
-          this.activeGame.keys['ShiftLeft'] = false;
+          this.activeGame.keys['ArrowLeft'] = Boolean(this.keyboardHeldKeys.has('ArrowLeft') || this.keyboardHeldKeys.has('KeyA') || this.touchHeldKeys.has('ArrowLeft'));
+          this.activeGame.keys['ArrowRight'] = Boolean(this.keyboardHeldKeys.has('ArrowRight') || this.keyboardHeldKeys.has('KeyD') || this.touchHeldKeys.has('ArrowRight'));
+          this.activeGame.keys['ArrowUp'] = Boolean(this.keyboardHeldKeys.has('ArrowUp') || this.keyboardHeldKeys.has('KeyW') || this.touchHeldKeys.has('ArrowUp'));
+          this.activeGame.keys['ArrowDown'] = Boolean(this.keyboardHeldKeys.has('ArrowDown') || this.keyboardHeldKeys.has('KeyS') || this.touchHeldKeys.has('ArrowDown'));
+          if (this.activeGame.keys['ShiftLeft'] !== undefined) {
+            this.activeGame.keys['ShiftLeft'] = Boolean(this.keyboardHeldKeys.has('ShiftLeft') || this.touchHeldKeys.has('ShiftLeft'));
+          }
         }
-        if (this.activeGame && this.activeGame.joystick) {
+        if (this.activeGame && this.activeGame.joystick && !this.isTouchJoystickActive) {
           this.activeGame.joystick = { x: 0, y: 0, active: false };
         }
       }
@@ -1275,7 +1294,8 @@ class ArcadeApp {
 
     scores.forEach((entry) => {
       const tr = document.createElement('tr');
-      if (entry.isUser) tr.style.background = 'rgba(0, 240, 255, 0.12)';
+      const isPlayer = Boolean(entry.isUser);
+      tr.className = isPlayer ? 'lb-row-player' : 'lb-row-demo';
 
       let rankClass = 'rank-other';
       if (entry.rank === 1) rankClass = 'rank-1';
@@ -1288,10 +1308,13 @@ class ArcadeApp {
 
       tr.innerHTML = `
         <td><span class="lb-rank ${rankClass}">${entry.rank}</span></td>
-        <td><span class="lb-tag">${entry.tag}</span>${entry.isUser ? ' <span style="font-size:0.7rem;color:var(--neon-green);font-weight:700;">★ VERIFIED</span>' : ' <span style="font-size:0.65rem;color:#64748b;">[SAMPLE]</span>'}</td>
-        <td><span class="lb-score">${scoreLabel}</span></td>
-        <td style="color:var(--text-muted);font-size:0.8rem;">${entry.isUser ? 'LOCAL PILOT' : 'CABINET MOCK'}</td>
-        <td style="color:var(--text-muted);font-size:0.8rem;">${entry.date || '2026-09-13'}</td>
+        <td>
+          <span class="lb-tag ${isPlayer ? 'player-tag' : 'demo-tag'}">${entry.tag}</span>
+          ${isPlayer ? '<span class="badge-verified">★ VERIFIED</span>' : '<span class="badge-demo">[DEMO]</span>'}
+        </td>
+        <td><span class="lb-score ${isPlayer ? 'player-score' : 'demo-score'}">${scoreLabel}</span></td>
+        <td class="lb-origin" style="font-size:0.75rem;">${isPlayer ? '🎮 LOCAL PLAYER' : '🤖 DEMO SCORE'}</td>
+        <td class="lb-date" style="color:var(--text-muted);font-size:0.8rem;">${entry.date || '2026-09-13'}</td>
       `;
       this.lbTableBody.appendChild(tr);
     });
@@ -1703,97 +1726,44 @@ class ArcadeApp {
       }
     };
 
-    if (gameKey === 'cyberSurvivors') {
-      if (btnModeToggle) btnModeToggle.style.display = 'none';
-      setDeckMode('joystick');
-      this.hudGameName.textContent = `Cyber Survivors (${mechClass.toUpperCase()})`;
-      this.hudHpContainer.style.display = 'flex';
-      this.hudSuperContainer.style.display = 'flex';
-      this.instructionsEl.innerHTML = `Move: Centered 360° Joystick / <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> | Super EMP: <kbd>SPACE</kbd> | Auto-Fire`;
-      if (lblPrimary) lblPrimary.textContent = 'SUPER EMP';
-      if (lblSub) lblSub.textContent = 'BOOST';
-      if (lblSuper) lblSuper.textContent = 'NOVA';
-      if (hintText) hintText.textContent = '🕹️ CENTER 360° JOYSTICK: MOVE | 💣 NOVA';
-      this.activeGame.init(mechClass);
-    } else if (gameKey === 'neonDash') {
-      if (btnModeToggle) btnModeToggle.style.display = 'none';
-      setDeckMode('dpad');
-      this.hudGameName.textContent = 'Neon Dash';
-      this.hudHpContainer.style.display = 'none';
-      this.hudSuperContainer.style.display = 'none';
-      this.instructionsEl.innerHTML = `Flip Gravity: <kbd>SPACE</kbd> or Click | Air-Dash: Tap while airborne | Dodge Spikes`;
-      if (lblPrimary) lblPrimary.textContent = 'JUMP / FLIP';
-      if (lblSub) lblSub.textContent = 'AIR DASH';
-      if (lblSuper) lblSuper.textContent = 'BURST';
-      if (hintText) hintText.textContent = '🕹️ TAP 🅰️ TO FLIP GRAVITY';
-      this.activeGame.init();
-    } else if (gameKey === 'quantumBreaker') {
-      if (btnModeToggle) btnModeToggle.style.display = 'none';
-      setDeckMode('slider');
+    const meta = getGameMeta(gameKey);
+    if (meta) {
+      this.hudGameName.textContent = gameKey === 'cyberSurvivors'
+        ? `Cyber Survivors (${mechClass.toUpperCase()})`
+        : meta.title;
+      this.hudHpContainer.style.display = meta.hud.hp ? 'flex' : 'none';
+      this.hudSuperContainer.style.display = meta.hud.super ? 'flex' : 'none';
+      if (meta.hud.superText && this.hudSuperText) {
+        this.hudSuperText.textContent = meta.hud.superText;
+      }
+      this.instructionsEl.innerHTML = meta.instructions;
+      if (lblPrimary) lblPrimary.textContent = meta.primaryLabel;
+      if (lblSub) lblSub.textContent = meta.subLabel;
+      if (lblSuper) lblSuper.textContent = meta.superLabel;
+      if (hintText) hintText.textContent = meta.hintText;
+
+      if (meta.controlMode === 'toggle') {
+        if (btnModeToggle) btnModeToggle.style.display = 'flex';
+        applyPacmanDeck();
+      } else {
+        if (btnModeToggle) btnModeToggle.style.display = 'none';
+        setDeckMode(meta.controlMode);
+      }
+    }
+
+    if (gameKey === 'quantumBreaker') {
       if (sliderVUp) sliderVUp.style.display = 'none';
       if (sliderVDown) sliderVDown.style.display = 'none';
       if (sliderLabel) sliderLabel.textContent = 'PADDLE SLIDER';
       if (this.sliderKnob) this.sliderKnob.style.left = '50%';
       if (this.sliderFill) this.sliderFill.style.width = '50%';
-      this.hudGameName.textContent = 'Quantum Breaker';
-      this.hudHpContainer.style.display = 'none';
-      this.hudSuperContainer.style.display = 'none';
-      this.instructionsEl.innerHTML = `Paddle: Centered Slider or Mouse / <kbd>A</kbd><kbd>D</kbd> | Fire Lasers: <kbd>SPACE</kbd>`;
-      if (lblPrimary) lblPrimary.textContent = 'LAUNCH / FIRE';
-      if (lblSub) lblSub.textContent = 'LASER';
-      if (lblSuper) lblSuper.textContent = 'BOMB';
-      if (hintText) hintText.textContent = '🕹️ CENTER SLIDER: PADDLE | 🅰️ FIRE';
-      this.activeGame.init();
-    } else if (gameKey === 'astroPulse') {
-      if (btnModeToggle) btnModeToggle.style.display = 'none';
-      setDeckMode('joystick');
-      this.hudGameName.textContent = 'Astro Pulse';
-      this.hudHpContainer.style.display = 'flex';
-      this.hudSuperContainer.style.display = 'flex';
-      this.hudSuperText.textContent = 'BOMB';
-      this.instructionsEl.innerHTML = `Move: 360° Joystick / Mouse / <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> | Smart Bomb: <kbd>SPACE</kbd> | Auto-Fire`;
-      if (lblPrimary) lblPrimary.textContent = 'FIRE';
-      if (lblSub) lblSub.textContent = 'THRUST';
-      if (lblSuper) lblSuper.textContent = 'SMART BOMB';
-      if (hintText) hintText.textContent = '🕹️ CENTER 360° JOYSTICK: FLY | 💣 SMART BOMB';
-      this.activeGame.init();
-    } else if (gameKey === 'neonDrift') {
-      if (btnModeToggle) btnModeToggle.style.display = 'none';
-      setDeckMode('dpad');
-      this.hudGameName.textContent = 'Neon Drift';
-      this.hudHpContainer.style.display = 'flex';
-      this.hudSuperContainer.style.display = 'flex';
-      this.hudSuperText.textContent = 'NITRO';
-      this.instructionsEl.innerHTML = `Steer: <kbd>A</kbd><kbd>D</kbd> or Mouse | Nitro: <kbd>W</kbd> / <kbd>SPACE</kbd> | Drift: <kbd>S</kbd> / <kbd>SHIFT</kbd>`;
-      if (lblPrimary) lblPrimary.textContent = 'NITRO';
-      if (lblSub) lblSub.textContent = 'DRIFT';
-      if (lblSuper) lblSuper.textContent = 'BOOST';
-      if (hintText) hintText.textContent = '🕹️ CENTER D-PAD | ⚡ DRIFT | 🅰️ NITRO';
+    }
+
+    if (gameKey === 'cyberSurvivors') {
+      this.activeGame.init(mechClass);
+    } else if (gameKey === 'neonDrift' || gameKey === 'hexaTron') {
       this.activeGame.start();
-    } else if (gameKey === 'hexaTron') {
-      if (btnModeToggle) btnModeToggle.style.display = 'none';
-      setDeckMode('dpad');
-      this.hudGameName.textContent = 'Hexa-Tron';
-      this.hudHpContainer.style.display = 'none';
-      this.hudSuperContainer.style.display = 'flex';
-      this.hudSuperText.textContent = 'JUMP';
-      this.instructionsEl.innerHTML = `Steer: <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or Arrows / Gamepad | Jump: <kbd>SPACE</kbd> / (A) | Nitro: <kbd>SHIFT</kbd> / (RT) | EMP: <kbd>E</kbd> / (X)`;
-      if (lblPrimary) lblPrimary.textContent = 'PHASE JUMP';
-      if (lblSub) lblSub.textContent = 'NITRO';
-      if (lblSuper) lblSuper.textContent = 'EMP BLAST';
-      if (hintText) hintText.textContent = '🕹️ CENTER D-PAD: TURN | 🅰️ PHASE JUMP';
-      this.activeGame.start();
-    } else if (gameKey === 'cyberPacman') {
-      if (btnModeToggle) btnModeToggle.style.display = 'flex';
-      applyPacmanDeck();
-      this.hudGameName.textContent = 'Cyber Pacman';
-      this.hudHpContainer.style.display = 'flex';
-      this.hudSuperContainer.style.display = 'flex';
-      this.hudSuperText.textContent = 'EMP';
-      this.instructionsEl.innerHTML = `Steer: Centered Joystick / D-Pad Buttons / Swipe / <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> | EMP: <kbd>SPACE</kbd>`;
-      if (lblPrimary) lblPrimary.textContent = 'EMP STUN';
-      if (lblSub) lblSub.textContent = 'SPEED';
-      if (lblSuper) lblSuper.textContent = 'EMP BLAST';
+    } else if (this.activeGame.init) {
       this.activeGame.init();
     }
   }
@@ -2095,14 +2065,14 @@ class ArcadeApp {
 
     const state = gamepad.state;
 
-    // Directional keys dispatch (synchronise press and release)
+    // Directional keys dispatch (combining gamepad with keyboard and touch)
     if (this.activeGame.keys !== undefined) {
-      this.activeGame.keys['ArrowLeft'] = Boolean(state.left || this.activeGame.keys['KeyA']);
-      this.activeGame.keys['ArrowRight'] = Boolean(state.right || this.activeGame.keys['KeyD']);
-      this.activeGame.keys['ArrowUp'] = Boolean(state.up || this.activeGame.keys['KeyW']);
-      this.activeGame.keys['ArrowDown'] = Boolean(state.down || this.activeGame.keys['KeyS']);
+      this.activeGame.keys['ArrowLeft'] = Boolean(state.left || this.keyboardHeldKeys.has('ArrowLeft') || this.keyboardHeldKeys.has('KeyA') || this.touchHeldKeys.has('ArrowLeft'));
+      this.activeGame.keys['ArrowRight'] = Boolean(state.right || this.keyboardHeldKeys.has('ArrowRight') || this.keyboardHeldKeys.has('KeyD') || this.touchHeldKeys.has('ArrowRight'));
+      this.activeGame.keys['ArrowUp'] = Boolean(state.up || this.keyboardHeldKeys.has('ArrowUp') || this.keyboardHeldKeys.has('KeyW') || this.touchHeldKeys.has('ArrowUp'));
+      this.activeGame.keys['ArrowDown'] = Boolean(state.down || this.keyboardHeldKeys.has('ArrowDown') || this.keyboardHeldKeys.has('KeyS') || this.touchHeldKeys.has('ArrowDown'));
       if (this.activeGame.keys['ShiftLeft'] !== undefined) {
-        this.activeGame.keys['ShiftLeft'] = Boolean(state.nitro);
+        this.activeGame.keys['ShiftLeft'] = Boolean(state.nitro || this.keyboardHeldKeys.has('ShiftLeft') || this.touchHeldKeys.has('ShiftLeft'));
       }
     }
 
