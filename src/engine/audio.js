@@ -373,6 +373,55 @@ class SoundEngine {
     } catch (e) {}
   }
 
+  playChomp(high = false) {
+    if (this.isMuted || !this.ctx) return;
+    try {
+      const now = this.ctx.currentTime;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+
+      osc.type = 'triangle';
+      const startFreq = high ? 480 : 320;
+      const endFreq = high ? 320 : 480;
+
+      osc.frequency.setValueAtTime(startFreq, now);
+      osc.frequency.exponentialRampToValueAtTime(endFreq, now + 0.06);
+
+      gain.gain.setValueAtTime(0.18, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+
+      osc.connect(gain);
+      gain.connect(this.sfxGain);
+
+      osc.start(now);
+      osc.stop(now + 0.06);
+    } catch (e) {}
+  }
+
+  playGhostEaten() {
+    if (this.isMuted || !this.ctx) return;
+    try {
+      const now = this.ctx.currentTime;
+      const notes = [440, 554.37, 659.25, 880];
+      notes.forEach((freq, idx) => {
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sawtooth';
+        const start = now + idx * 0.035;
+        osc.frequency.setValueAtTime(freq, start);
+        osc.frequency.exponentialRampToValueAtTime(freq * 1.3, start + 0.07);
+
+        gain.gain.setValueAtTime(0.2, start);
+        gain.gain.exponentialRampToValueAtTime(0.001, start + 0.07);
+
+        osc.connect(gain);
+        gain.connect(this.sfxGain);
+        osc.start(start);
+        osc.stop(start + 0.07);
+      });
+    } catch (e) {}
+  }
+
   playPowerup() {
     if (this.isMuted || !this.ctx) return;
     try {

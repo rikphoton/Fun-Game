@@ -63,7 +63,7 @@
     <div id="lobby-view">
       <div class="hero-banner">
         <h1 class="hero-title">NeonPulse Arcade</h1>
-        <p class="hero-subtitle">Step into a hyper-kinetic retro cyberpunk world. Six adrenaline-fueled arcade games, tech tree progression, a local Hall of Fame, and procedural synthwave audio.</p>
+        <p class="hero-subtitle">Step into a hyper-kinetic retro cyberpunk world. Seven adrenaline-fueled arcade games, tech tree progression, a local Hall of Fame, and procedural synthwave audio.</p>
       </div>
 
       <div class="games-grid">
@@ -177,6 +177,25 @@
             </div>
             <button class="play-btn" id="btn-play-tron" style="background: linear-gradient(135deg, #00f0ff, #0077ff); border-color: #00f0ff;">
               <span>▶</span> Enter The Grid
+            </button>
+          </div>
+        </div>
+
+        <!-- Game 7: Cyber Pacman -->
+        <div class="game-card">
+          <div>
+            <div class="card-badge badge-pacman" style="background: rgba(255, 230, 0, 0.15); border-color: #ffe600; color: #ffe600;">Cyber Maze Infiltrator</div>
+            <div class="card-icon">👾</div>
+            <h2 class="card-title">Cyber Pacman</h2>
+            <p class="card-desc">Hyper-kinetic cyberpunk maze action! Infiltrate neon server grids, devour encrypted data bits, overclock with Power Cores to hunt rogue AI hunter drones, and trigger screen-clearing EMP Stun Pulses.</p>
+          </div>
+          <div>
+            <div class="card-meta">
+              <span>Best Score</span>
+              <span class="high-score-tag" id="best-score-pacman">0 PTS</span>
+            </div>
+            <button class="play-btn" id="btn-play-pacman" style="background: linear-gradient(135deg, #ffe600, #ff8c00); border-color: #ffe600; color: #000;">
+              <span>▶</span> Infiltrate Grid
             </button>
           </div>
         </div>
@@ -462,6 +481,7 @@
         <button class="lb-tab" data-game="astroPulse">Astro Pulse</button>
         <button class="lb-tab" data-game="neonDrift">Neon Drift</button>
         <button class="lb-tab" data-game="hexaTron">Hexa-Tron</button>
+        <button class="lb-tab" data-game="cyberPacman">Pacman</button>
       </div>
 
       <!-- Leaderboard Table -->

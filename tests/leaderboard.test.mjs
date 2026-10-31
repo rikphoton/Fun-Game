@@ -6,7 +6,7 @@ installBrowserMocks();
 const { leaderboard } = await import('../src/engine/leaderboard.js');
 
 test('every game starts with ten default scores in descending order', () => {
-  for (const key of ['cyberSurvivors', 'neonDash', 'quantumBreaker', 'astroPulse', 'neonDrift', 'hexaTron']) {
+  for (const key of ['cyberSurvivors', 'neonDash', 'quantumBreaker', 'astroPulse', 'neonDrift', 'hexaTron', 'cyberPacman']) {
     const scores = leaderboard.getScores(key);
     assert.equal(scores.length, 10, key);
     for (let i = 1; i < scores.length; i++) assert.ok(scores[i - 1].score >= scores[i].score, key);

@@ -11,6 +11,7 @@ import { QuantumBreakerGame } from './games/quantumBreaker.js';
 import { AstroPulseGame } from './games/astroPulse.js';
 import { NeonDriftGame } from './games/neonDrift.js';
 import { HexaTronGame } from './games/hexaTron.js';
+import { CyberPacmanGame } from './games/cyberPacman.js';
 import { leaderboard } from './engine/leaderboard.js';
 import { gamepad } from './engine/gamepad.js';
 
@@ -220,6 +221,23 @@ class ArcadeApp {
             this.hudHpFill.style.width = '100%';
           }
         }
+      }),
+
+      cyberPacman: new CyberPacmanGame(this.canvas, this.particles, {
+        onGameOver: (data) => this.handleGameOver(data),
+        onScoreUpdate: (score, lives, stage, dotsLeft, totalDots, superPct) => {
+          this.hudScore.textContent = score;
+          const livesIcons = '🟡'.repeat(Math.max(0, lives));
+          this.hudSecondary.innerHTML = `LIVES: <span>${livesIcons}</span> | STAGE: <span>${stage}</span> | BITS: <span>${totalDots - dotsLeft}/${totalDots}</span>`;
+          if (this.hudSuperFill) {
+            this.hudSuperFill.style.width = `${superPct}%`;
+            this.hudSuperText.textContent = superPct >= 100 ? 'READY!' : `${superPct}%`;
+            this.btnSuperAbility.classList.toggle('ready', superPct >= 100);
+          }
+          if (this.hudHpFill) {
+            this.hudHpFill.style.width = `${Math.max(0, (lives / 3) * 100)}%`;
+          }
+        }
       })
     };
   }
@@ -231,6 +249,7 @@ class ArcadeApp {
     const aScore = storage.getHighScore('astroPulse');
     const rScore = storage.getHighScore('neonDrift');
     const tScore = storage.getHighScore('hexaTron');
+    const pScore = storage.getHighScore('cyberPacman');
 
     const sEl = document.getElementById('best-score-survivors');
     const dEl = document.getElementById('best-score-dash');
@@ -245,6 +264,8 @@ class ArcadeApp {
     if (aEl) aEl.textContent = `${aScore.toLocaleString()} PTS`;
     if (rEl) rEl.textContent = `${rScore.toLocaleString()} PTS`;
     if (tEl) tEl.textContent = `${tScore.toLocaleString()} PTS`;
+    const pEl = document.getElementById('best-score-pacman');
+    if (pEl) pEl.textContent = `${pScore.toLocaleString()} PTS`;
   }
 
   updateCreditsDisplay() {
@@ -398,6 +419,9 @@ class ArcadeApp {
     if (btnPlayDrift) btnPlayDrift.addEventListener('click', () => this.launchGame('neonDrift'));
     const btnPlayTron = document.getElementById('btn-play-tron');
     if (btnPlayTron) btnPlayTron.addEventListener('click', () => this.launchGame('hexaTron'));
+
+    const btnPlayPacman = document.getElementById('btn-play-pacman');
+    if (btnPlayPacman) btnPlayPacman.addEventListener('click', () => this.launchGame('cyberPacman'));
 
     // Navigation & Pause
     this.btnHomeLogo.addEventListener('click', () => this.returnToHub());
@@ -1253,6 +1277,17 @@ class ArcadeApp {
       if (lblSuper) lblSuper.textContent = 'EMP BLAST';
       if (hintText) hintText.textContent = '🕹️ D-PAD: TURN | 🅰️ PHASE JUMP';
       this.activeGame.init();
+    } else if (gameKey === 'cyberPacman') {
+      this.hudGameName.textContent = 'Cyber Pacman';
+      this.hudHpContainer.style.display = 'flex';
+      this.hudSuperContainer.style.display = 'flex';
+      this.hudSuperText.textContent = 'EMP';
+      this.instructionsEl.innerHTML = `Steer: <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or Arrows / Gamepad | EMP Stun: <kbd>SPACE</kbd> / (A) | Touch Swipe`;
+      if (lblPrimary) lblPrimary.textContent = 'EMP STUN';
+      if (lblSub) lblSub.textContent = 'SPEED';
+      if (lblSuper) lblSuper.textContent = 'EMP BLAST';
+      if (hintText) hintText.textContent = '🕹️ D-PAD: STEER | 🅰️ EMP STUN PULSE';
+      this.activeGame.init();
     }
   }
 
@@ -1379,13 +1414,20 @@ class ArcadeApp {
         <div class="stat-row"><span>CREDITS EARNED:</span><span class="stat-val">💎 ${data.credits} NC</span></div>
       `;
       storage.updateQuestProgress('quest_drift', data.score);
-    } else if (this.activeGameKey === 'hexaTron') {
+    } else if (this.activeGameKey === 'hexaTron' || this.activeGameKey === 'cyberPacman') {
       statsHtml += `
         <div class="stat-row"><span>RIVALS DESTROYED:</span><span class="stat-val">${data.kills || 0}</span></div>
         <div class="stat-row"><span>ROUNDS SURVIVED:</span><span class="stat-val">${data.round || 1}</span></div>
         <div class="stat-row"><span>CREDITS EARNED:</span><span class="stat-val">💎 ${data.credits || 0} NC</span></div>
       `;
       storage.updateQuestProgress('quest_tron', data.kills || 0);
+    } else if (this.activeGameKey === 'cyberPacman') {
+      statsHtml += `
+        <div class="stat-row"><span>STAGE REACHED:</span><span class="stat-val">${data.stage || 1}</span></div>
+        <div class="stat-row"><span>BITS CONSUMED:</span><span class="stat-val">${data.dotsEaten || 0}</span></div>
+        <div class="stat-row"><span>DRONES NEUTRALIZED:</span><span class="stat-val">${data.ghostsEaten || 0}</span></div>
+        <div class="stat-row"><span>CREDITS EARNED:</span><span class="stat-val">💎 ${data.credits || 0} NC</span></div>
+      `;
     } else if (data.distance !== undefined) {
       statsHtml += `
         <div class="stat-row"><span>DISTANCE RUN:</span><span class="stat-val">${data.distance}m</span></div>

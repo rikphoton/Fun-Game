@@ -9,7 +9,8 @@ const INITIAL_DATA = {
     quantumBreaker: 0,
     astroPulse: 0,
     neonDrift: 0,
-    hexaTron: 0
+    hexaTron: 0,
+    cyberPacman: 0
   },
   stats: {
     gamesPlayed: 0,

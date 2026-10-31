@@ -1668,6 +1668,12 @@ canvas {
   color: #00ffea !important;
 }
 
+.badge-pacman {
+  background: rgba(255, 230, 0, 0.15) !important;
+  border-color: #ffe600 !important;
+  color: #ffe600 !important;
+}
+
 .lb-tabs {
   display: flex;
   gap: 8px;

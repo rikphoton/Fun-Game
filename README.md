@@ -1,7 +1,7 @@
 # 🕹️ NeonPulse Arcade
 
 > **Hyper-Kinetic Cyberpunk Web & Desktop Arcade**  
-> Six adrenaline-fueled arcade games, roguelite tech tree progression, procedural Web Audio synthwave soundtracks, local Hall of Fame, full gamepad support, and responsive mobile arcade controls.
+> Seven adrenaline-fueled arcade games, roguelite tech tree progression, procedural Web Audio synthwave soundtracks, local Hall of Fame, full gamepad support, and responsive mobile arcade controls.
 
 🎮 **Play Live in Browser:** **[https://rikphoton.github.io/Fun-Game/](https://rikphoton.github.io/Fun-Game/)**
 
@@ -39,7 +39,7 @@ Open [http://localhost:3000](http://localhost:3000) (or the port Vite prints in 
 ### 🧪 Run Automated Tests
 
 ```bash
-# Run all 45 automated unit tests (using Node's native test runner)
+# Run all 49 automated unit tests (using Node's native test runner)
 npm test
 ```
 
@@ -88,6 +88,7 @@ npm run package:linux  # Linux x64
 | **🌠 Astro Pulse** | Vertical Cyber Shmup | Retro vertical shooter across scrolling starfields. Pick up 5-way spread cannons, seeking micro-missiles, energy shields, and confront the Mothership boss. |
 | **🏎️ Neon Drift** | Cyber Highway Racer | Pseudo-3D Outrun-style highway racer set in Neo-Tokyo 2099. Ignite twin nitro afterburners, drift around bends, weave past cyber traffic, and rack up near-miss points. |
 | **⚡ Hexa-Tron** | Lightcycle Arena | High-stakes arena combat against 3 ruthless AI cycles. Draw lethal light ribbons, deploy aerial phase jumps, boost nitro, and drop EMP trail clearers. |
+| **👾 Cyber Pacman** | Cyber Maze Infiltrator | Hyper-kinetic neon maze runner. Devour encrypted data bits, collect Overclock Power Cores to turn the tables on 4 hunter drone AIs (*RedLine*, *Valkyrie*, *Glitch*, *Chaos*), snatch rare Cyber Fruit caches, and discharge screen-clearing EMP Stun Pulses. |
 
 ---
 
@@ -148,6 +149,7 @@ neon-pulse-arcade/
 │   │   └── storage.js       # Save management (credits, quests, upgrades, armory)
 │   ├── games/
 │   │   ├── astroPulse.js    # Vertical cyber shmup
+│   │   ├── cyberPacman.js   # Cyberpunk maze infiltrator
 │   │   ├── cyberSurvivors.js# Bullet-heaven roguelite
 │   │   ├── hexaTron.js      # Lightcycle arena combat
 │   │   ├── neonDash.js      # Gravity runner
@@ -155,7 +157,7 @@ neon-pulse-arcade/
 │   │   └── quantumBreaker.js# Handcrafted brick breaker
 │   ├── main.js              # State manager, UI modals, game loop router
 │   └── style.css            # Cyberpunk aesthetic, responsive layouts & HUD
-├── tests/                   # 45 automated unit tests (node --test)
+├── tests/                   # 49 automated unit tests (node --test)
 ├── build-desktop.sh         # macOS/Linux desktop build helper
 ├── build-exe.bat            # Windows .exe builder helper
 ├── index.html               # Main arcade shell and modals

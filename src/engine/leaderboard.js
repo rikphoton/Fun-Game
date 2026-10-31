@@ -77,6 +77,18 @@ const DEFAULT_BOARDS = {
     { tag: 'LGT', score: 4100,  date: '2026-09-07' },
     { tag: 'WAL', score: 3200,  date: '2026-09-06' },
     { tag: 'BYT', score: 2100,  date: '2026-09-05' }
+  ],
+  cyberPacman: [
+    { tag: 'PAC', score: 28500, date: '2026-09-14' },
+    { tag: 'RIK', score: 24200, date: '2026-09-14' },
+    { tag: 'NEO', score: 20600, date: '2026-09-13' },
+    { tag: 'GHO', score: 17400, date: '2026-09-12' },
+    { tag: 'DOT', score: 14100, date: '2026-09-11' },
+    { tag: 'PWR', score: 11500, date: '2026-09-10' },
+    { tag: 'BIT', score: 9200,  date: '2026-09-09' },
+    { tag: 'WAK', score: 7300,  date: '2026-09-08' },
+    { tag: 'EMP', score: 5600,  date: '2026-09-07' },
+    { tag: 'ARC', score: 3800,  date: '2026-09-06' }
   ]
 };
 
