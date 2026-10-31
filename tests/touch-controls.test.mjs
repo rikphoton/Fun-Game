@@ -192,13 +192,26 @@ test('CyberPacman ghosts actively move in scatter and chase modes without being 
   game.isRunning = true;
 
   const blinky = game.ghosts.find(g => g.id === 'blinky');
-  assert.ok(blinky, 'Blinky should exist');
+  const pinky = game.ghosts.find(g => g.id === 'pinky');
+  const inky = game.ghosts.find(g => g.id === 'inky');
+  const clyde = game.ghosts.find(g => g.id === 'clyde');
+
+  assert.ok(blinky && pinky && inky && clyde, 'All 4 ghosts should exist');
   const initialBlinkyX = blinky.x;
 
+  // Run 30 frames (~0.5s)
   for (let i = 0; i < 30; i++) {
     game.update(0.016);
   }
-
-  // Blinky starts facing left in corridor (8, 8) and must move left
+  // Blinky must move left immediately
   assert.ok(blinky.x < initialBlinkyX, `Blinky should move left along corridor, started at ${initialBlinkyX}, now at ${blinky.x}`);
+
+  // Run another 300 frames (~5s total), all ghosts must exit and roam
+  for (let i = 0; i < 300; i++) {
+    game.update(0.016);
+  }
+
+  for (const ghost of game.ghosts) {
+    assert.equal(ghost.inHouse, false, `${ghost.name} should have exited the house after 5 seconds`);
+  }
 });

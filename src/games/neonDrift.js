@@ -334,22 +334,33 @@ export class NeonDriftGame {
       const relSpeed = this.speed - car.speed;
       car.z -= relSpeed * dt * 1.8;
 
-      // Collision check with player
-      if (car.z > 0 && car.z < 28 && !car.passed) {
+      if (car.hitCooldown > 0) {
+        car.hitCooldown -= dt;
+      }
+
+      // Collision check with player (player car is visually centered at z ~ 93)
+      if (car.z >= 70 && car.z <= 122 && !car.passed) {
         const lateralDist = Math.abs(car.lane - this.playerX);
-        if (lateralDist < 0.28) {
-          // Crash!
-          this.handleCrash(car);
-          this.traffic.splice(i, 1);
-          continue;
-        } else if (lateralDist < 0.52 && !car.nearMissTriggered) {
+        if (lateralDist < 0.18) {
+          // Direct rear-end impact!
+          if (!car.hitCooldown || car.hitCooldown <= 0) {
+            car.hitCooldown = 0.5;
+            this.handleCrash(car);
+          }
+        } else if (lateralDist < 0.28) {
+          // Sideswipe / scrape!
+          if (!car.hitCooldown || car.hitCooldown <= 0) {
+            car.hitCooldown = 0.35;
+            this.handleScrape(car);
+          }
+        } else if (lateralDist < 0.48 && !car.nearMissTriggered) {
           // NEAR MISS!
           car.nearMissTriggered = true;
           this.handleNearMiss(car);
         }
       }
 
-      if (car.z <= 0) {
+      if (car.z < 65) {
         car.passed = true;
       }
 
@@ -370,9 +381,9 @@ export class NeonDriftGame {
       const p = this.pickups[i];
       p.z -= this.speed * dt * 1.8;
 
-      if (p.z > 0 && p.z < 35) {
+      if (p.z >= 65 && p.z <= 125) {
         const lateralDist = Math.abs(p.lane - this.playerX);
-        if (lateralDist < 0.32) {
+        if (lateralDist < 0.35) {
           this.collectPickup(p);
           this.pickups.splice(i, 1);
           continue;
@@ -467,17 +478,50 @@ export class NeonDriftGame {
     sound.announce('Nice drift!');
   }
 
+  handleScrape(car) {
+    sound.play('hit');
+    this.particles.shake(4);
+    this.speed = Math.max(70, this.speed - 20);
+
+    const dmg = car.type === 'truck' ? 8 : 5;
+    this.hp = Math.max(0, this.hp - dmg);
+
+    // Lateral bounce
+    const pushDir = this.playerX > car.lane ? 1 : -1;
+    this.playerX = Math.max(-1.05, Math.min(1.05, this.playerX + pushDir * 0.08));
+    car.lane = Math.max(-0.85, Math.min(0.85, car.lane - pushDir * 0.08));
+
+    // Contact sparks
+    const carPx = 400 + this.playerX * 280;
+    this.particles.explode(carPx, this.playerY, '#ffe600', 12);
+
+    this.addFloatingText(`SCRAPE! -${dmg} HP`, carPx, this.playerY - 30, '#ffe600');
+
+    if (this.hp <= 0) {
+      this.triggerGameOver();
+    }
+  }
+
   handleCrash(car) {
     sound.play('explosion');
-    this.particles.shake(12);
-    this.speed = Math.max(40, this.speed * 0.4);
+    this.particles.shake(10);
+    this.speed = Math.max(60, this.speed * 0.65);
 
-    const dmg = car.type === 'truck' ? 40 : 25;
+    const dmg = car.type === 'truck' ? 25 : 15;
     this.hp = Math.max(0, this.hp - dmg);
+
+    // Push the other car forward with impact
+    car.z += 30;
+    car.speed += 30;
+    car.spinAngle = (Math.random() - 0.5) * 0.5;
+
+    // Bounce player laterally slightly
+    const pushDir = this.playerX >= car.lane ? 1 : -1;
+    this.playerX = Math.max(-1.05, Math.min(1.05, this.playerX + pushDir * 0.12));
 
     // Spawn collision sparks
     const carPx = 400 + this.playerX * 280;
-    this.particles.explode(carPx, this.playerY, '#ff007f', 35);
+    this.particles.explode(carPx, this.playerY, '#ff007f', 30);
     this.particles.explode(carPx, this.playerY, '#ffd700', 20);
 
     this.addFloatingText(`CRASH! -${dmg} HP`, carPx, this.playerY - 40, '#ff0055');
@@ -749,6 +793,12 @@ export class NeonDriftGame {
 
     ctx.save();
     ctx.translate(x, y);
+
+    if (car.spinAngle) {
+      ctx.rotate(car.spinAngle);
+      car.spinAngle *= 0.92;
+      if (Math.abs(car.spinAngle) < 0.01) car.spinAngle = 0;
+    }
 
     // Car shadow
     ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';

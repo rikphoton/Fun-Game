@@ -261,6 +261,10 @@ export class CyberPacmanGame {
         stunTimer: 0
       }
     ];
+
+    for (const ghost of this.ghosts) {
+      ghost.baseY = ghost.y;
+    }
   }
 
   bindInputs() {
@@ -757,10 +761,10 @@ export class CyberPacmanGame {
           ghost.y = gateY;
           ghost.inHouse = false;
           ghost.mode = this.frightenedTimer > 0 ? 'frightened' : this.waveMode;
-          ghost.dir = 'left';
+          ghost.dir = (ghost.id === 'pinky' || ghost.id === 'clyde') ? 'right' : 'left';
         } else {
-          // Bob up and down in house
-          ghost.y += Math.sin(performance.now() * 0.006) * 0.4;
+          // Bob up and down around base position in house
+          ghost.y = (ghost.baseY || ghost.y) + Math.sin(performance.now() * 0.006) * 3;
           continue;
         }
       }
@@ -790,12 +794,19 @@ export class CyberPacmanGame {
     const centerX = ORIGIN_X + curTileX * TILE_SIZE + TILE_SIZE / 2;
     const centerY = ORIGIN_Y + curTileY * TILE_SIZE + TILE_SIZE / 2;
 
-    const distToCenterX = Math.abs(ghost.x - centerX);
-    const distToCenterY = Math.abs(ghost.y - centerY);
-    const TURN_THRESHOLD = Math.max(8, moveDist + 1);
+    let reachedCenter = false;
+    if (ghost.dir === 'left' && ghost.x >= centerX && (ghost.x - moveDist) <= centerX) {
+      reachedCenter = true;
+    } else if (ghost.dir === 'right' && ghost.x <= centerX && (ghost.x + moveDist) >= centerX) {
+      reachedCenter = true;
+    } else if (ghost.dir === 'up' && ghost.y >= centerY && (ghost.y - moveDist) <= centerY) {
+      reachedCenter = true;
+    } else if (ghost.dir === 'down' && ghost.y <= centerY && (ghost.y + moveDist) >= centerY) {
+      reachedCenter = true;
+    }
 
-    // Check intersection turn decision
-    if (distToCenterX <= TURN_THRESHOLD && distToCenterY <= TURN_THRESHOLD) {
+    // Check intersection turn decision when crossing center
+    if (reachedCenter) {
       // Snap to tile center
       ghost.x = centerX;
       ghost.y = centerY;
