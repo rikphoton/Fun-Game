@@ -234,9 +234,37 @@ export class QuantumBreakerGame {
 
   handlePointerDown(x) {
     if (x !== undefined) this.pointerX = x;
-    if (this.paddle.hasLaser) {
-      this.fireLaser();
+    this.launchBall();
+  }
+
+  launchBall() {
+    if (this.balls.length === 0) {
+      this.spawnInitialBall();
+      return;
     }
+    this.fireLaser();
+  }
+
+  handleAction() {
+    this.launchBall();
+  }
+
+  triggerBomb() {
+    if (!this.isRunning || this.isPaused) return;
+    this.particles.shake(12, 0.4);
+    sound.play('explosion');
+    for (const b of this.bricks) {
+      if (b.alive && b.y > this.height * 0.35) {
+        b.hp--;
+        if (b.hp <= 0) {
+          b.alive = false;
+          this.score += 60;
+        }
+      }
+    }
+    this.particles.addShockwave(this.paddle.x, this.paddle.y - 40, '#ff0055', 120, 0.4);
+    this.particles.addFloatingText('QUANTUM BOMB!', this.paddle.x, this.paddle.y - 30, { color: '#ff0055' });
+    this.callbacks.onScoreUpdate(this.score, this.lives, this.combo, this.stage);
   }
 
   fireLaser() {

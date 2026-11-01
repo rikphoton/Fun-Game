@@ -199,8 +199,9 @@ export class AstroPulseGame {
       dy /= joyMag;
     }
 
-    this.player.x += dx * this.player.speed * dt;
-    this.player.y += dy * this.player.speed * dt;
+    const thrustMult = (this.keys && (this.keys['ShiftLeft'] || this.keys['ShiftRight'])) ? 1.55 : 1.0;
+    this.player.x += dx * this.player.speed * thrustMult * dt;
+    this.player.y += dy * this.player.speed * thrustMult * dt;
 
     // Boundaries
     this.player.x = Math.max(20, Math.min(this.width - 20, this.player.x));

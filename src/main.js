@@ -1202,9 +1202,11 @@ class ArcadeApp {
             this.activeGame.keys['Space'] = true;
           }
           if (this.activeGame.handleAction) this.activeGame.handleAction();
-          if (this.activeGame.fireLaser) this.activeGame.fireLaser();
+          if (this.activeGame.launchBall) this.activeGame.launchBall();
+          if (this.activeGame.fireLaser && this.activeGameKey === 'quantumBreaker') this.activeGame.fireLaser();
           if (this.activeGame.jump) this.activeGame.jump();
           if (this.activeGame.triggerPhaseJump) this.activeGame.triggerPhaseJump();
+          if (this.activeGame.triggerEmp) this.activeGame.triggerEmp();
           if (this.activeGame.setTouchAction) this.activeGame.setTouchAction('nitro', true);
           if (this.activeGame.triggerSuperAbility && this.activeGameKey === 'cyberSurvivors') {
             this.activeGame.triggerSuperAbility();
@@ -1245,6 +1247,12 @@ class ArcadeApp {
           }
           if (this.activeGame.handleAction && this.activeGameKey === 'neonDash') {
             this.activeGame.handleAction();
+          }
+          if (this.activeGame.fireLaser && this.activeGameKey === 'quantumBreaker') {
+            this.activeGame.fireLaser();
+          }
+          if (this.activeGame.triggerNitro) {
+            this.activeGame.triggerNitro();
           }
           if (this.activeGame.triggerPhaseJump) this.activeGame.triggerPhaseJump();
         } else {
@@ -2443,6 +2451,34 @@ class ArcadeApp {
           if (btnModeToggle) btnModeToggle.style.display = 'none';
           setDeckMode(meta.controlMode);
         }
+
+        const btnTouchNitro = document.getElementById('btn-touch-nitro');
+        const btnTouchSuper = document.getElementById('touch-super-btn');
+        const btnTouchA = document.getElementById('touch-action-a');
+        const iconPrimary = document.getElementById('icon-touch-primary');
+        const iconSub = document.getElementById('icon-touch-sub');
+        const iconSuper = document.getElementById('icon-touch-super');
+        const deckZoneRight = document.getElementById('deck-zone-right');
+
+        if (btnTouchNitro) {
+          btnTouchNitro.style.display = meta.showSub ? 'flex' : 'none';
+        }
+        if (btnTouchSuper) {
+          btnTouchSuper.style.display = meta.showSuper ? 'flex' : 'none';
+        }
+        if (btnTouchA) {
+          btnTouchA.style.display = meta.showPrimary !== false ? 'flex' : 'none';
+        }
+        if (deckZoneRight) {
+          if (!meta.showSuper) {
+            deckZoneRight.classList.add('single-action');
+          } else {
+            deckZoneRight.classList.remove('single-action');
+          }
+        }
+        if (iconPrimary && meta.primaryIcon) iconPrimary.textContent = meta.primaryIcon;
+        if (iconSub && meta.subIcon) iconSub.textContent = meta.subIcon;
+        if (iconSuper && meta.superIcon) iconSuper.textContent = meta.superIcon;
       }
 
       if (gameKey === 'quantumBreaker') {

@@ -1307,112 +1307,305 @@ canvas {
     z-index: 40;
   }
 
+  /* Center-Oriented Mobile Control Deck */
   body.in-game .deck-controls-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    width: 100%;
-    max-width: 520px;
-    padding: 0;
-    margin: 0 auto;
-    box-sizing: border-box;
-    gap: 8px;
+    display: grid !important;
+    grid-template-columns: 1fr auto 1fr !important;
+    align-items: center !important;
+    width: 100% !important;
+    max-width: 520px !important;
+    padding: 0 10px !important;
+    margin: 0 auto !important;
+    box-sizing: border-box !important;
+    gap: 6px !important;
   }
 
+  /* Left Zone: Secondary Ability or Mode Toggle */
   body.in-game .deck-zone-left {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    flex: 0 0 auto;
+    grid-column: 1 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    justify-content: center !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    gap: 4px !important;
   }
 
+  /* Center Zone: Primary Movement / Directional Controls (Joystick, D-Pad, Slider) */
   body.in-game .deck-zone-center {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex: 1 1 auto;
-    min-width: 0;
+    grid-column: 2 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    margin: 0 !important;
+    position: relative !important;
   }
 
+  /* Right Zone: Special Ability & Primary Action */
   body.in-game .deck-zone-right {
+    grid-column: 3 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-end !important;
+    justify-content: center !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    gap: 4px !important;
+  }
+
+  /* Directional D-Pad Cluster (Centered) */
+  body.in-game .deck-dpad-cluster {
     display: flex;
     flex-direction: column;
-    align-items: flex-end;
-    justify-content: center;
-    gap: 6px;
-    flex: 0 0 auto;
-  }
-
-  body.in-game .deck-action-top-row {
-    display: flex;
     align-items: center;
-    gap: 6px;
+    justify-content: center;
+    margin: 0 auto;
+    touch-action: none;
   }
 
   body.in-game .dpad-btn {
-    width: 48px;
-    height: 48px;
-    font-size: 1.25rem;
+    width: 46px;
+    height: 44px;
+    font-size: 1.15rem;
     border-radius: 10px;
-  }
-
-  body.in-game .dpad-center-hub {
-    width: 24px;
-    height: 24px;
-  }
-
-  body.in-game .deck-joystick-cluster {
-    width: 120px;
-    height: 120px;
+    background: rgba(14, 26, 48, 0.85);
+    border: 1.5px solid rgba(0, 243, 255, 0.35);
+    color: var(--neon-cyan);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.15);
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 0;
-    margin: 0;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: none;
+  }
+
+  body.in-game .dpad-btn:active, body.in-game .dpad-btn.pressed {
+    transform: scale(0.92);
+    background: rgba(0, 243, 255, 0.35);
+    border-color: #ffffff;
+    color: #ffffff;
+    box-shadow: 0 0 14px rgba(0, 243, 255, 0.6);
+  }
+
+  body.in-game .dpad-horizontal {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    margin: 2px 0;
+  }
+
+  body.in-game .dpad-center-hub {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: rgba(0, 243, 255, 0.15);
+    border: 1px solid rgba(0, 243, 255, 0.25);
+  }
+
+  /* 360° Virtual Joystick (Centered) */
+  body.in-game .deck-joystick-cluster {
+    width: 114px;
+    height: 114px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    margin: 0 auto;
+    touch-action: none;
   }
 
   body.in-game .joystick-base {
     width: 110px;
     height: 110px;
+    border-radius: 50%;
+    background: radial-gradient(circle at center, rgba(14, 26, 48, 0.9) 0%, rgba(5, 10, 22, 0.95) 75%);
+    border: 2px solid rgba(0, 243, 255, 0.35);
+    box-shadow: 0 0 16px rgba(0, 243, 255, 0.15), inset 0 0 14px rgba(0, 243, 255, 0.1);
+    position: relative;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: none;
+  }
+
+  body.in-game .joystick-ring {
+    position: absolute;
+    inset: 10px;
+    border-radius: 50%;
+    border: 1px dashed rgba(0, 243, 255, 0.2);
+    pointer-events: none;
   }
 
   body.in-game .joystick-knob {
     width: 48px;
     height: 48px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #00f3ff 0%, #0088cc 60%, #003366 100%);
+    border: 2px solid #ffffff;
+    box-shadow: 0 0 14px rgba(0, 243, 255, 0.7), inset 0 2px 3px rgba(255, 255, 255, 0.6);
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
   }
 
+  body.in-game .joystick-core {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #ffffff;
+    box-shadow: 0 0 8px #00f3ff;
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+  }
+
+  /* Slider Cluster (Centered) */
   body.in-game .deck-slider-cluster {
     width: 100%;
-    max-width: 180px;
+    max-width: 176px;
     padding: 0 4px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+    touch-action: none;
+  }
+
+  body.in-game .slider-track-wrap {
+    width: 100%;
+    touch-action: none;
   }
 
   body.in-game .slider-track {
-    height: 24px;
+    height: 26px;
+    background: rgba(14, 26, 48, 0.85);
+    border: 1.5px solid rgba(0, 243, 255, 0.4);
+    border-radius: 13px;
+    position: relative;
+    box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.6);
   }
 
   body.in-game .slider-knob {
-    width: 42px;
-    height: 36px;
+    width: 44px;
+    height: 38px;
+    border-radius: 10px;
+    background: linear-gradient(180deg, #00f3ff 0%, #0088cc 100%);
+    border: 1.5px solid #ffffff;
+    box-shadow: 0 0 12px rgba(0, 243, 255, 0.6);
+    top: 50%;
+    transform: translate(-50%, -50%);
+  }
+
+  /* Left Action Button: Secondary Ability */
+  body.in-game .action-sub {
+    width: 66px;
+    height: 52px;
+    border-radius: 12px;
+    border: 1.5px solid rgba(0, 243, 255, 0.5);
+    background: linear-gradient(135deg, rgba(0, 243, 255, 0.15) 0%, rgba(14, 26, 48, 0.7) 100%);
+    color: var(--neon-cyan);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2px 4px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: none;
+  }
+
+  body.in-game .action-sub:active, body.in-game .action-sub.pressed {
+    transform: scale(0.92);
+    background: rgba(0, 243, 255, 0.4);
+    border-color: #ffffff;
+    color: #ffffff;
+    box-shadow: 0 0 16px rgba(0, 243, 255, 0.7);
+  }
+
+  /* Right Action Buttons: Super & Primary */
+  body.in-game .action-super {
+    width: 68px;
+    height: 38px;
+    border-radius: 10px;
+    border: 1.5px solid rgba(255, 230, 0, 0.55);
+    background: linear-gradient(135deg, rgba(255, 230, 0, 0.18) 0%, rgba(255, 113, 206, 0.2) 100%);
+    color: var(--neon-yellow);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2px 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: none;
+  }
+
+  body.in-game .action-super:active, body.in-game .action-super.pressed {
+    transform: scale(0.92);
+    background: rgba(255, 230, 0, 0.5);
+    border-color: #ffffff;
+    color: #000;
+    box-shadow: 0 0 16px var(--neon-yellow);
   }
 
   body.in-game .action-primary {
-    width: 110px;
-    height: 48px;
-    border-radius: 12px;
-  }
-
-  body.in-game .action-sub,
-  body.in-game .action-super {
-    width: 52px;
-    height: 42px;
+    width: 68px;
+    height: 38px;
     border-radius: 10px;
+    border: 1.5px solid rgba(255, 0, 123, 0.65);
+    background: linear-gradient(135deg, rgba(255, 0, 123, 0.25) 0%, rgba(168, 85, 247, 0.3) 100%);
+    color: #ffffff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2px 4px;
+    box-shadow: 0 2px 8px rgba(255, 0, 123, 0.3);
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: none;
   }
 
+  body.in-game .action-primary:active, body.in-game .action-primary.pressed {
+    transform: scale(0.92);
+    background: linear-gradient(135deg, var(--neon-pink) 0%, #ff55a3 100%);
+    border-color: #ffffff;
+    box-shadow: 0 0 18px var(--neon-pink);
+  }
+
+  /* When only Primary Action is active on right (no super button), make it full height */
+  body.in-game .deck-zone-right.single-action .action-primary {
+    height: 52px;
+  }
+
+  /* Mode Toggle button on the left */
   body.in-game .deck-mode-toggle {
-    padding: 4px 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 6px 10px;
     font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--neon-cyan);
+    background: rgba(0, 243, 255, 0.12);
+    border: 1.5px solid rgba(0, 243, 255, 0.4);
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: none;
   }
 }
 
@@ -2496,14 +2689,21 @@ body.briefing-active .mobile-arcade-deck {
   body.in-game .hud-hp-bar { width: 36px; height: 7px; }
   body.in-game .super-btn { width: 46px; height: 16px; }
   body.in-game .super-text { font-size: 0.58rem; }
-  body.in-game .deck-joystick-cluster { width: 102px; height: 102px; }
-  body.in-game .joystick-base { width: 92px; height: 92px; }
-  body.in-game .joystick-knob { width: 40px; height: 40px; }
-  body.in-game .dpad-btn { width: 40px; height: 40px; font-size: 1.05rem; }
-  body.in-game .dpad-center-hub { width: 18px; height: 18px; }
-  body.in-game .action-primary { width: 94px; height: 44px; font-size: 0.78rem; }
-  body.in-game .action-sub,
-  body.in-game .action-super { width: 45px; height: 38px; }
+  body.in-game .deck-controls-row { padding: 0 4px; gap: 2px; }
+  body.in-game .deck-zone-left { min-width: 48px; }
+  body.in-game .deck-zone-right { min-width: 48px; }
+  body.in-game .deck-joystick-cluster { width: 104px; height: 104px; }
+  body.in-game .joystick-base { width: 98px; height: 98px; }
+  body.in-game .joystick-knob { width: 42px; height: 42px; }
+  body.in-game .dpad-btn { width: 40px; height: 38px; font-size: 1rem; }
+  body.in-game .dpad-center-hub { width: 16px; height: 16px; }
+  body.in-game .deck-slider-cluster { max-width: 144px; }
+  body.in-game .action-sub { width: 56px; height: 46px; }
+  body.in-game .action-super,
+  body.in-game .action-primary { width: 58px; height: 34px; }
+  body.in-game .deck-zone-right.single-action .action-primary { height: 48px; }
+  body.in-game .btn-icon { font-size: 1rem; }
+  body.in-game .btn-subtext { font-size: 0.54rem; letter-spacing: 0.5px; }
 }
 
 

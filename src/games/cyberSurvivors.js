@@ -274,8 +274,9 @@ export class CyberSurvivorsGame {
       dy /= joyMag;
     }
 
-    this.player.x += dx * this.player.speed * dt;
-    this.player.y += dy * this.player.speed * dt;
+    const boostMult = (this.keys && (this.keys['ShiftLeft'] || this.keys['ShiftRight'])) ? 1.6 : 1.0;
+    this.player.x += dx * this.player.speed * boostMult * dt;
+    this.player.y += dy * this.player.speed * boostMult * dt;
 
     // Boundaries
     const margin = this.player.radius + 4;

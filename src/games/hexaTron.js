@@ -248,9 +248,19 @@ export class HexaTronGame {
     this.particles.addShockwave(this.player.x, this.player.y, '#00f3ff', 80, 0.3);
   }
 
-  setTouchAction(action) {
-    if (action === 'jump' || action === 'nitro') {
+  triggerNitro() {
+    if (!this.player || !this.player.alive) return;
+    this.player.nitroTimer = Math.max(this.player.nitroTimer, 2.5);
+    sound.play('powerup');
+    this.particles.shake(2);
+    this.particles.addShockwave(this.player.x, this.player.y, '#ffe600', 60, 0.25);
+  }
+
+  setTouchAction(action, active = true) {
+    if (action === 'jump') {
       this.triggerPhaseJump();
+    } else if (action === 'nitro' && active) {
+      this.triggerNitro();
     }
   }
 

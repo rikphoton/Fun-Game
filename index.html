@@ -303,10 +303,23 @@
         <!-- Top Guidance Banner (Hidden during active gameplay to maximize screen space) -->
         <div class="deck-hint-bar" id="deck-hint-text" style="display: none;">🕹️ TOUCH CONTROLS</div>
 
-        <!-- Ergonomic Dual Thumb Controls: Left D-Pad/Joystick & Right Actions -->
+        <!-- Centered Movement Deck: Left Secondary | Center Joystick/D-Pad | Right Actions -->
         <div class="deck-controls-row">
-          <!-- Left Zone: Movement (D-Pad or 360° Joystick) -->
-          <div class="deck-zone-left" id="deck-movement-center">
+          <!-- Left Zone: Secondary Ability (Boost / Thrust / Drift / Air Dash / Laser / Nitro) -->
+          <div class="deck-zone-left" id="deck-zone-left">
+            <button class="deck-btn action-btn action-sub" id="btn-touch-nitro" data-code="ShiftLeft" aria-label="Secondary Ability">
+              <span class="btn-icon" id="icon-touch-sub">⚡</span>
+              <span class="btn-subtext" id="lbl-touch-sub">BOOST</span>
+            </button>
+            <!-- Mode Toggle Pill (e.g. For Pacman: Stick vs D-Pad) placed on left to balance layout -->
+            <button class="deck-mode-toggle" id="btn-deck-mode-toggle" aria-label="Toggle Movement Style" style="display: none;">
+              <span class="mode-toggle-icon" id="lbl-deck-mode-icon">🕹️</span>
+              <span class="mode-toggle-text" id="lbl-deck-mode-text">STICK</span>
+            </button>
+          </div>
+
+          <!-- Center Zone: Primary Movement / Directional Controls -->
+          <div class="deck-zone-center" id="deck-zone-center">
             <!-- 1. Virtual 360° Analog Joystick (Cyber Survivors, Astro Pulse, Pacman stick) -->
             <div class="deck-cluster deck-joystick-cluster" id="deck-joystick" style="display: none;">
               <div class="joystick-base" id="joystick-base">
@@ -320,7 +333,7 @@
               <div class="deck-sublabel" id="joystick-sublabel" style="display: none;">360° JOYSTICK</div>
             </div>
 
-            <!-- 2. Directional D-Pad Cluster (Cyber Pacman, Hexa-Tron, Neon Drift) -->
+            <!-- 2. Directional D-Pad Cluster (Cyber Pacman, Hexa-Tron, Neon Drift, Neon Dash) -->
             <div class="deck-cluster deck-dpad-cluster" id="deck-dpad">
               <button class="deck-btn dpad-btn dpad-up" id="btn-touch-up" data-code="ArrowUp" aria-label="Up">▲</button>
               <div class="dpad-horizontal">
@@ -332,15 +345,7 @@
               <div class="deck-sublabel" id="dpad-sublabel" style="display: none;">D-PAD</div>
             </div>
 
-            <!-- Mode Toggle Pill (e.g. For Pacman: Stick vs D-Pad) -->
-            <button class="deck-mode-toggle" id="btn-deck-mode-toggle" aria-label="Toggle Movement Style" style="display: none;">
-              <span class="mode-toggle-icon" id="lbl-deck-mode-icon">🕹️</span>
-              <span class="mode-toggle-text" id="lbl-deck-mode-text">STICK</span>
-            </button>
-          </div>
-
-          <!-- Center Zone: Horizontal Slider (Quantum Breaker) -->
-          <div class="deck-zone-center" id="deck-zone-center">
+            <!-- 3. Paddle Slider Cluster (Quantum Breaker) -->
             <div class="deck-cluster deck-slider-cluster" id="deck-slider" style="display: none;">
               <div class="slider-v-row" id="slider-v-up-wrap" style="display: none;">
                 <button class="deck-btn slider-v-btn" id="btn-slider-up" data-code="ArrowUp" aria-label="Up">▲</button>
@@ -362,20 +367,16 @@
             </div>
           </div>
 
-          <!-- Right Zone: Action Controls (Sub + Super on top, Primary Action on bottom) -->
-          <div class="deck-zone-right" id="deck-actions">
-            <div class="deck-action-top-row">
-              <button class="deck-btn action-btn action-sub" id="btn-touch-nitro" data-code="ShiftLeft" aria-label="Auxiliary Action">
-                <span class="btn-icon">⚡</span>
-                <span class="btn-subtext" id="lbl-touch-sub">DRIFT</span>
-              </button>
-              <button class="deck-btn action-btn action-super" id="touch-super-btn" data-code="KeyE" aria-label="Super Ability">
-                <span class="btn-icon">💣</span>
-                <span class="btn-subtext" id="lbl-touch-super">EMP</span>
-              </button>
-            </div>
+          <!-- Right Zone: Special Ability & Primary Action -->
+          <div class="deck-zone-right" id="deck-zone-right">
+            <!-- Special Ability (Super Nova / Smart Bomb / EMP / Phase Jump) -->
+            <button class="deck-btn action-btn action-super" id="touch-super-btn" data-code="KeyE" aria-label="Special Ability">
+              <span class="btn-icon" id="icon-touch-super">💣</span>
+              <span class="btn-subtext" id="lbl-touch-super">EMP</span>
+            </button>
+            <!-- Primary Action (Fire / Action / Flip / Launch / Nitro) -->
             <button class="deck-btn action-btn action-primary" id="touch-action-a" data-code="Space" aria-label="Primary Action">
-              <span class="btn-icon">🅰️</span>
+              <span class="btn-icon" id="icon-touch-primary">🅰️</span>
               <span class="btn-subtext" id="lbl-touch-primary">ACTION</span>
             </button>
           </div>

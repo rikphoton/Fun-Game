@@ -37,10 +37,16 @@ export const GAMES_METADATA = {
     portraitDims: { width: 720, height: 720 },
     desktopDims: { width: 800, height: 600 },
     instructions: 'Move: 360° Joystick / <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> | Super EMP: <kbd>SPACE</kbd> | Auto-Fire',
-    hintText: '🕹️ 360° JOYSTICK: MOVE | 💣 NOVA | ⚡ BOOST',
-    primaryLabel: 'SUPER EMP',
+    hintText: '🕹️ CENTER JOYSTICK: MOVE | ⚡ BOOST (LEFT) | 💣 NOVA (RIGHT)',
+    primaryLabel: 'EMP',
     subLabel: 'BOOST',
     superLabel: 'NOVA',
+    primaryIcon: '⚡',
+    subIcon: '⚡',
+    superIcon: '💣',
+    showSub: true,
+    showSuper: true,
+    showPrimary: true,
     hud: { hp: true, super: true, superText: 'NOVA' },
     briefing: {
       objective: 'Survive unrelenting cyber drone swarms, collect data cores for tech perks, and detonate the Super Nova EMP.',
@@ -51,9 +57,9 @@ export const GAMES_METADATA = {
         'Plasma weapons auto-target nearest foes'
       ],
       mobile: [
-        '360° Analog Joystick (left) to steer',
-        '💣 NOVA: Screen-clearing EMP blast',
-        '⚡ BOOST: Quick thruster evasion',
+        'Centred 360° Analog Joystick for fluid navigation',
+        '⚡ BOOST (left): High-speed thruster surge',
+        '💣 NOVA / ⚡ EMP (right): Screen-clearing detonations',
         'Weapons auto-fire continuously'
       ]
     }
@@ -68,10 +74,16 @@ export const GAMES_METADATA = {
     portraitDims: { width: 800, height: 600 },
     desktopDims: { width: 800, height: 600 },
     instructions: 'Flip Gravity: <kbd>SPACE</kbd> or Click | Air-Dash: Tap while airborne | Dodge Spikes',
-    hintText: '🕹️ TAP SCREEN / 🅰️ TO FLIP GRAVITY',
-    primaryLabel: 'JUMP / FLIP',
+    hintText: '🕹️ CENTER D-PAD / TAP SCREEN TO FLIP GRAVITY',
+    primaryLabel: 'FLIP',
     subLabel: 'AIR DASH',
-    superLabel: 'BURST',
+    superLabel: '',
+    primaryIcon: '⬆️',
+    subIcon: '⚡',
+    superIcon: '🚀',
+    showSub: true,
+    showSuper: false,
+    showPrimary: true,
     hud: { hp: false, super: false },
     briefing: {
       objective: 'Sprint through high-speed hazard corridors, flip gravity between floor and ceiling, and rocket dash over spikes.',
@@ -81,9 +93,9 @@ export const GAMES_METADATA = {
         'Collect gold stars to ramp score multiplier up to 5x'
       ],
       mobile: [
-        'Tap anywhere on Canvas or 🅰️: Flip Gravity',
-        '⚡ AIR DASH: Thruster dash while airborne',
-        'Collect gold stars for 5x score multiplier'
+        'Centred directional control or tap canvas to Flip Gravity',
+        '⚡ AIR DASH (left): Aerial rocket thrust over hazards',
+        '⬆️ FLIP (right): Instant ceiling/floor gravity inversion'
       ]
     }
   },
@@ -97,10 +109,16 @@ export const GAMES_METADATA = {
     portraitDims: { width: 760, height: 800 },
     desktopDims: { width: 800, height: 600 },
     instructions: 'Paddle: Touch Screen or Slider / <kbd>A</kbd><kbd>D</kbd> | Fire Lasers: <kbd>SPACE</kbd>',
-    hintText: '🕹️ DRAG SCREEN TO MOVE PADDLE | 🅰️ LAUNCH / FIRE',
-    primaryLabel: 'LAUNCH / FIRE',
+    hintText: '🕹️ CENTER SLIDER / DRAG CANVAS | ⚡ LASER | 💣 BOMB',
+    primaryLabel: 'LAUNCH',
     subLabel: 'LASER',
     superLabel: 'BOMB',
+    primaryIcon: '🚀',
+    subIcon: '⚡',
+    superIcon: '💣',
+    showSub: true,
+    showSuper: true,
+    showPrimary: true,
     hud: { hp: false, super: false },
     briefing: {
       objective: 'Demolish quantum defense matrices, catch falling power cores, unleash twin lasers, and defeat the Stage 6 Quantum Core.',
@@ -110,9 +128,9 @@ export const GAMES_METADATA = {
         'Catch glowing capsules for lasers, multiball & shields'
       ],
       mobile: [
-        'Touch & drag directly on canvas to slide paddle',
-        'Tap Screen or 🅰️ LAUNCH: Launch ball & fire lasers',
-        'Optional bottom slider available for thumb control'
+        'Centred Paddle Slider or direct touch drag on canvas',
+        '⚡ LASER (left): Fire twin destructive beam cannons',
+        '🚀 LAUNCH & 💣 BOMB (right): Launch balls & clear matrices'
       ]
     }
   },
@@ -126,10 +144,16 @@ export const GAMES_METADATA = {
     portraitDims: { width: 600, height: 800 },
     desktopDims: { width: 800, height: 600 },
     instructions: 'Move: 360° Joystick / <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> | Smart Bomb: <kbd>SPACE</kbd> | Auto-Fire',
-    hintText: '🕹️ 360° JOYSTICK: FLY | 💣 SMART BOMB | 🅰️ FIRE',
+    hintText: '🕹️ CENTER JOYSTICK: FLY | ⚡ THRUST (LEFT) | 🚀 FIRE & 💣 BOMB (RIGHT)',
     primaryLabel: 'FIRE',
     subLabel: 'THRUST',
-    superLabel: 'SMART BOMB',
+    superLabel: 'BOMB',
+    primaryIcon: '🚀',
+    subIcon: '⚡',
+    superIcon: '💣',
+    showSub: true,
+    showSuper: true,
+    showPrimary: true,
     hud: { hp: true, super: true, superText: 'BOMB' },
     briefing: {
       objective: 'Pilot the pulse starfighter through deep hyperspace, collect multi-beam lasers and micro-missiles, and eliminate the Mothership.',
@@ -139,9 +163,9 @@ export const GAMES_METADATA = {
         'Pulse cannons auto-fire with continuous upgrades'
       ],
       mobile: [
-        '360° Analog Joystick (left) for precision flight',
-        '💣 SMART BOMB: Annihilate all on-screen hostiles',
-        '🅰️ FIRE: Hold for maximum continuous cannon barrage'
+        'Centred 360° Analog Joystick for agile starfighter flight',
+        '⚡ THRUST (left): Afterburner speed multiplier',
+        '🚀 FIRE & 💣 BOMB (right): Laser barrage & Smart Bomb'
       ]
     }
   },
@@ -155,10 +179,16 @@ export const GAMES_METADATA = {
     portraitDims: { width: 640, height: 800 },
     desktopDims: { width: 800, height: 600 },
     instructions: 'Steer: Drag on Road / D-Pad / <kbd>A</kbd><kbd>D</kbd> | Nitro: <kbd>SPACE</kbd> | Drift: <kbd>SHIFT</kbd>',
-    hintText: '🕹️ DRAG ROAD / D-PAD TO STEER | ⚡ DRIFT | 🅰️ NITRO',
+    hintText: '🕹️ CENTER D-PAD / DRAG ROAD | 💨 DRIFT (LEFT) | 🔥 NITRO (RIGHT)',
     primaryLabel: 'NITRO',
     subLabel: 'DRIFT',
-    superLabel: 'BOOST',
+    superLabel: '',
+    primaryIcon: '🔥',
+    subIcon: '💨',
+    superIcon: '⚡',
+    showSub: true,
+    showSuper: false,
+    showPrimary: true,
     hud: { hp: true, super: true, superText: 'NITRO' },
     briefing: {
       objective: 'Blaze through neon highway traffic, power-drift through sharp turns, collect nitro capsules, and outrun interceptors.',
@@ -168,9 +198,9 @@ export const GAMES_METADATA = {
         'S / SHIFT: Initiate Power Drift around corners'
       ],
       mobile: [
-        'Drag finger across road or tap Left/Right D-Pad to steer',
-        '🅰️ NITRO: Full afterburner boost',
-        '⚡ DRIFT: Hold while cornering to execute power drift'
+        'Centred steering D-Pad or direct finger drag on road',
+        '💨 DRIFT (left): Hold to initiate smooth power-drift',
+        '🔥 NITRO (right): Ignite afterburners for top speed'
       ]
     }
   },
@@ -184,10 +214,16 @@ export const GAMES_METADATA = {
     portraitDims: { width: 720, height: 720 },
     desktopDims: { width: 800, height: 600 },
     instructions: 'Steer: D-Pad / <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> | Phase Jump: <kbd>SPACE</kbd> | Nitro: <kbd>SHIFT</kbd>',
-    hintText: '🕹️ D-PAD: TURN | 🅰️ PHASE JUMP | ⚡ NITRO',
-    primaryLabel: 'PHASE JUMP',
+    hintText: '🕹️ CENTER D-PAD: TURN | ⚡ NITRO (LEFT) | 🚀 JUMP (RIGHT)',
+    primaryLabel: 'JUMP',
     subLabel: 'NITRO',
-    superLabel: 'EMP BLAST',
+    superLabel: '',
+    primaryIcon: '🚀',
+    subIcon: '⚡',
+    superIcon: '💣',
+    showSub: true,
+    showSuper: false,
+    showPrimary: true,
     hud: { hp: true, super: true, superText: 'SHIELD' },
     briefing: {
       objective: 'Maneuver high-speed lightcycles on the neon grid, box in rival AI cycles with light ribbons, and leap over obstacles.',
@@ -197,9 +233,9 @@ export const GAMES_METADATA = {
         'SHIFT: Nitro acceleration | E: Drop EMP ribbon clearer'
       ],
       mobile: [
-        'Left D-Pad: Instant 90° directional turns',
-        '🅰️ PHASE JUMP: Aerial leap over lethal light trails',
-        '⚡ NITRO: Speed boost | 💣 EMP: Vaporize obstacles'
+        'Centred directional D-Pad for sharp 90° turns',
+        '⚡ NITRO (left): High-velocity cycle boost',
+        '🚀 JUMP (right): Phase Jump cleanly over light trails'
       ]
     }
   },
@@ -213,10 +249,16 @@ export const GAMES_METADATA = {
     portraitDims: { width: 640, height: 580 },
     desktopDims: { width: 800, height: 600 },
     instructions: 'Steer: D-Pad / Joystick / <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> | EMP Stun: <kbd>SPACE</kbd>',
-    hintText: '🕹️ D-PAD / STICK: STEER | 🅰️ EMP STUN',
+    hintText: '🕹️ CENTER D-PAD / STICK: STEER | ⚡ EMP STUN (RIGHT)',
     primaryLabel: 'EMP STUN',
-    subLabel: 'SPEED',
-    superLabel: 'EMP BLAST',
+    subLabel: '',
+    superLabel: '',
+    primaryIcon: '⚡',
+    subIcon: '🕹️',
+    superIcon: '💣',
+    showSub: false,
+    showSuper: false,
+    showPrimary: true,
     hud: { hp: true, super: true, superText: 'EMP' },
     briefing: {
       objective: 'Infiltrate neon server grids, devour all encrypted data bits, grab Power Cores to turn the tables on rogue hunter drones, and stun with EMP.',
@@ -226,9 +268,9 @@ export const GAMES_METADATA = {
         'Chomp flashing Power Cores to make drones vulnerable'
       ],
       mobile: [
-        'Ergonomic D-Pad or 360° Joystick (toggle with 🎛️ button)',
-        '🅰️ EMP STUN: Freeze all hunting drones instantly',
-        'Devour Power Cores to counter-attack hunter drones'
+        'Centred 4-direction D-Pad (or 360° Joystick in stick mode)',
+        '🕹️/🎛️ STICK TOGGLE (left): Switch between D-Pad and Stick',
+        '⚡ EMP STUN (right): Freeze all hunter drones in place'
       ]
     }
   }

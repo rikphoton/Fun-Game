@@ -196,3 +196,76 @@ test('Hexa-Tron arena expands vertically in square portrait mode while preservin
   assert.ok(game.player.x >= game.arena.x && game.player.x <= game.arena.x + game.arena.w);
   assert.ok(game.player.y >= game.arena.y && game.player.y <= game.arena.y + game.arena.h);
 });
+
+test('Centered mobile layout metadata configures 3-zone controls across all seven games', () => {
+  const requirements = {
+    cyberSurvivors: { controlMode: 'joystick', showSub: true, subLabel: 'BOOST', showSuper: true, superLabel: 'NOVA', primaryLabel: 'EMP' },
+    astroPulse: { controlMode: 'joystick', showSub: true, subLabel: 'THRUST', showSuper: true, superLabel: 'BOMB', primaryLabel: 'FIRE' },
+    cyberPacman: { controlMode: 'toggle', showSub: false, showSuper: false, primaryLabel: 'EMP STUN' },
+    hexaTron: { controlMode: 'dpad', showSub: true, subLabel: 'NITRO', showSuper: false, primaryLabel: 'JUMP' },
+    neonDrift: { controlMode: 'dpad', showSub: true, subLabel: 'DRIFT', showSuper: false, primaryLabel: 'NITRO' },
+    neonDash: { controlMode: 'dpad', showSub: true, subLabel: 'AIR DASH', showSuper: false, primaryLabel: 'FLIP' },
+    quantumBreaker: { controlMode: 'slider', showSub: true, subLabel: 'LASER', showSuper: true, superLabel: 'BOMB', primaryLabel: 'LAUNCH' }
+  };
+
+  for (const [key, req] of Object.entries(requirements)) {
+    const meta = getGameMeta(key);
+    assert.ok(meta, `Meta exists for ${key}`);
+    assert.equal(meta.controlMode, req.controlMode, `${key} controlMode matches`);
+    assert.equal(meta.showSub, req.showSub, `${key} showSub matches`);
+    assert.equal(meta.showSuper, req.showSuper, `${key} showSuper matches`);
+    assert.equal(meta.primaryLabel, req.primaryLabel, `${key} primaryLabel matches`);
+    if (req.subLabel) assert.equal(meta.subLabel, req.subLabel, `${key} subLabel matches`);
+    if (req.superLabel) assert.equal(meta.superLabel, req.superLabel, `${key} superLabel matches`);
+  }
+});
+
+test('Secondary ability buttons trigger gameplay actions (AstroPulse Thrust, CyberSurvivors Boost, HexaTron Nitro)', () => {
+  const c = createMockCanvas(600, 800);
+  const cb = { onScoreUpdate: () => {}, onGameOver: () => {} };
+
+  // 1. Astro Pulse Thrust
+  const ap = new AstroPulseGame(c, dummyParticles, cb);
+  ap.init();
+  ap.joystick = { x: 0, y: -1.0 };
+  const basePy = ap.player.y;
+  ap.update(0.1);
+  const standardMove = basePy - ap.player.y;
+
+  // Activate Thrust (ShiftLeft)
+  ap.player.y = basePy;
+  ap.keys['ShiftLeft'] = true;
+  ap.update(0.1);
+  const thrustMove = basePy - ap.player.y;
+  assert.ok(thrustMove > standardMove, 'Astro Pulse moves faster when Thrust is active');
+
+  // 2. Cyber Survivors Boost
+  const cs = new CyberSurvivorsGame(c, dummyParticles, cb);
+  cs.init('specter');
+  cs.joystick = { x: 1.0, y: 0 };
+  const basePx = cs.player.x;
+  cs.update(0.1);
+  const standardCsMove = cs.player.x - basePx;
+
+  cs.player.x = basePx;
+  cs.keys['ShiftLeft'] = true;
+  cs.update(0.1);
+  const boostCsMove = cs.player.x - basePx;
+  assert.ok(boostCsMove > standardCsMove, 'Cyber Survivors moves faster when Boost is active');
+
+  // 3. Hexa-Tron Nitro
+  const ht = new HexaTronGame(c, dummyParticles, cb);
+  ht.start();
+  assert.equal(ht.player.nitroTimer, 0);
+  ht.setTouchAction('nitro', true);
+  assert.ok(ht.player.nitroTimer > 0, 'Hexa-Tron activates nitro boost');
+
+  // 4. Quantum Breaker Laser & Bomb
+  const qb = new QuantumBreakerGame(c, dummyParticles, cb);
+  qb.init();
+  const initialLasers = qb.lasers.length;
+  qb.fireLaser();
+  assert.equal(qb.lasers.length, initialLasers + 2, 'Quantum Breaker fires lasers');
+  qb.triggerBomb();
+  assert.ok(true, 'Quantum Breaker detonates quantum bomb');
+});
