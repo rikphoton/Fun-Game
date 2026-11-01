@@ -52,6 +52,17 @@ class ArcadeApp {
     }
     this.particles.setQuality(storage.getSetting('graphicsQuality') || 'balanced');
 
+    // Sync sound engine with persistent storage settings
+    sound.setMasterVolume(storage.getSetting('masterVolume') ?? 0.8);
+    sound.setBgmVolume(storage.getSetting('bgmVolume') ?? 0.4);
+    sound.setSfxVolume(storage.getSetting('sfxVolume') ?? 0.6);
+    sound.setMute(storage.getSetting('isMuted') ?? false);
+    sound.setMusicEnabled(storage.getSetting('musicEnabled') ?? true);
+    sound.setSfxEnabled(storage.getSetting('sfxEnabled') ?? true);
+    sound.setAmbientAudioEnabled(storage.getSetting('ambientAudioEnabled') ?? true);
+    sound.setHapticsEnabled(storage.getSetting('haptics') ?? true);
+    sound.setAnnouncerEnabled(storage.getSetting('announcerEnabled') ?? true);
+
     // Storage Event Listeners
     storage.onAchievementUnlock = (ach) => this.showAchievementToast(ach);
     storage.onCreditsChange = () => this.updateCreditsDisplay();
@@ -127,11 +138,19 @@ class ArcadeApp {
     this.btnCloseArmory = document.getElementById('btn-close-armory');
 
     this.modalAudio = document.getElementById('modal-audio');
+    this.sliderMaster = document.getElementById('slider-master');
+    this.valMaster = document.getElementById('val-master');
     this.sliderBgm = document.getElementById('slider-bgm');
     this.sliderSfx = document.getElementById('slider-sfx');
     this.valBgm = document.getElementById('val-bgm');
     this.valSfx = document.getElementById('val-sfx');
+    this.checkMuteAll = document.getElementById('check-mute-all');
+    this.checkMusic = document.getElementById('check-music');
+    this.checkSfx = document.getElementById('check-sfx');
+    this.checkAmbient = document.getElementById('check-ambient');
     this.checkAnnouncer = document.getElementById('check-announcer');
+    this.checkHaptics = document.getElementById('check-haptics');
+    this.btnTestAudio = document.getElementById('btn-test-audio');
     this.btnCloseAudio = document.getElementById('btn-close-audio');
 
     this.modalUpgrade = document.getElementById('modal-upgrade');
@@ -350,59 +369,141 @@ class ArcadeApp {
     // Cyber Lab Modal
     this.btnOpenLab.addEventListener('click', () => {
       sound.init();
+      sound.playMenuOpen();
       this.renderCyberLab();
       this.modalLab.style.display = 'flex';
     });
     this.btnCloseLab.addEventListener('click', () => {
+      sound.playButtonClick();
       this.modalLab.style.display = 'none';
     });
 
     // Daily Quests Modal
     this.btnOpenQuests.addEventListener('click', () => {
       sound.init();
+      sound.playMenuOpen();
       this.renderQuests();
       this.modalQuests.style.display = 'flex';
     });
     this.btnCloseQuests.addEventListener('click', () => {
+      sound.playButtonClick();
       this.modalQuests.style.display = 'none';
     });
 
     // Audio Modal
     this.btnOpenAudio.addEventListener('click', () => {
       sound.init();
-      this.sliderBgm.value = sound.bgmVolume * 100;
-      this.sliderSfx.value = sound.sfxVolume * 100;
-      this.valBgm.textContent = `${Math.round(sound.bgmVolume * 100)}%`;
-      this.valSfx.textContent = `${Math.round(sound.sfxVolume * 100)}%`;
-      this.checkAnnouncer.checked = storage.getSetting('announcerEnabled') !== false;
+      sound.playMenuOpen();
+      if (this.sliderMaster) this.sliderMaster.value = Math.round(sound.masterVolume * 100);
+      if (this.valMaster) this.valMaster.textContent = `${Math.round(sound.masterVolume * 100)}%`;
+      if (this.sliderBgm) this.sliderBgm.value = Math.round(sound.bgmVolume * 100);
+      if (this.valBgm) this.valBgm.textContent = `${Math.round(sound.bgmVolume * 100)}%`;
+      if (this.sliderSfx) this.sliderSfx.value = Math.round(sound.sfxVolume * 100);
+      if (this.valSfx) this.valSfx.textContent = `${Math.round(sound.sfxVolume * 100)}%`;
+
+      if (this.checkMuteAll) this.checkMuteAll.checked = sound.isMuted;
+      if (this.checkMusic) this.checkMusic.checked = sound.musicEnabled;
+      if (this.checkSfx) this.checkSfx.checked = sound.sfxEnabled;
+      if (this.checkAmbient) this.checkAmbient.checked = sound.ambientAudioEnabled;
+      if (this.checkAnnouncer) this.checkAnnouncer.checked = sound.announcerEnabled;
+      if (this.checkHaptics) this.checkHaptics.checked = sound.hapticsEnabled;
+
       this.modalAudio.style.display = 'flex';
     });
 
     this.btnCloseAudio.addEventListener('click', () => {
+      sound.playButtonClick();
       this.modalAudio.style.display = 'none';
     });
 
-    this.sliderBgm.addEventListener('input', (e) => {
-      const val = e.target.value / 100;
-      sound.setBgmVolume(val);
-      this.valBgm.textContent = `${e.target.value}%`;
-      storage.setSetting('bgmVolume', val);
-    });
+    if (this.sliderMaster) {
+      this.sliderMaster.addEventListener('input', (e) => {
+        const val = e.target.value / 100;
+        sound.setMasterVolume(val);
+        if (this.valMaster) this.valMaster.textContent = `${e.target.value}%`;
+        storage.setSetting('masterVolume', val);
+      });
+    }
 
-    this.sliderSfx.addEventListener('input', (e) => {
-      const val = e.target.value / 100;
-      sound.setSfxVolume(val);
-      this.valSfx.textContent = `${e.target.value}%`;
-      storage.setSetting('sfxVolume', val);
-    });
+    if (this.sliderBgm) {
+      this.sliderBgm.addEventListener('input', (e) => {
+        const val = e.target.value / 100;
+        sound.setBgmVolume(val);
+        if (this.valBgm) this.valBgm.textContent = `${e.target.value}%`;
+        storage.setSetting('bgmVolume', val);
+      });
+    }
 
-    this.checkAnnouncer.addEventListener('change', (e) => {
-      storage.setSetting('announcerEnabled', e.target.checked);
-      if (e.target.checked) sound.announce('Announcer Active');
-    });
+    if (this.sliderSfx) {
+      this.sliderSfx.addEventListener('input', (e) => {
+        const val = e.target.value / 100;
+        sound.setSfxVolume(val);
+        if (this.valSfx) this.valSfx.textContent = `${e.target.value}%`;
+        storage.setSetting('sfxVolume', val);
+      });
+    }
+
+    if (this.checkMuteAll) {
+      this.checkMuteAll.addEventListener('change', (e) => {
+        sound.setMute(e.target.checked);
+        storage.setSetting('isMuted', e.target.checked);
+        sound.playSettingsInteract();
+      });
+    }
+
+    if (this.checkMusic) {
+      this.checkMusic.addEventListener('change', (e) => {
+        sound.setMusicEnabled(e.target.checked);
+        storage.setSetting('musicEnabled', e.target.checked);
+        sound.playSettingsInteract();
+      });
+    }
+
+    if (this.checkSfx) {
+      this.checkSfx.addEventListener('change', (e) => {
+        sound.setSfxEnabled(e.target.checked);
+        storage.setSetting('sfxEnabled', e.target.checked);
+        sound.playSettingsInteract();
+      });
+    }
+
+    if (this.checkAmbient) {
+      this.checkAmbient.addEventListener('change', (e) => {
+        sound.setAmbientAudioEnabled(e.target.checked);
+        storage.setSetting('ambientAudioEnabled', e.target.checked);
+        sound.playSettingsInteract();
+      });
+    }
+
+    if (this.checkHaptics) {
+      this.checkHaptics.addEventListener('change', (e) => {
+        sound.setHapticsEnabled(e.target.checked);
+        storage.setSetting('haptics', e.target.checked);
+        sound.playSettingsInteract();
+        if (e.target.checked) sound.vibrate(30);
+      });
+    }
+
+    if (this.checkAnnouncer) {
+      this.checkAnnouncer.addEventListener('change', (e) => {
+        sound.setAnnouncerEnabled(e.target.checked);
+        storage.setSetting('announcerEnabled', e.target.checked);
+        if (e.target.checked) sound.announce('Announcer Active');
+      });
+    }
+
+    if (this.btnTestAudio) {
+      this.btnTestAudio.addEventListener('click', () => {
+        sound.init();
+        sound.playLaser('fast');
+        setTimeout(() => sound.playGemPickup(3), 70);
+        sound.vibrate(25);
+      });
+    }
 
     document.querySelectorAll('.track-btn').forEach(btn => {
       btn.addEventListener('click', () => {
+        sound.playButtonClick();
         document.querySelectorAll('.track-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         const track = btn.dataset.track;
@@ -475,16 +576,19 @@ class ArcadeApp {
     // Cyber Armory Shop
     const openArmory = () => {
       sound.init();
+      sound.playMenuOpen();
       this.renderArmory();
       this.modalArmory.style.display = 'flex';
     };
     this.btnOpenArmory.addEventListener('click', openArmory);
     this.btnOpenArmoryBadge.addEventListener('click', openArmory);
     this.btnCloseArmory.addEventListener('click', () => {
+      sound.playButtonClick();
       this.modalArmory.style.display = 'none';
     });
 
     this.tabTrails.addEventListener('click', () => {
+      sound.playButtonClick();
       this.tabTrails.classList.add('active');
       this.tabThemes.classList.remove('active');
       this.shopTrailsList.style.display = 'grid';
@@ -492,6 +596,7 @@ class ArcadeApp {
     });
 
     this.tabThemes.addEventListener('click', () => {
+      sound.playButtonClick();
       this.tabThemes.classList.add('active');
       this.tabTrails.classList.remove('active');
       this.shopTrailsList.style.display = 'none';
@@ -499,8 +604,12 @@ class ArcadeApp {
     });
 
     // Trophies Modal
-    this.btnAchievements.addEventListener('click', () => this.openAchievementsModal());
+    this.btnAchievements.addEventListener('click', () => {
+      sound.playMenuOpen();
+      this.openAchievementsModal();
+    });
     this.btnCloseAchievements.addEventListener('click', () => {
+      sound.playButtonClick();
       this.modalAchievements.style.display = 'none';
     });
 
@@ -508,12 +617,14 @@ class ArcadeApp {
     if (this.btnOpenProfile) {
       this.btnOpenProfile.addEventListener('click', () => {
         sound.init();
+        sound.playMenuOpen();
         this.renderPlayerProfile();
         this.modalPlayerProfile.style.display = 'flex';
       });
     }
     if (this.btnCloseProfile) {
       this.btnCloseProfile.addEventListener('click', () => {
+        sound.playButtonClick();
         this.modalPlayerProfile.style.display = 'none';
       });
     }
@@ -594,12 +705,14 @@ class ArcadeApp {
     if (this.btnOpenTournament) {
       this.btnOpenTournament.addEventListener('click', () => {
         sound.init();
+        sound.playMenuOpen();
         this.renderTournamentStatus();
         this.modalTournament.style.display = 'flex';
       });
     }
     if (this.btnCloseTournament) {
       this.btnCloseTournament.addEventListener('click', () => {
+        sound.playButtonClick();
         this.modalTournament.style.display = 'none';
       });
     }
@@ -631,6 +744,11 @@ class ArcadeApp {
     if (btnPlayTron) btnPlayTron.addEventListener('click', () => this.openChallengeModePicker('hexaTron'));
     const btnPlayPacman = document.getElementById('btn-play-pacman');
     if (btnPlayPacman) btnPlayPacman.addEventListener('click', () => this.openChallengeModePicker('cyberPacman'));
+
+    // Global Interactive Button Hover Feedback
+    document.querySelectorAll('.control-btn, .game-card, .play-btn, .shop-tab, .track-btn, .mech-option, .hub-btn').forEach(el => {
+      el.addEventListener('mouseenter', () => sound.playButtonHover());
+    });
 
     document.querySelectorAll('.mech-card').forEach(card => {
       card.addEventListener('click', () => {
@@ -1439,6 +1557,7 @@ class ArcadeApp {
     if (this.btnOpenLeaderboard) {
       this.btnOpenLeaderboard.addEventListener('click', () => {
         sound.init();
+        sound.playMenuOpen();
         this.renderLeaderboard(this.activeLbGame);
         this.modalLeaderboard.style.display = 'flex';
       });
@@ -1446,6 +1565,7 @@ class ArcadeApp {
 
     if (this.btnCloseLeaderboard) {
       this.btnCloseLeaderboard.addEventListener('click', () => {
+        sound.playButtonClick();
         this.modalLeaderboard.style.display = 'none';
       });
     }
@@ -2453,6 +2573,7 @@ class ArcadeApp {
 
     this.activeGame.pause();
     document.body.classList.add('briefing-active');
+    sound.playBriefingOpen();
 
     const meta = getGameMeta(gameKey);
     if (titleEl) titleEl.textContent = `${meta ? meta.title.toUpperCase() : gameKey.toUpperCase()} - BRIEFING`;
@@ -2480,6 +2601,7 @@ class ArcadeApp {
     overlay.style.display = 'flex';
 
     const dismiss = (skipForever = false) => {
+      sound.playMissionStart();
       document.body.classList.remove('briefing-active');
       overlay.style.display = 'none';
       if (skipForever) {
@@ -2756,7 +2878,9 @@ class ArcadeApp {
         this.activeGame = null;
       }
       this.physicsAccumulator = 0;
+      sound.playGameExit();
       sound.stopBgm();
+      sound.startBgm('lobby');
       this.gameView.style.display = 'none';
       this.lobbyView.style.display = 'flex';
       this.modalPause.style.display = 'none';
@@ -2852,10 +2976,13 @@ class ArcadeApp {
       this.lastTime = performance.now();
       this.physicsAccumulator = 0;
       sound.resume();
+      sound.playResume();
+      sound.resumeBgm();
       if (this.activeGame.resume) this.activeGame.resume();
     } else {
       this.physicsAccumulator = 0;
-      sound.suspend();
+      sound.playPause();
+      sound.pauseBgm();
       if (this.resetTouchState) this.resetTouchState();
       if (this.activeGame.pause) this.activeGame.pause();
     }

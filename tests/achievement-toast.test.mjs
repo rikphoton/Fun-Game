@@ -273,13 +273,13 @@ test('Achievement Toast: Lifecycle, queueing, formatting, and auto-dismissal log
   assert.equal(arcade.toastQueue.length, 2);
 
   // 4. Wait for first batch to dismiss and next queued toasts to appear
-  await new Promise(r => setTimeout(r, 80));
+  await new Promise(r => setTimeout(r, 120));
 
   // Queue should have progressed
   assert.equal(arcade.toastQueue.length, 0);
 
   // 5. Wait for remaining toasts to dismiss
-  await new Promise(r => setTimeout(r, 80));
+  await new Promise(r => setTimeout(r, 140));
   assert.equal(container.children.length, 0);
   assert.equal(arcade.activeToasts.size, 0);
 

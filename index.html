@@ -497,6 +497,11 @@
       <!-- Panel 1: Audio Console -->
       <div id="panel-settings-audio" class="audio-controls-box">
         <div class="slider-row">
+          <label>Master Volume (<span id="val-master">80%</span>)</label>
+          <input type="range" id="slider-master" min="0" max="100" value="80">
+        </div>
+
+        <div class="slider-row">
           <label>Music Volume (<span id="val-bgm">35%</span>)</label>
           <input type="range" id="slider-bgm" min="0" max="100" value="35">
         </div>
@@ -506,18 +511,48 @@
           <input type="range" id="slider-sfx" min="0" max="100" value="60">
         </div>
 
-        <div class="slider-row" style="margin-top: 10px;">
+        <div class="slider-row" style="margin-top: 6px;">
           <label>Synthwave BGM Track:</label>
           <div class="track-buttons">
             <button class="track-btn active" data-track="synthwave">Sunset</button>
             <button class="track-btn" data-track="darksynth">Darksynth</button>
             <button class="track-btn" data-track="chiptune">Chiptune</button>
+            <button class="track-btn" data-track="lobby">Cyber Lounge</button>
           </div>
         </div>
 
-        <div style="margin-top: 14px; display: flex; align-items: center; gap: 10px; cursor: pointer;">
-          <input type="checkbox" id="check-announcer" checked style="width: 18px; height: 18px; accent-color: var(--neon-cyan); cursor: pointer;">
-          <label for="check-announcer" style="margin: 0; cursor: pointer;">Enable Arcade Voice Announcer 🎙️</label>
+        <!-- Toggles Grid -->
+        <div class="audio-toggles-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-top: 10px; background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(0, 243, 255, 0.15); border-radius: 8px; padding: 12px;">
+          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 0.85rem; margin: 0;">
+            <input type="checkbox" id="check-mute-all" style="width: 16px; height: 16px; accent-color: var(--neon-magenta); cursor: pointer;">
+            <span>Mute All Audio 🔇</span>
+          </label>
+          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 0.85rem; margin: 0;">
+            <input type="checkbox" id="check-music" checked style="width: 16px; height: 16px; accent-color: var(--neon-cyan); cursor: pointer;">
+            <span>Music Enabled 🎵</span>
+          </label>
+          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 0.85rem; margin: 0;">
+            <input type="checkbox" id="check-sfx" checked style="width: 16px; height: 16px; accent-color: var(--neon-cyan); cursor: pointer;">
+            <span>Sound Effects 🔊</span>
+          </label>
+          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 0.85rem; margin: 0;">
+            <input type="checkbox" id="check-ambient" checked style="width: 16px; height: 16px; accent-color: var(--neon-cyan); cursor: pointer;">
+            <span>Ambient Atmosphere 🌌</span>
+          </label>
+          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 0.85rem; margin: 0;">
+            <input type="checkbox" id="check-announcer" checked style="width: 16px; height: 16px; accent-color: var(--neon-cyan); cursor: pointer;">
+            <span>Arcade Announcer 🎙️</span>
+          </label>
+          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 0.85rem; margin: 0;">
+            <input type="checkbox" id="check-haptics" checked style="width: 16px; height: 16px; accent-color: var(--neon-yellow); cursor: pointer;">
+            <span>Haptic Vibration 📳</span>
+          </label>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; margin-top: 6px;">
+          <button type="button" class="control-btn" id="btn-test-audio" style="font-size: 0.8rem; padding: 4px 10px;">
+            ⚡ Test Audio Synth
+          </button>
         </div>
       </div>
 

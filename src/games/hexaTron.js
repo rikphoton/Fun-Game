@@ -144,24 +144,30 @@ export class HexaTronGame {
     this.pickups = [];
     this.pickupTimer = 0;
 
+    sound.startBgm('hexaTron');
+    sound.startCycleHum();
     sound.announce('Grid Activated. Lightcycle Duel!');
     this.initRound();
   }
 
   stop() {
     this.isRunning = false;
+    sound.stopCycleHum();
   }
 
   pause() {
     this.isPaused = true;
+    sound.stopCycleHum();
   }
 
   resume() {
     this.isPaused = false;
+    sound.startCycleHum();
   }
 
   destroy() {
     this.isRunning = false;
+    sound.stopCycleHum();
   }
 
   initRound() {
@@ -337,6 +343,9 @@ export class HexaTronGame {
 
   updateCycle(cycle, dt) {
     // Commit nextDir
+    if (cycle.dir !== cycle.nextDir && cycle === this.player) {
+      sound.playDirectionTurn();
+    }
     cycle.dir = cycle.nextDir;
 
     const currentSpeed = cycle.nitroTimer > 0 ? cycle.speed * 1.4 : cycle.speed;
@@ -493,6 +502,7 @@ export class HexaTronGame {
     this.particles.explode(cycle.x, cycle.y, '#ffffff', 20);
 
     if (cycle.id === 'player') {
+      sound.stopCycleHum();
       gamepad.rumble(400, 0.8, 1.0);
       sound.announce('Cycle Derezz! Mission Offline.');
     } else {
@@ -560,7 +570,9 @@ export class HexaTronGame {
 
   handleGameOver() {
     this.isRunning = false;
-    sound.play('gameover');
+    sound.stopCycleHum();
+    sound.stopBgm();
+    sound.playGameOver();
     storage.saveHighScore('hexaTron', this.score);
     storage.recordGamePlayed();
 

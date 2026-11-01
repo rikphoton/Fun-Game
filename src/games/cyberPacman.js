@@ -179,7 +179,7 @@ export class CyberPacmanGame {
 
     storage.recordGamePlayed();
     this.startStage(1);
-    sound.startBgm('synthwave');
+    sound.startBgm('cyberPacman');
     sound.announce('Grid Infiltrator Online');
   }
 
@@ -1048,7 +1048,7 @@ export class CyberPacmanGame {
   playerHit() {
     this.gameState = 'dying';
     this.stateTimer = 1.4;
-    sound.playExplosion();
+    sound.playPacmanDeath();
     this.particles.shake(14, 0.4);
 
     this.particles.burst(this.player.x, this.player.y, 25, {
@@ -1082,6 +1082,7 @@ export class CyberPacmanGame {
     this.isRunning = false;
 
     const isRecord = storage.saveHighScore('cyberPacman', this.score);
+    sound.stopBgm();
     sound.playGameOver();
 
     if (this.callbacks && this.callbacks.onGameOver) {

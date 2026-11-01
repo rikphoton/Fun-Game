@@ -135,8 +135,13 @@ const INITIAL_DATA = {
     arcade_master: { id: 'arcade_master', title: 'All-Star Champion', desc: 'Score over 1,000 in all games', unlocked: false, icon: '👑', category: 'Mastery' }
   },
   settings: {
+    masterVolume: 0.8,
     sfxVolume: 0.6,
     bgmVolume: 0.4,
+    isMuted: false,
+    musicEnabled: true,
+    sfxEnabled: true,
+    ambientAudioEnabled: true,
     crtFilter: true,
     bgmTrack: 'synthwave',
     announcerEnabled: true,
@@ -345,8 +350,13 @@ class StorageManager {
 
     // Settings
     if (raw.settings && typeof raw.settings === 'object') {
+      if (typeof raw.settings.masterVolume === 'number') clean.settings.masterVolume = Math.max(0, Math.min(1, raw.settings.masterVolume));
       if (typeof raw.settings.sfxVolume === 'number') clean.settings.sfxVolume = Math.max(0, Math.min(1, raw.settings.sfxVolume));
       if (typeof raw.settings.bgmVolume === 'number') clean.settings.bgmVolume = Math.max(0, Math.min(1, raw.settings.bgmVolume));
+      if (typeof raw.settings.isMuted === 'boolean') clean.settings.isMuted = raw.settings.isMuted;
+      if (typeof raw.settings.musicEnabled === 'boolean') clean.settings.musicEnabled = raw.settings.musicEnabled;
+      if (typeof raw.settings.sfxEnabled === 'boolean') clean.settings.sfxEnabled = raw.settings.sfxEnabled;
+      if (typeof raw.settings.ambientAudioEnabled === 'boolean') clean.settings.ambientAudioEnabled = raw.settings.ambientAudioEnabled;
       if (typeof raw.settings.crtFilter === 'boolean') clean.settings.crtFilter = raw.settings.crtFilter;
       if (typeof raw.settings.bgmTrack === 'string') clean.settings.bgmTrack = raw.settings.bgmTrack;
       if (typeof raw.settings.announcerEnabled === 'boolean') clean.settings.announcerEnabled = raw.settings.announcerEnabled;

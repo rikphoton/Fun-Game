@@ -186,23 +186,29 @@ export class NeonDriftGame {
     this.nitro = this.maxNitro;
 
     sound.announce('Ignition. Floor it!');
+    sound.startBgm('neonDrift');
+    sound.startEngineSound();
     this.updateHUD();
   }
 
   stop() {
     this.isRunning = false;
+    sound.stopEngineSound();
   }
 
   pause() {
     this.isPaused = true;
+    sound.stopEngineSound();
   }
 
   resume() {
     this.isPaused = false;
+    sound.startEngineSound();
   }
 
   destroy() {
     this.isRunning = false;
+    sound.stopEngineSound();
   }
 
   setTouchAction(action, active) {
@@ -266,6 +272,8 @@ export class NeonDriftGame {
     } else {
       this.speed = Math.max(targetSpeed, this.speed - this.deceleration * dt);
     }
+
+    sound.updateEngineSound(this.speed / this.maxSpeed, this.isAccelerating, this.isDrifting);
 
     // 2. Steering & Drifting
     let steerDir = 0;
@@ -552,7 +560,9 @@ export class NeonDriftGame {
 
   triggerGameOver() {
     this.isRunning = false;
-    sound.play('gameover');
+    sound.stopEngineSound();
+    sound.stopBgm();
+    sound.playGameOver();
     sound.announce('System offline. Totaled.');
 
     const distMeters = Math.floor(this.distance);

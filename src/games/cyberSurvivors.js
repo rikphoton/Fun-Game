@@ -145,7 +145,7 @@ export class CyberSurvivorsGame {
     this.mechClass = mechClass;
     this.reset(customSeed);
     this.isRunning = true;
-    sound.startBgm(storage.getSetting('bgmTrack') || 'synthwave');
+    sound.startBgm('cyberSurvivors');
   }
 
   start(mechClass, customSeed = null) {
@@ -341,6 +341,8 @@ export class CyberSurvivorsGame {
     if (this.gameTime >= 60 && !this.bossSpawned) {
       this.bossSpawned = true;
       this.spawnBoss();
+      sound.playWarning();
+      sound.setAdaptiveIntensity(2);
       this.particles.shake(10, 0.4);
       this.particles.addFloatingText('⚠️ DREADNOUGHT ARRIVAL ⚠️', this.width / 2, 100, { color: '#ff0055', size: 22 });
     }
@@ -853,6 +855,7 @@ export class CyberSurvivorsGame {
         this.score += 2500;
         storage.addCredits(150); // Massive credit bonus
         storage.unlockAchievement('dreadnought_slayer');
+        sound.setAdaptiveIntensity(0);
         sound.announce('Mega Dreadnought Destroyed!');
       } else if (enemy.type === 'bomber') {
         this.particles.addShockwave(enemy.x, enemy.y, '#ff3333', 60, 0.25);
@@ -907,7 +910,7 @@ export class CyberSurvivorsGame {
     if (p.type === 'health') {
       this.player.hp = Math.min(this.player.maxHp, this.player.hp + 35);
       this.particles.addFloatingText('+35 HP', this.player.x, this.player.y - 20, { color: '#00ff88', size: 18 });
-      sound.playPowerup();
+      sound.playHealthPickup();
     } else if (p.type === 'bomb') {
       this.particles.shake(12, 0.35);
       this.particles.addShockwave(this.player.x, this.player.y, '#ffe600', 300, 0.35);

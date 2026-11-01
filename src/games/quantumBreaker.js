@@ -69,7 +69,7 @@ export class QuantumBreakerGame {
   init() {
     this.reset();
     this.isRunning = true;
-    sound.startBgm(storage.getSetting('bgmTrack') || 'synthwave');
+    sound.startBgm('quantumBreaker');
   }
 
   start() {
@@ -404,7 +404,7 @@ export class QuantumBreakerGame {
         b.vy = -Math.cos(angle) * currentSpeed;
         b.y = pTop - b.radius;
 
-        sound.playBounce(1.5);
+        sound.playBounce(1.2 + Math.abs(hitOffset) * 0.4);
         this.particles.burst(b.x, b.y, 6, { color: '#00f3ff', life: 0.2 });
       }
 
@@ -418,6 +418,7 @@ export class QuantumBreakerGame {
           this.particles.addShockwave(this.width / 2, this.height, '#00ffcc', 300, 0.3);
           this.particles.addFloatingText('SHIELD SAVED!', this.width / 2, this.height - 40, { color: '#00ffcc' });
         } else {
+          sound.playBallLost();
           this.balls.splice(i, 1);
           continue;
         }
@@ -507,7 +508,7 @@ export class QuantumBreakerGame {
         });
       }
 
-      sound.playExplosion(brick.isExplosive ? 1.5 : 0.5);
+      sound.playBrickDestroy(brick.isExplosive);
 
       if (brick.isExplosive && !preventChain) {
         this.particles.shake(10, 0.25);
@@ -526,7 +527,7 @@ export class QuantumBreakerGame {
         });
       }
     } else {
-      sound.playBounce(1.3);
+      sound.playBrickImpact(brick.isExplosive ? 'explosive' : (brick.hitsMax > 1 ? 'tough' : 'standard'));
     }
   }
 

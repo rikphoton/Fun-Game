@@ -105,7 +105,7 @@ export class NeonDashGame {
     this.reset();
     this.isRunning = true;
     if (typeof window !== 'undefined' && (window.AudioContext || window.webkitAudioContext)) {
-      sound.startBgm(storage.getSetting('bgmTrack') || 'synthwave');
+      sound.startBgm('neonDash');
     }
   }
 
@@ -152,7 +152,7 @@ export class NeonDashGame {
       this.player.vy = this.player.gravityDir * 320;
       this.player.canAirDash = true;
 
-      sound.playJump();
+      sound.playGravityFlip();
       this.particles.burst(this.player.x, this.player.y, 8, {
         color: this.player.gravityDir === 1 ? '#00f3ff' : '#ff00aa',
         minSpeed: 40,
@@ -257,6 +257,7 @@ export class NeonDashGame {
       if (!this.player.onGround) {
         this.player.onGround = true;
         this.player.canAirDash = true;
+        sound.playLanding();
         this.particles.burst(this.player.x, this.floorY, 4, { color: '#00f3ff', life: 0.15 });
       }
     } else if (this.player.gravityDir === -1 && this.player.y <= minY) {
@@ -265,6 +266,7 @@ export class NeonDashGame {
       if (!this.player.onGround) {
         this.player.onGround = true;
         this.player.canAirDash = true;
+        sound.playLanding();
         this.particles.burst(this.player.x, this.ceilY, 4, { color: '#ff00aa', life: 0.15 });
       }
     } else {
@@ -275,6 +277,7 @@ export class NeonDashGame {
       this.player.angle += this.player.gravityDir * 8 * dt;
     } else {
       this.player.angle = 0;
+      sound.playFootstep();
     }
 
     // Custom Particle Trail

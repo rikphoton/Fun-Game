@@ -77,7 +77,7 @@ export class AstroPulseGame {
   init() {
     this.reset();
     this.isRunning = true;
-    sound.startBgm('darksynth');
+    sound.startBgm('astroPulse');
     sound.announce('Astro Pulse Initiated!');
   }
 
@@ -269,6 +269,7 @@ export class AstroPulseGame {
       this.bossSpawned = true;
       this.spawnMothership();
       sound.playWarning();
+      sound.setAdaptiveIntensity(2);
       sound.announce('Warning! Mothership Detected!');
       this.particles.shake(14, 0.5);
       this.particles.addFloatingText('⚠️ MOTHERSHIP DETECTED ⚠️', this.width / 2, 120, {
@@ -504,7 +505,8 @@ export class AstroPulseGame {
       }
     }
 
-    sound.playLaser('fast');
+    const panX = ((this.player.x / this.width) * 2) - 1;
+    sound.playLaser('fast', panX);
   }
 
   fireMissiles() {
@@ -675,6 +677,7 @@ export class AstroPulseGame {
           size: 24
         });
         this.score += 2500;
+        sound.setAdaptiveIntensity(0);
         sound.announce('Mothership Destroyed!');
         storage.recordShmupBossKill();
       }
