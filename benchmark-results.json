@@ -1,0 +1,118 @@
+{
+  "timestamp": "2026-11-01T05:25:41.198Z",
+  "initialLoadMs": 948.2,
+  "games": {
+    "cyberSurvivors": {
+      "startupMs": 1,
+      "avgFps": 17.6,
+      "avgFrameMs": 56.94,
+      "p95FrameMs": 83.3,
+      "minFrameMs": 16.6,
+      "maxFrameMs": 200,
+      "totalFrames": 180,
+      "longFrames": 166,
+      "midDrops": 169,
+      "longFrameRate": 92.22,
+      "memory": {
+        "usedHeapMB": "2.35",
+        "totalHeapMB": "5.28"
+      }
+    },
+    "neonDash": {
+      "startupMs": 0,
+      "avgFps": 18.8,
+      "avgFrameMs": 53.24,
+      "p95FrameMs": 83.3,
+      "minFrameMs": 16.6,
+      "maxFrameMs": 83.4,
+      "totalFrames": 180,
+      "longFrames": 167,
+      "midDrops": 170,
+      "longFrameRate": 92.78,
+      "memory": {
+        "usedHeapMB": "2.68",
+        "totalHeapMB": "4.28"
+      }
+    },
+    "quantumBreaker": {
+      "startupMs": 0,
+      "avgFps": 17.3,
+      "avgFrameMs": 57.78,
+      "p95FrameMs": 83.4,
+      "minFrameMs": 16.6,
+      "maxFrameMs": 133.4,
+      "totalFrames": 180,
+      "longFrames": 166,
+      "midDrops": 167,
+      "longFrameRate": 92.22,
+      "memory": {
+        "usedHeapMB": "2.43",
+        "totalHeapMB": "3.03"
+      }
+    },
+    "astroPulse": {
+      "startupMs": 0.1,
+      "avgFps": 11.4,
+      "avgFrameMs": 87.87,
+      "p95FrameMs": 116.6,
+      "minFrameMs": 16.6,
+      "maxFrameMs": 183.3,
+      "totalFrames": 180,
+      "longFrames": 170,
+      "midDrops": 170,
+      "longFrameRate": 94.44,
+      "memory": {
+        "usedHeapMB": "2.05",
+        "totalHeapMB": "3.03"
+      }
+    },
+    "neonDrift": {
+      "startupMs": 0.1,
+      "avgFps": 10.7,
+      "avgFrameMs": 93.33,
+      "p95FrameMs": 116.7,
+      "minFrameMs": 16.6,
+      "maxFrameMs": 216.7,
+      "totalFrames": 180,
+      "longFrames": 171,
+      "midDrops": 172,
+      "longFrameRate": 95,
+      "memory": {
+        "usedHeapMB": "2.47",
+        "totalHeapMB": "3.28"
+      }
+    },
+    "hexaTron": {
+      "startupMs": 0.1,
+      "avgFps": 10.7,
+      "avgFrameMs": 93.79,
+      "p95FrameMs": 116.7,
+      "minFrameMs": 16.7,
+      "maxFrameMs": 216.6,
+      "totalFrames": 180,
+      "longFrames": 177,
+      "midDrops": 177,
+      "longFrameRate": 98.33,
+      "memory": {
+        "usedHeapMB": "2.81",
+        "totalHeapMB": "3.53"
+      }
+    },
+    "cyberPacman": {
+      "startupMs": 0.1,
+      "avgFps": 9.6,
+      "avgFrameMs": 104.44,
+      "p95FrameMs": 116.8,
+      "minFrameMs": 16.7,
+      "maxFrameMs": 216.7,
+      "totalFrames": 180,
+      "longFrames": 176,
+      "midDrops": 176,
+      "longFrameRate": 97.78,
+      "memory": {
+        "usedHeapMB": "2.87",
+        "totalHeapMB": "3.79"
+      }
+    }
+  }
+}

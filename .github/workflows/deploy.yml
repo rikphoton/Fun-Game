@@ -4,21 +4,88 @@ on:
   push:
     branches:
       - main
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
 
-# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
 permissions:
   contents: read
   pages: write
   id-token: write
 
-# Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
 concurrency:
   group: "pages"
   cancel-in-progress: false
 
 jobs:
-  build-and-deploy:
+  validate-and-test:
+    name: Automated Unit & Playwright Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+        run: npm ci || npm install
+
+      - name: Run Node Unit Tests
+        run: npm test
+
+      - name: Build Production Arcade (For E2E Testing)
+        run: npm run build
+
+      - name: Install Playwright Browsers & OS Dependencies
+        run: npx playwright install chromium --with-deps
+
+      - name: Run Playwright Browser Tests
+        run: npm run test:browser
+
+      - name: Verify Generated PWA Assets
+        run: |
+          node -e "
+            const fs = require('fs');
+            const required = [
+              'dist/index.html',
+              'dist/manifest.webmanifest',
+              'dist/sw.js',
+              'dist/favicon.ico',
+              'dist/icons/icon-192.png',
+              'dist/icons/icon-512.png',
+              'dist/icons/icon-maskable-512.png',
+              'dist/icons/apple-touch-icon.png'
+            ];
+            for (const file of required) {
+              if (!fs.existsSync(file)) {
+                console.error('Missing required release artifact: ' + file);
+                process.exit(1);
+              }
+            }
+            console.log('All required PWA assets verified in dist/');
+          "
+
+      - name: Upload Test Diagnostics Artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-diagnostics
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 14
+
+  deploy:
+    name: GitHub Pages Production Release
+    needs: validate-and-test
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -27,7 +94,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Setup Node.js 20
         uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -35,14 +102,10 @@ jobs:
 
       - name: Install Dependencies
         env:
-          # Electron is only needed for the desktop build; skip its large binary download in CI.
           ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
         run: npm ci || npm install
 
-      - name: Run Tests
-        run: npm test
-
-      - name: Build Production Arcade
+      - name: Build Production Distribution
         run: npm run build
 
       - name: Setup GitHub Pages
@@ -56,3 +119,8 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+      - name: Post-Release Verification
+        run: |
+          echo "Release successfully deployed to: ${{ steps.deployment.outputs.page_url }}"
+          curl -sI "${{ steps.deployment.outputs.page_url }}" | head -n 5 || true

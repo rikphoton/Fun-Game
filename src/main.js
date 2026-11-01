@@ -786,6 +786,7 @@ class ArcadeApp {
     window.addEventListener('blur', () => {
       this.keyboardHeldKeys.clear();
       this.touchHeldKeys.clear();
+      if (this.resetTouchState) this.resetTouchState();
       if (this.activeGame) {
         this.activeGame.keys = {};
         if (this.activeGame.pointer) this.activeGame.pointer.active = false;
@@ -996,6 +997,9 @@ class ArcadeApp {
     let activeJoyPointerId = null;
     let joyCenter = { x: 0, y: 0 };
     const maxJoyRadius = 38; // px
+    const activeTouchAPointers = new Set();
+    const activeTouchNitroPointers = new Set();
+    const activeTouchSuperPointers = new Set();
 
     if (joystickBase && joystickKnob) {
       const updateJoyPosition = (clientX, clientY) => {
@@ -1226,7 +1230,6 @@ class ArcadeApp {
     // Primary Action Button (🅰️)
     const btnTouchA = document.getElementById('touch-action-a');
     if (btnTouchA) {
-      const activeTouchAPointers = new Set();
       const triggerActionA = (press) => {
         if (press) {
           this.touchHeldKeys.add('Space');
@@ -1284,7 +1287,6 @@ class ArcadeApp {
     // Sub Action / Nitro / Drift / Air Dash Button (⚡)
     const btnTouchNitro = document.getElementById('btn-touch-nitro');
     if (btnTouchNitro) {
-      const activeTouchNitroPointers = new Set();
       const triggerActionNitro = (press) => {
         if (press) {
           this.touchHeldKeys.add('ShiftLeft');
@@ -1349,7 +1351,6 @@ class ArcadeApp {
     // Super Action / EMP / Bomb Button (💣)
     const btnTouchSuper = document.getElementById('touch-super-btn');
     if (btnTouchSuper) {
-      const activeTouchSuperPointers = new Set();
       const triggerActionSuper = (press) => {
         if (press) {
           this.touchHeldKeys.add('KeyE');
@@ -1404,6 +1405,29 @@ class ArcadeApp {
       btnTouchSuper.addEventListener('pointercancel', clearTouchSuper, { passive: false });
       btnTouchSuper.addEventListener('lostpointercapture', clearTouchSuper, { passive: false });
     }
+
+    this.resetTouchState = () => {
+      if (typeof resetJoy === 'function') resetJoy();
+      document.querySelectorAll('.deck-btn, .action-btn, .joystick-base, .slider-wrap, .deck-dpad-btn').forEach(el => {
+        el.classList.remove('pressed');
+        el.classList.remove('active');
+      });
+      activeTouchAPointers.clear();
+      activeTouchNitroPointers.clear();
+      activeTouchSuperPointers.clear();
+      this.touchHeldKeys.clear();
+      if (this.activeGame) {
+        if (this.activeGame.keys) {
+          ['Space', 'ShiftLeft', 'KeyE', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].forEach(k => {
+            this.activeGame.keys[k] = false;
+          });
+        }
+        if (this.activeGame.joystick) {
+          this.activeGame.joystick.x = 0;
+          this.activeGame.joystick.y = 0;
+        }
+      }
+    };
 
     // Leaderboard Modal Controls
     if (this.btnOpenLeaderboard) {
@@ -2776,6 +2800,7 @@ class ArcadeApp {
   initVisibilityHandling() {
     const pauseIfPlaying = () => {
       const game = this.activeGame;
+      if (this.resetTouchState) this.resetTouchState();
       if (game && game.isRunning && !this.isPaused && !game.isPaused) {
         this.togglePause();
       }
@@ -2784,6 +2809,7 @@ class ArcadeApp {
 
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) {
+        if (this.resetTouchState) this.resetTouchState();
         pauseIfPlaying();
         sound.suspend();
       } else {
@@ -2809,6 +2835,7 @@ class ArcadeApp {
     } else {
       this.physicsAccumulator = 0;
       sound.suspend();
+      if (this.resetTouchState) this.resetTouchState();
       if (this.activeGame.pause) this.activeGame.pause();
     }
   }
