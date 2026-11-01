@@ -40,6 +40,21 @@ export class HexaTronGame {
     this.bindInputs();
   }
 
+  setDimensions(width, height) {
+    this.width = width;
+    this.height = height;
+    this.arena = {
+      x: 30,
+      y: 30,
+      w: this.width - 60,
+      h: this.height - 60
+    };
+    if (this.player) {
+      this.player.x = Math.max(this.arena.x + 20, Math.min(this.arena.x + this.arena.w - 20, this.player.x));
+      this.player.y = Math.max(this.arena.y + 20, Math.min(this.arena.y + this.arena.h - 20, this.player.y));
+    }
+  }
+
   bindInputs() {
     this.onKeyDown = (e) => {
       if (!this.isRunning) return;

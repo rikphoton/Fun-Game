@@ -15,6 +15,15 @@ export class AstroPulseGame {
     this.reset();
   }
 
+  setDimensions(width, height) {
+    this.width = width;
+    this.height = height;
+    if (this.player) {
+      this.player.x = Math.max(20, Math.min(this.width - 20, this.player.x));
+      this.player.y = Math.max(50, Math.min(this.height - 25, this.player.y));
+    }
+  }
+
   reset() {
     this.isRunning = false;
     this.isPaused = false;

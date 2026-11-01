@@ -15,6 +15,16 @@ export class QuantumBreakerGame {
     this.reset();
   }
 
+  setDimensions(width, height) {
+    this.width = width;
+    this.height = height;
+    if (this.paddle) {
+      this.paddle.y = this.height - 40;
+      const halfWidth = this.paddle.width / 2;
+      this.paddle.x = Math.max(halfWidth, Math.min(this.width - halfWidth, this.paddle.x));
+    }
+  }
+
   reset() {
     this.isRunning = false;
     this.isPaused = false;

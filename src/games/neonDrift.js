@@ -79,6 +79,13 @@ export class NeonDriftGame {
     this.bindInputs();
   }
 
+  setDimensions(width, height) {
+    this.width = width;
+    this.height = height;
+    this.horizonY = Math.round(this.height * 0.34);
+    this.playerY = this.height - 90;
+  }
+
   bindInputs() {
     this.onKeyDown = (e) => {
       if (!this.isRunning) return;

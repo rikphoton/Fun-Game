@@ -18,6 +18,11 @@ export class NeonDashGame {
     this.reset();
   }
 
+  setDimensions(width, height) {
+    this.width = width;
+    this.height = height;
+  }
+
   // Mulberry32 deterministic 32-bit PRNG for gameplay hazards & obstacles
   prng() {
     let t = (this._seedState += 0x6d2b79f5);

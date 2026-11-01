@@ -6,8 +6,8 @@ import { gamepad } from '../engine/gamepad.js';
 const TILE_SIZE = 22;
 const GRID_COLS = 28;
 const GRID_ROWS = 25;
-const ORIGIN_X = 92; // (800 - 28 * 22) / 2 = 92
-const ORIGIN_Y = 25; // (600 - 25 * 22) / 2 = 25
+const DEFAULT_ORIGIN_X = 92; // (800 - 28 * 22) / 2 = 92
+const DEFAULT_ORIGIN_Y = 25; // (600 - 25 * 22) / 2 = 25
 
 // Base 14-column symmetrical half-map:
 // 1: Wall, 2: Dot (Data Bit), 3: Power Pellet (Overclock Core), 4: Ghost Gate, 5: Ghost House, 0: Empty/Walkable
@@ -56,6 +56,8 @@ export class CyberPacmanGame {
 
     this.width = 800;
     this.height = 600;
+    this.originX = DEFAULT_ORIGIN_X;
+    this.originY = DEFAULT_ORIGIN_Y;
 
     this.isRunning = false;
     this.isPaused = false;
@@ -112,6 +114,33 @@ export class CyberPacmanGame {
     this.keys = {};
 
     this.bindInputs();
+  }
+
+  setDimensions(width, height) {
+    const oldOriginX = this.originX;
+    const oldOriginY = this.originY;
+    this.width = width;
+    this.height = height;
+    this.originX = Math.round((this.width - GRID_COLS * TILE_SIZE) / 2);
+    this.originY = Math.round((this.height - GRID_ROWS * TILE_SIZE) / 2);
+    const dx = this.originX - oldOriginX;
+    const dy = this.originY - oldOriginY;
+    if (dx !== 0 || dy !== 0) {
+      if (this.player) {
+        this.player.x += dx;
+        this.player.y += dy;
+      }
+      if (this.ghosts) {
+        for (const g of this.ghosts) {
+          g.x += dx;
+          g.y += dy;
+        }
+      }
+      if (this.fruit) {
+        this.fruit.x += dx;
+        this.fruit.y += dy;
+      }
+    }
   }
 
   buildGrid() {
@@ -188,8 +217,8 @@ export class CyberPacmanGame {
     // Pacman Start (Row 18, Col 13 - open corridor facing left)
     const startTileX = 13;
     const startTileY = 18;
-    this.player.x = ORIGIN_X + startTileX * TILE_SIZE + TILE_SIZE / 2;
-    this.player.y = ORIGIN_Y + startTileY * TILE_SIZE + TILE_SIZE / 2;
+    this.player.x = this.originX + startTileX * TILE_SIZE + TILE_SIZE / 2;
+    this.player.y = this.originY + startTileY * TILE_SIZE + TILE_SIZE / 2;
     this.player.tileX = startTileX;
     this.player.tileY = startTileY;
     this.player.dir = 'left';
@@ -205,8 +234,8 @@ export class CyberPacmanGame {
         name: 'RedLine',
         color: '#ff0055',
         aura: 'rgba(255, 0, 85, 0.4)',
-        x: ORIGIN_X + 8 * TILE_SIZE + TILE_SIZE / 2,
-        y: ORIGIN_Y + 8 * TILE_SIZE + TILE_SIZE / 2, // Outside gate in corridor
+        x: this.originX + 8 * TILE_SIZE + TILE_SIZE / 2,
+        y: this.originY + 8 * TILE_SIZE + TILE_SIZE / 2, // Outside gate in corridor
         dir: 'left',
         mode: 'scatter',
         targetX: 25,
@@ -224,8 +253,8 @@ export class CyberPacmanGame {
         name: 'Valkyrie',
         color: '#ff71ce',
         aura: 'rgba(255, 113, 206, 0.4)',
-        x: ORIGIN_X + 8 * TILE_SIZE + TILE_SIZE / 2,
-        y: ORIGIN_Y + 10 * TILE_SIZE + TILE_SIZE / 2, // Inside house
+        x: this.originX + 8 * TILE_SIZE + TILE_SIZE / 2,
+        y: this.originY + 10 * TILE_SIZE + TILE_SIZE / 2, // Inside house
         dir: 'up',
         mode: 'house',
         targetX: 2,
@@ -243,8 +272,8 @@ export class CyberPacmanGame {
         name: 'Glitch',
         color: '#00f3ff',
         aura: 'rgba(0, 243, 255, 0.4)',
-        x: ORIGIN_X + 7 * TILE_SIZE + TILE_SIZE / 2,
-        y: ORIGIN_Y + 10 * TILE_SIZE + TILE_SIZE / 2, // Inside house left
+        x: this.originX + 7 * TILE_SIZE + TILE_SIZE / 2,
+        y: this.originY + 10 * TILE_SIZE + TILE_SIZE / 2, // Inside house left
         dir: 'up',
         mode: 'house',
         targetX: 27,
@@ -262,8 +291,8 @@ export class CyberPacmanGame {
         name: 'Chaos',
         color: '#ff9900',
         aura: 'rgba(255, 153, 0, 0.4)',
-        x: ORIGIN_X + 8 * TILE_SIZE + TILE_SIZE / 2,
-        y: ORIGIN_Y + 11 * TILE_SIZE + TILE_SIZE / 2, // Inside house lower
+        x: this.originX + 8 * TILE_SIZE + TILE_SIZE / 2,
+        y: this.originY + 11 * TILE_SIZE + TILE_SIZE / 2, // Inside house lower
         dir: 'up',
         mode: 'house',
         targetX: 0,
@@ -319,8 +348,8 @@ export class CyberPacmanGame {
       this.player.dir = dir;
       this.player.nextDir = 'none';
     } else if (this.player.dir === 'none') {
-      const curTileX = Math.floor((this.player.x - ORIGIN_X) / TILE_SIZE);
-      const curTileY = Math.floor((this.player.y - ORIGIN_Y) / TILE_SIZE);
+      const curTileX = Math.floor((this.player.x - this.originX) / TILE_SIZE);
+      const curTileY = Math.floor((this.player.y - this.originY) / TILE_SIZE);
       const targetTile = this.getAdjacentTile(curTileX, curTileY, dir);
       if (this.isWalkableForPlayer(targetTile.col, targetTile.row)) {
         this.player.dir = dir;
@@ -509,24 +538,24 @@ export class CyberPacmanGame {
     this.processPlayerMovement(moveDist);
 
     // Check tunnel wrap
-    const minX = ORIGIN_X - TILE_SIZE / 2;
-    const maxX = ORIGIN_X + GRID_COLS * TILE_SIZE + TILE_SIZE / 2;
+    const minX = this.originX - TILE_SIZE / 2;
+    const maxX = this.originX + GRID_COLS * TILE_SIZE + TILE_SIZE / 2;
     if (this.player.x < minX) this.player.x = maxX;
     else if (this.player.x > maxX) this.player.x = minX;
 
     // Calculate current tile
-    this.player.tileX = Math.floor((this.player.x - ORIGIN_X) / TILE_SIZE);
-    this.player.tileY = Math.floor((this.player.y - ORIGIN_Y) / TILE_SIZE);
+    this.player.tileX = Math.floor((this.player.x - this.originX) / TILE_SIZE);
+    this.player.tileY = Math.floor((this.player.y - this.originY) / TILE_SIZE);
 
     // Eat dots
     this.checkTileEating();
   }
 
   processPlayerMovement(moveDist) {
-    const curTileX = Math.floor((this.player.x - ORIGIN_X) / TILE_SIZE);
-    const curTileY = Math.floor((this.player.y - ORIGIN_Y) / TILE_SIZE);
-    const centerX = ORIGIN_X + curTileX * TILE_SIZE + TILE_SIZE / 2;
-    const centerY = ORIGIN_Y + curTileY * TILE_SIZE + TILE_SIZE / 2;
+    const curTileX = Math.floor((this.player.x - this.originX) / TILE_SIZE);
+    const curTileY = Math.floor((this.player.y - this.originY) / TILE_SIZE);
+    const centerX = this.originX + curTileX * TILE_SIZE + TILE_SIZE / 2;
+    const centerY = this.originY + curTileY * TILE_SIZE + TILE_SIZE / 2;
 
     const distToCenterX = Math.abs(this.player.x - centerX);
     const distToCenterY = Math.abs(this.player.y - centerY);
@@ -710,8 +739,8 @@ export class CyberPacmanGame {
       const fruitData = FRUIT_TYPES[fruitIndex];
       this.fruit = {
         ...fruitData,
-        x: ORIGIN_X + 13.5 * TILE_SIZE + TILE_SIZE / 2,
-        y: ORIGIN_Y + 14 * TILE_SIZE + TILE_SIZE / 2,
+        x: this.originX + 13.5 * TILE_SIZE + TILE_SIZE / 2,
+        y: this.originY + 14 * TILE_SIZE + TILE_SIZE / 2,
         life: 10
       };
       sound.playGemPickup(2);
@@ -771,8 +800,8 @@ export class CyberPacmanGame {
         ghost.exitTimer -= dt;
         if (ghost.exitTimer <= 0) {
           // Move towards gate
-          const gateX = ORIGIN_X + 8 * TILE_SIZE + TILE_SIZE / 2;
-          const gateY = ORIGIN_Y + 8 * TILE_SIZE + TILE_SIZE / 2;
+          const gateX = this.originX + 8 * TILE_SIZE + TILE_SIZE / 2;
+          const gateY = this.originY + 8 * TILE_SIZE + TILE_SIZE / 2;
           ghost.x = gateX;
           ghost.y = gateY;
           ghost.inHouse = false;
@@ -797,18 +826,18 @@ export class CyberPacmanGame {
       this.processGhostMovement(ghost, moveDist);
 
       // Tunnel wrap
-      const minX = ORIGIN_X - TILE_SIZE / 2;
-      const maxX = ORIGIN_X + GRID_COLS * TILE_SIZE + TILE_SIZE / 2;
+      const minX = this.originX - TILE_SIZE / 2;
+      const maxX = this.originX + GRID_COLS * TILE_SIZE + TILE_SIZE / 2;
       if (ghost.x < minX) ghost.x = maxX;
       else if (ghost.x > maxX) ghost.x = minX;
     }
   }
 
   processGhostMovement(ghost, moveDist) {
-    const curTileX = Math.floor((ghost.x - ORIGIN_X) / TILE_SIZE);
-    const curTileY = Math.floor((ghost.y - ORIGIN_Y) / TILE_SIZE);
-    const centerX = ORIGIN_X + curTileX * TILE_SIZE + TILE_SIZE / 2;
-    const centerY = ORIGIN_Y + curTileY * TILE_SIZE + TILE_SIZE / 2;
+    const curTileX = Math.floor((ghost.x - this.originX) / TILE_SIZE);
+    const curTileY = Math.floor((ghost.y - this.originY) / TILE_SIZE);
+    const centerX = this.originX + curTileX * TILE_SIZE + TILE_SIZE / 2;
+    const centerY = this.originY + curTileY * TILE_SIZE + TILE_SIZE / 2;
 
     let reachedCenter = false;
     if (ghost.dir === 'left' && ghost.x >= centerX && (ghost.x - moveDist) <= centerX) {
@@ -854,8 +883,8 @@ export class CyberPacmanGame {
 
     // If eaten ghost reaches house door, enter and respawn
     if (ghost.mode === 'eaten') {
-      const houseDoorX = ORIGIN_X + 8 * TILE_SIZE + TILE_SIZE / 2;
-      const houseDoorY = ORIGIN_Y + 9 * TILE_SIZE + TILE_SIZE / 2;
+      const houseDoorX = this.originX + 8 * TILE_SIZE + TILE_SIZE / 2;
+      const houseDoorY = this.originY + 9 * TILE_SIZE + TILE_SIZE / 2;
       if (Math.hypot(ghost.x - houseDoorX, ghost.y - houseDoorY) < 14) {
         ghost.mode = this.frightenedTimer > 0 ? 'frightened' : this.waveMode;
         ghost.dir = 'up';
@@ -943,8 +972,8 @@ export class CyberPacmanGame {
       } else if (ghost.id === 'inky') {
         // Blinky vector doubled
         const blinky = this.ghosts.find(g => g.id === 'blinky') || ghost;
-        const bCol = Math.floor((blinky.x - ORIGIN_X) / TILE_SIZE);
-        const bRow = Math.floor((blinky.y - ORIGIN_Y) / TILE_SIZE);
+        const bCol = Math.floor((blinky.x - this.originX) / TILE_SIZE);
+        const bRow = Math.floor((blinky.y - this.originY) / TILE_SIZE);
 
         let aheadX = px;
         let aheadY = py;
@@ -956,8 +985,8 @@ export class CyberPacmanGame {
         ghost.targetX = aheadX + (aheadX - bCol);
         ghost.targetY = aheadY + (aheadY - bRow);
       } else if (ghost.id === 'clyde') {
-        const curCol = Math.floor((ghost.x - ORIGIN_X) / TILE_SIZE);
-        const curRow = Math.floor((ghost.y - ORIGIN_Y) / TILE_SIZE);
+        const curCol = Math.floor((ghost.x - this.originX) / TILE_SIZE);
+        const curRow = Math.floor((ghost.y - this.originY) / TILE_SIZE);
         const dist = Math.hypot(curCol - px, curRow - py);
 
         if (dist > 8) {
@@ -1127,8 +1156,8 @@ export class CyberPacmanGame {
     for (let r = 0; r < GRID_ROWS; r++) {
       for (let c = 0; c < GRID_COLS; c++) {
         const tile = this.grid[r][c];
-        const x = ORIGIN_X + c * TILE_SIZE;
-        const y = ORIGIN_Y + r * TILE_SIZE;
+        const x = this.originX + c * TILE_SIZE;
+        const y = this.originY + r * TILE_SIZE;
 
         if (tile === 1) {
           // Wall tile
@@ -1353,6 +1382,7 @@ export class CyberPacmanGame {
   }
 
   drawSideHUD(ctx) {
+    if (this.originX < 60) return; // Clean, distraction-free maze on compact mobile
     ctx.save();
     ctx.font = '10px "Share Tech Mono", monospace';
     ctx.textAlign = 'left';
@@ -1377,15 +1407,16 @@ export class CyberPacmanGame {
 
     // Right Margin (Bounties & Status)
     ctx.textAlign = 'right';
+    const rx = this.width - 14;
     ctx.fillStyle = '#ffe600';
-    ctx.fillText('DATA TARGET', 786, 60);
+    ctx.fillText('DATA TARGET', rx, 60);
     ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
-    ctx.fillText(`TOTAL: ${this.totalDots}`, 786, 80);
-    ctx.fillText(`REMAIN: ${this.dotsLeft}`, 786, 98);
+    ctx.fillText(`TOTAL: ${this.totalDots}`, rx, 80);
+    ctx.fillText(`REMAIN: ${this.dotsLeft}`, rx, 98);
 
     if (this.fruit) {
       ctx.fillStyle = this.fruit.color;
-      ctx.fillText(`${this.fruit.symbol} +${this.fruit.pts}`, 786, 130);
+      ctx.fillText(`${this.fruit.symbol} +${this.fruit.pts}`, rx, 130);
     }
 
     ctx.restore();

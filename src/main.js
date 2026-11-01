@@ -57,6 +57,19 @@ class ArcadeApp {
     storage.onCreditsChange = () => this.updateCreditsDisplay();
     storage.onQuestUpdate = () => this.renderQuests();
 
+    window.arcade = this;
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const initialGame = urlParams.get('game');
+    if (initialGame && this.games && this.games[initialGame]) {
+      setTimeout(() => {
+        if (urlParams.get('skipTutorial') === '1') {
+          storage.setTutorialSeen(initialGame);
+        }
+        this.launchGame(initialGame);
+      }, 60);
+    }
+
     requestAnimationFrame((t) => this.loop(t));
   }
 
@@ -779,66 +792,56 @@ class ArcadeApp {
       }
     });
 
-    // Pointer Events on Canvas
+    // Unified Pointer Events on Canvas (multi-touch supported, zero duplicate synthetic events)
+    let activeCanvasPointers = new Set();
+
     const getCanvasPos = (e) => {
       const rect = this.canvas.getBoundingClientRect();
-      const scaleX = LOGICAL_WIDTH / rect.width;
-      const scaleY = LOGICAL_HEIGHT / rect.height;
-      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      const logicalW = (this.activeGame && this.activeGame.width) ? this.activeGame.width : LOGICAL_WIDTH;
+      const logicalH = (this.activeGame && this.activeGame.height) ? this.activeGame.height : LOGICAL_HEIGHT;
+      const scaleX = logicalW / (rect.width || 1);
+      const scaleY = logicalH / (rect.height || 1);
+      const clientX = e.clientX !== undefined ? e.clientX : (e.touches && e.touches[0] ? e.touches[0].clientX : 0);
+      const clientY = e.clientY !== undefined ? e.clientY : (e.touches && e.touches[0] ? e.touches[0].clientY : 0);
       return {
         x: (clientX - rect.left) * scaleX,
         y: (clientY - rect.top) * scaleY
       };
     };
 
-    this.canvas.addEventListener('mousemove', (e) => {
-      const pos = getCanvasPos(e);
-      if (this.activeGame && this.activeGame.handlePointerMove) {
-        this.activeGame.handlePointerMove(pos.x, pos.y);
-      }
-    });
-
-    this.canvas.addEventListener('mousedown', (e) => {
-      sound.init();
-      const pos = getCanvasPos(e);
-      if (this.activeGame && this.activeGame.handlePointerDown) {
-        this.activeGame.handlePointerDown(pos.x, pos.y);
-      }
-    });
-
-    this.canvas.addEventListener('mouseup', () => {
-      if (this.activeGame && this.activeGame.handlePointerUp) {
-        this.activeGame.handlePointerUp();
-      }
-    });
-
-    this.canvas.addEventListener('touchstart', (e) => {
+    this.canvas.addEventListener('pointerdown', (e) => {
       e.preventDefault();
       sound.init();
+      activeCanvasPointers.add(e.pointerId);
+      try { this.canvas.setPointerCapture(e.pointerId); } catch (_) {}
       const pos = getCanvasPos(e);
       if (this.activeGame && this.activeGame.handlePointerDown) {
         this.activeGame.handlePointerDown(pos.x, pos.y);
       }
-      if (this.activeGameKey === 'neonDash' && this.activeGame && this.activeGame.handleAction) {
+      if (this.activeGameKey === 'neonDash' && this.activeGame && this.activeGame.jump) {
+        this.activeGame.jump();
+      } else if (this.activeGameKey === 'neonDash' && this.activeGame && this.activeGame.handleAction) {
         this.activeGame.handleAction();
       }
     }, { passive: false });
 
-    this.canvas.addEventListener('touchmove', (e) => {
-      e.preventDefault();
+    this.canvas.addEventListener('pointermove', (e) => {
       const pos = getCanvasPos(e);
       if (this.activeGame && this.activeGame.handlePointerMove) {
         this.activeGame.handlePointerMove(pos.x, pos.y);
       }
     }, { passive: false });
 
-    this.canvas.addEventListener('touchend', (e) => {
-      e.preventDefault();
+    const handleCanvasPointerRelease = (e) => {
+      activeCanvasPointers.delete(e.pointerId);
+      try { this.canvas.releasePointerCapture(e.pointerId); } catch (_) {}
       if (this.activeGame && this.activeGame.handlePointerUp) {
         this.activeGame.handlePointerUp();
       }
-    }, { passive: false });
+    };
+
+    this.canvas.addEventListener('pointerup', handleCanvasPointerRelease, { passive: false });
+    this.canvas.addEventListener('pointercancel', handleCanvasPointerRelease, { passive: false });
 
     // ==========================================================================
     // Tactile Mobile Arcade Deck Controls (D-Pad & Actions)
@@ -2251,25 +2254,35 @@ class ArcadeApp {
     if (!overlay || !this.activeGame) return;
 
     this.activeGame.pause();
+    document.body.classList.add('briefing-active');
 
     const meta = getGameMeta(gameKey);
     if (titleEl) titleEl.textContent = `${meta ? meta.title.toUpperCase() : gameKey.toUpperCase()} - BRIEFING`;
-    if (descEl) descEl.textContent = meta ? meta.desc : 'Neutralize targets and achieve sector dominance.';
-    if (controlsEl) {
+    if (descEl) {
+      descEl.textContent = (meta && meta.briefing && meta.briefing.objective)
+        ? meta.briefing.objective
+        : (meta ? meta.desc : 'Neutralize targets and achieve sector dominance.');
+    }
+    if (controlsEl && meta) {
+      const kbList = (meta.briefing && meta.briefing.keyboard)
+        ? meta.briefing.keyboard.map(k => `<div>• ${k}</div>`).join('')
+        : '<div>• Standard Arcade Keybindings</div>';
+      const mobList = (meta.briefing && meta.briefing.mobile)
+        ? meta.briefing.mobile.map(m => `<div>• ${m}</div>`).join('')
+        : '<div>• Touch Controls</div>';
+
       controlsEl.innerHTML = `
-        <div style="color:var(--neon-cyan); margin-bottom:4px; font-weight:bold;">KEYBOARD:</div>
-        <div>• WASD or Arrow Keys to Move / Steer</div>
-        <div>• Space: Primary Fire / Jump</div>
-        <div>• Shift: Drift / Nitro / Shield</div>
-        <div>• E: Super Nova / EMP</div>
-        <div style="color:var(--neon-yellow); margin-top:6px; font-weight:bold;">MOBILE / TOUCH:</div>
-        <div>• Virtual 360° Joystick & Touch D-Pad below canvas</div>
+        <div style="color:var(--neon-cyan); margin-bottom:4px; font-weight:bold; font-size:0.82rem;">KEYBOARD CONTROLS:</div>
+        <div style="color:#e2e8f0; font-size:0.78rem; line-height:1.4; margin-bottom:8px;">${kbList}</div>
+        <div style="color:var(--neon-yellow); margin-bottom:4px; font-weight:bold; font-size:0.82rem;">MOBILE / TOUCH CONTROLS:</div>
+        <div style="color:#e2e8f0; font-size:0.78rem; line-height:1.4;">${mobList}</div>
       `;
     }
 
     overlay.style.display = 'flex';
 
     const dismiss = (skipForever = false) => {
+      document.body.classList.remove('briefing-active');
       overlay.style.display = 'none';
       if (skipForever) {
         storage.setTutorialSeen(gameKey);
@@ -2440,6 +2453,16 @@ class ArcadeApp {
         if (this.sliderFill) this.sliderFill.style.width = '50%';
       }
 
+      // Configure responsive viewport dimensions based on orientation & device
+      const isMobilePortrait = window.innerWidth <= 860 && window.innerHeight > window.innerWidth;
+      if (meta && this.activeGame.setDimensions) {
+        const dims = (isMobilePortrait && meta.portraitDims) ? meta.portraitDims : (meta.desktopDims || { width: 800, height: 600 });
+        this.activeGame.setDimensions(dims.width, dims.height);
+      }
+      if (this.refitCanvas) {
+        this.refitCanvas();
+      }
+
       if (gameKey === 'cyberSurvivors') {
         this.activeGame.init(mechClass, seed);
       } else if (gameKey === 'neonDash') {
@@ -2480,6 +2503,7 @@ class ArcadeApp {
   returnToHub() {
     this.showCurtain(() => {
       document.body.classList.remove('in-game');
+      document.body.classList.remove('briefing-active');
       if (this.activeGame) {
         // Record abandon in analytics telemetry
         if (this.activeGame.isRunning && !this.isReplay) {
@@ -2515,11 +2539,28 @@ class ArcadeApp {
   // Keep the canvas backing store matched to how big (and how dense) the screen shows it.
   initDisplayScaling() {
     const refit = () => {
-      this.renderScale = fitCanvasToDisplay(this.canvas);
+      const activeGame = this.activeGame;
+      const meta = this.activeGameKey ? getGameMeta(this.activeGameKey) : null;
+      const isMobilePortrait = window.innerWidth <= 860 && window.innerHeight > window.innerWidth;
+      let targetDims = { width: LOGICAL_WIDTH, height: LOGICAL_HEIGHT };
+      if (meta) {
+        targetDims = (isMobilePortrait && meta.portraitDims) ? meta.portraitDims : (meta.desktopDims || targetDims);
+      }
+      if (activeGame && activeGame.setDimensions) {
+        activeGame.setDimensions(targetDims.width, targetDims.height);
+      }
+      const logicalW = (activeGame && activeGame.width) ? activeGame.width : targetDims.width;
+      const logicalH = (activeGame && activeGame.height) ? activeGame.height : targetDims.height;
+      this.renderScale = fitCanvasToDisplay(this.canvas, window.devicePixelRatio, logicalW, logicalH);
     };
+    this.refitCanvas = refit;
     refit();
     if (typeof ResizeObserver !== 'undefined') {
       new ResizeObserver(refit).observe(this.canvas);
+      const container = document.querySelector('.canvas-container');
+      if (container) {
+        new ResizeObserver(refit).observe(container);
+      }
     }
     window.addEventListener('resize', refit);
     window.addEventListener('orientationchange', refit);

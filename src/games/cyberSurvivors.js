@@ -16,6 +16,16 @@ export class CyberSurvivorsGame {
     this.reset();
   }
 
+  setDimensions(width, height) {
+    this.width = width;
+    this.height = height;
+    if (this.player) {
+      const margin = (this.player.radius || 16) + 4;
+      this.player.x = Math.max(margin, Math.min(this.width - margin, this.player.x));
+      this.player.y = Math.max(margin, Math.min(this.height - margin, this.player.y));
+    }
+  }
+
   setMechClass(mech) {
     this.mechClass = mech;
   }
