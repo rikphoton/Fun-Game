@@ -910,28 +910,37 @@ class ArcadeApp {
     dpadButtons.forEach(btnDef => {
       const el = document.getElementById(btnDef.id);
       if (!el) return;
+      const activeBtnPointers = new Set();
 
       el.addEventListener('pointerdown', (e) => {
         e.preventDefault();
+        activeBtnPointers.add(e.pointerId);
+        try { el.setPointerCapture(e.pointerId); } catch (_) {}
         pressDirection(btnDef);
       }, { passive: false });
 
-      el.addEventListener('pointerup', (e) => {
-        e.preventDefault();
-        releaseDirection(btnDef);
-      }, { passive: false });
+      const clearBtnPointer = (e) => {
+        if (activeBtnPointers.has(e.pointerId)) {
+          activeBtnPointers.delete(e.pointerId);
+          try { el.releasePointerCapture(e.pointerId); } catch (_) {}
+          if (activeBtnPointers.size === 0) {
+            releaseDirection(btnDef);
+          }
+        }
+      };
 
-      el.addEventListener('pointercancel', (e) => {
-        e.preventDefault();
-        releaseDirection(btnDef);
-      }, { passive: false });
+      el.addEventListener('pointerup', clearBtnPointer, { passive: false });
+      el.addEventListener('pointercancel', clearBtnPointer, { passive: false });
+      el.addEventListener('lostpointercapture', clearBtnPointer, { passive: false });
 
-      el.addEventListener('pointerleave', () => {
-        releaseDirection(btnDef);
+      el.addEventListener('pointerleave', (e) => {
+        if (!activeBtnPointers.has(e.pointerId)) {
+          releaseDirection(btnDef);
+        }
       });
     });
 
-    // Support thumb sliding across the D-Pad
+    // Support thumb sliding across the D-Pad with pointer capture
     const dpadCluster = document.getElementById('deck-dpad');
     if (dpadCluster) {
       let activeDpadPointerId = null;
@@ -939,7 +948,8 @@ class ArcadeApp {
 
       dpadCluster.addEventListener('pointerdown', (e) => {
         activeDpadPointerId = e.pointerId;
-      });
+        try { dpadCluster.setPointerCapture(e.pointerId); } catch (_) {}
+      }, { passive: false });
 
       dpadCluster.addEventListener('pointermove', (e) => {
         if (activeDpadPointerId === null || e.pointerId !== activeDpadPointerId) return;
@@ -957,10 +967,11 @@ class ArcadeApp {
           }
           lastActiveBtn = btnEl;
         }
-      });
+      }, { passive: false });
 
       const clearDpadSlide = (e) => {
         if (e.pointerId === activeDpadPointerId) {
+          try { dpadCluster.releasePointerCapture(e.pointerId); } catch (_) {}
           if (lastActiveBtn) {
             const def = dpadButtons.find(b => b.id === lastActiveBtn.id);
             if (def) releaseDirection(def);
@@ -971,8 +982,9 @@ class ArcadeApp {
         }
       };
 
-      dpadCluster.addEventListener('pointerup', clearDpadSlide);
-      dpadCluster.addEventListener('pointercancel', clearDpadSlide);
+      dpadCluster.addEventListener('pointerup', clearDpadSlide, { passive: false });
+      dpadCluster.addEventListener('pointercancel', clearDpadSlide, { passive: false });
+      dpadCluster.addEventListener('lostpointercapture', clearDpadSlide, { passive: false });
     }
 
     // ==========================================================================
@@ -1070,6 +1082,7 @@ class ArcadeApp {
 
       joystickBase.addEventListener('pointerup', clearJoyPointer, { passive: false });
       joystickBase.addEventListener('pointercancel', clearJoyPointer, { passive: false });
+      joystickBase.addEventListener('lostpointercapture', clearJoyPointer, { passive: false });
     }
 
     // ==========================================================================
@@ -1089,6 +1102,7 @@ class ArcadeApp {
 
     const wireSliderBtn = (btnEl, code, dir) => {
       if (!btnEl) return;
+      const activeBtnPointers = new Set();
       const press = () => {
         sound.init();
         if (navigator.vibrate) navigator.vibrate(8);
@@ -1104,10 +1118,31 @@ class ArcadeApp {
         if (this.activeGame.keys) this.activeGame.keys[code] = false;
         if (this.activeGame.handleKeyUp) this.activeGame.handleKeyUp(code);
       };
-      btnEl.addEventListener('pointerdown', (e) => { e.preventDefault(); press(); }, { passive: false });
-      btnEl.addEventListener('pointerup', (e) => { e.preventDefault(); release(); }, { passive: false });
-      btnEl.addEventListener('pointercancel', (e) => { e.preventDefault(); release(); }, { passive: false });
-      btnEl.addEventListener('pointerleave', release);
+      btnEl.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        activeBtnPointers.add(e.pointerId);
+        try { btnEl.setPointerCapture(e.pointerId); } catch (_) {}
+        press();
+      }, { passive: false });
+
+      const clearBtnPointer = (e) => {
+        if (activeBtnPointers.has(e.pointerId)) {
+          activeBtnPointers.delete(e.pointerId);
+          try { btnEl.releasePointerCapture(e.pointerId); } catch (_) {}
+          if (activeBtnPointers.size === 0) {
+            release();
+          }
+        }
+      };
+
+      btnEl.addEventListener('pointerup', clearBtnPointer, { passive: false });
+      btnEl.addEventListener('pointercancel', clearBtnPointer, { passive: false });
+      btnEl.addEventListener('lostpointercapture', clearBtnPointer, { passive: false });
+      btnEl.addEventListener('pointerleave', (e) => {
+        if (!activeBtnPointers.has(e.pointerId)) {
+          release();
+        }
+      });
     };
 
     wireSliderBtn(btnSliderUp, 'ArrowUp', 'up');
@@ -1185,11 +1220,13 @@ class ArcadeApp {
 
       sliderWrap.addEventListener('pointerup', clearSliderPointer, { passive: false });
       sliderWrap.addEventListener('pointercancel', clearSliderPointer, { passive: false });
+      sliderWrap.addEventListener('lostpointercapture', clearSliderPointer, { passive: false });
     }
 
     // Primary Action Button (🅰️)
     const btnTouchA = document.getElementById('touch-action-a');
     if (btnTouchA) {
+      const activeTouchAPointers = new Set();
       const triggerActionA = (press) => {
         if (press) {
           this.touchHeldKeys.add('Space');
@@ -1222,14 +1259,32 @@ class ArcadeApp {
         }
       };
 
-      btnTouchA.addEventListener('pointerdown', (e) => { e.preventDefault(); triggerActionA(true); }, { passive: false });
-      btnTouchA.addEventListener('pointerup', (e) => { e.preventDefault(); triggerActionA(false); }, { passive: false });
-      btnTouchA.addEventListener('pointercancel', (e) => { e.preventDefault(); triggerActionA(false); }, { passive: false });
+      btnTouchA.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        activeTouchAPointers.add(e.pointerId);
+        try { btnTouchA.setPointerCapture(e.pointerId); } catch (_) {}
+        triggerActionA(true);
+      }, { passive: false });
+
+      const clearTouchA = (e) => {
+        if (activeTouchAPointers.has(e.pointerId)) {
+          activeTouchAPointers.delete(e.pointerId);
+          try { btnTouchA.releasePointerCapture(e.pointerId); } catch (_) {}
+          if (activeTouchAPointers.size === 0) {
+            triggerActionA(false);
+          }
+        }
+      };
+
+      btnTouchA.addEventListener('pointerup', clearTouchA, { passive: false });
+      btnTouchA.addEventListener('pointercancel', clearTouchA, { passive: false });
+      btnTouchA.addEventListener('lostpointercapture', clearTouchA, { passive: false });
     }
 
     // Sub Action / Nitro / Drift / Air Dash Button (⚡)
     const btnTouchNitro = document.getElementById('btn-touch-nitro');
     if (btnTouchNitro) {
+      const activeTouchNitroPointers = new Set();
       const triggerActionNitro = (press) => {
         if (press) {
           this.touchHeldKeys.add('ShiftLeft');
@@ -1269,14 +1324,32 @@ class ArcadeApp {
         }
       };
 
-      btnTouchNitro.addEventListener('pointerdown', (e) => { e.preventDefault(); triggerActionNitro(true); }, { passive: false });
-      btnTouchNitro.addEventListener('pointerup', (e) => { e.preventDefault(); triggerActionNitro(false); }, { passive: false });
-      btnTouchNitro.addEventListener('pointercancel', (e) => { e.preventDefault(); triggerActionNitro(false); }, { passive: false });
+      btnTouchNitro.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        activeTouchNitroPointers.add(e.pointerId);
+        try { btnTouchNitro.setPointerCapture(e.pointerId); } catch (_) {}
+        triggerActionNitro(true);
+      }, { passive: false });
+
+      const clearTouchNitro = (e) => {
+        if (activeTouchNitroPointers.has(e.pointerId)) {
+          activeTouchNitroPointers.delete(e.pointerId);
+          try { btnTouchNitro.releasePointerCapture(e.pointerId); } catch (_) {}
+          if (activeTouchNitroPointers.size === 0) {
+            triggerActionNitro(false);
+          }
+        }
+      };
+
+      btnTouchNitro.addEventListener('pointerup', clearTouchNitro, { passive: false });
+      btnTouchNitro.addEventListener('pointercancel', clearTouchNitro, { passive: false });
+      btnTouchNitro.addEventListener('lostpointercapture', clearTouchNitro, { passive: false });
     }
 
     // Super Action / EMP / Bomb Button (💣)
     const btnTouchSuper = document.getElementById('touch-super-btn');
     if (btnTouchSuper) {
+      const activeTouchSuperPointers = new Set();
       const triggerActionSuper = (press) => {
         if (press) {
           this.touchHeldKeys.add('KeyE');
@@ -1310,9 +1383,26 @@ class ArcadeApp {
         }
       };
 
-      btnTouchSuper.addEventListener('pointerdown', (e) => { e.preventDefault(); triggerActionSuper(true); }, { passive: false });
-      btnTouchSuper.addEventListener('pointerup', (e) => { e.preventDefault(); triggerActionSuper(false); }, { passive: false });
-      btnTouchSuper.addEventListener('pointercancel', (e) => { e.preventDefault(); triggerActionSuper(false); }, { passive: false });
+      btnTouchSuper.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        activeTouchSuperPointers.add(e.pointerId);
+        try { btnTouchSuper.setPointerCapture(e.pointerId); } catch (_) {}
+        triggerActionSuper(true);
+      }, { passive: false });
+
+      const clearTouchSuper = (e) => {
+        if (activeTouchSuperPointers.has(e.pointerId)) {
+          activeTouchSuperPointers.delete(e.pointerId);
+          try { btnTouchSuper.releasePointerCapture(e.pointerId); } catch (_) {}
+          if (activeTouchSuperPointers.size === 0) {
+            triggerActionSuper(false);
+          }
+        }
+      };
+
+      btnTouchSuper.addEventListener('pointerup', clearTouchSuper, { passive: false });
+      btnTouchSuper.addEventListener('pointercancel', clearTouchSuper, { passive: false });
+      btnTouchSuper.addEventListener('lostpointercapture', clearTouchSuper, { passive: false });
     }
 
     // Leaderboard Modal Controls
@@ -2162,6 +2252,61 @@ class ArcadeApp {
         this.particles.setQuality(q);
       });
     }
+
+    // Mobile Joystick Ergonomics Configuration
+    const savedJoySize = storage.getSetting('joystickSize') || 'medium';
+    const savedJoyOffset = storage.getSetting('deckVerticalOffset') || 0;
+    this.applyJoystickConfig(savedJoySize, savedJoyOffset);
+
+    ['small', 'medium', 'large'].forEach(size => {
+      const btn = document.getElementById(`opt-joy-${size}`);
+      if (btn) {
+        if (size === savedJoySize) btn.classList.add('active');
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          ['small', 'medium', 'large'].forEach(s => document.getElementById(`opt-joy-${s}`)?.classList.remove('active'));
+          btn.classList.add('active');
+          storage.setSetting('joystickSize', size);
+          storage.save();
+          this.applyJoystickConfig(size, storage.getSetting('deckVerticalOffset') || 0);
+        });
+      }
+    });
+
+    [
+      { id: 'opt-offset-up', offset: -10 },
+      { id: 'opt-offset-zero', offset: 0 },
+      { id: 'opt-offset-down', offset: 10 }
+    ].forEach(({ id, offset }) => {
+      const btn = document.getElementById(id);
+      if (btn) {
+        if (offset === savedJoyOffset) btn.classList.add('active');
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          ['opt-offset-up', 'opt-offset-zero', 'opt-offset-down'].forEach(i => document.getElementById(i)?.classList.remove('active'));
+          btn.classList.add('active');
+          storage.setSetting('deckVerticalOffset', offset);
+          storage.save();
+          this.applyJoystickConfig(storage.getSetting('joystickSize') || 'medium', offset);
+        });
+      }
+    });
+  }
+
+  applyJoystickConfig(size = 'medium', vOffset = 0) {
+    const sizeMap = {
+      small: { cluster: 96, base: 92, knob: 40, maxRadius: 32 },
+      medium: { cluster: 114, base: 110, knob: 48, maxRadius: 38 },
+      large: { cluster: 130, base: 124, knob: 54, maxRadius: 44 }
+    };
+    const cfg = sizeMap[size] || sizeMap.medium;
+    this.maxJoyRadius = cfg.maxRadius;
+    if (typeof document !== 'undefined' && document.documentElement) {
+      document.documentElement.style.setProperty('--joystick-size', `${cfg.cluster}px`);
+      document.documentElement.style.setProperty('--joystick-base-size', `${cfg.base}px`);
+      document.documentElement.style.setProperty('--joystick-knob-size', `${cfg.knob}px`);
+      document.documentElement.style.setProperty('--deck-offset-y', `${vOffset}px`);
+    }
   }
 
   refreshKeybindButtons() {
@@ -2490,8 +2635,8 @@ class ArcadeApp {
       }
 
       // Configure responsive viewport dimensions based on orientation & device
-      const isMobilePortrait = window.innerWidth <= 860 && window.innerHeight > window.innerWidth;
-      if (meta && this.activeGame.setDimensions) {
+      const isMobilePortrait = (window.innerWidth <= 860 && window.innerHeight > window.innerWidth) || (window.innerWidth <= 600);
+      if (meta && this.activeGame && this.activeGame.setDimensions) {
         const dims = (isMobilePortrait && meta.portraitDims) ? meta.portraitDims : (meta.desktopDims || { width: 800, height: 600 });
         this.activeGame.setDimensions(dims.width, dims.height);
       }
@@ -2507,6 +2652,15 @@ class ArcadeApp {
         this.activeGame.start();
       } else if (this.activeGame.init) {
         this.activeGame.init();
+      }
+
+      // Re-apply target dimensions after init to ensure full mobile canvas coverage
+      if (meta && this.activeGame && this.activeGame.setDimensions) {
+        const dims = (isMobilePortrait && meta.portraitDims) ? meta.portraitDims : (meta.desktopDims || { width: 800, height: 600 });
+        this.activeGame.setDimensions(dims.width, dims.height);
+      }
+      if (this.refitCanvas) {
+        this.refitCanvas();
       }
 
       // Check tutorial overlay
@@ -2573,21 +2727,23 @@ class ArcadeApp {
   }
 
   // Keep the canvas backing store matched to how big (and how dense) the screen shows it.
-  initDisplayScaling() {
+  initDisplayScaling(explicitGameKey = null) {
     const refit = () => {
-      const activeGame = this.activeGame;
-      const meta = this.activeGameKey ? getGameMeta(this.activeGameKey) : null;
-      const isMobilePortrait = window.innerWidth <= 860 && window.innerHeight > window.innerWidth;
-      let targetDims = { width: LOGICAL_WIDTH, height: LOGICAL_HEIGHT };
+      const gameKey = explicitGameKey || this.activeGameKey;
+      const activeGame = this.activeGame || (gameKey ? this.games[gameKey] : null);
+      const meta = gameKey ? getGameMeta(gameKey) : null;
+      const isMobilePortrait = (typeof window !== 'undefined') &&
+        ((window.innerWidth <= 860 && window.innerHeight > window.innerWidth) || (window.innerWidth <= 600));
+      let targetDims;
       if (meta) {
-        targetDims = (isMobilePortrait && meta.portraitDims) ? meta.portraitDims : (meta.desktopDims || targetDims);
+        targetDims = (isMobilePortrait && meta.portraitDims) ? meta.portraitDims : (meta.desktopDims || { width: LOGICAL_WIDTH, height: LOGICAL_HEIGHT });
+      } else {
+        targetDims = { width: LOGICAL_WIDTH, height: LOGICAL_HEIGHT };
       }
-      if (activeGame && activeGame.setDimensions) {
+      if (activeGame && typeof activeGame.setDimensions === 'function') {
         activeGame.setDimensions(targetDims.width, targetDims.height);
       }
-      const logicalW = (activeGame && activeGame.width) ? activeGame.width : targetDims.width;
-      const logicalH = (activeGame && activeGame.height) ? activeGame.height : targetDims.height;
-      this.renderScale = fitCanvasToDisplay(this.canvas, window.devicePixelRatio, logicalW, logicalH);
+      this.renderScale = fitCanvasToDisplay(this.canvas, window.devicePixelRatio || 1, targetDims.width, targetDims.height);
     };
     this.refitCanvas = refit;
     refit();

@@ -71,7 +71,7 @@ export const GAMES_METADATA = {
     tag: 'RUNNER',
     badge: 'RUNNER',
     controlMode: 'dpad',
-    portraitDims: { width: 800, height: 600 },
+    portraitDims: { width: 600, height: 800 },
     desktopDims: { width: 800, height: 600 },
     instructions: 'Flip Gravity: <kbd>SPACE</kbd> or Click | Air-Dash: Tap while airborne | Dodge Spikes',
     hintText: '🕹️ CENTER D-PAD / TAP SCREEN TO FLIP GRAVITY',

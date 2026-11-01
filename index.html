@@ -560,6 +560,31 @@
         <div style="display: flex; justify-content: flex-end; margin-top: 10px;">
           <button class="control-btn" id="btn-reset-keybinds" style="font-size: 0.8rem;">🔄 Reset Defaults</button>
         </div>
+
+        <!-- Mobile Joystick & Deck Ergonomics -->
+        <div style="margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(0, 243, 255, 0.2);">
+          <div style="font-weight: 700; color: var(--neon-cyan); font-size: 0.85rem; margin-bottom: 8px; letter-spacing: 1px;">
+            🕹️ MOBILE JOYSTICK CONFIGURATION
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+              <span style="font-size: 0.82rem; color: #cbd5e1;">Joystick Size</span>
+              <div style="display: flex; gap: 6px;" id="joystick-size-group">
+                <button class="control-btn opt-btn" id="opt-joy-small" data-size="small" style="font-size: 0.75rem; padding: 4px 8px;">Small</button>
+                <button class="control-btn opt-btn active" id="opt-joy-medium" data-size="medium" style="font-size: 0.75rem; padding: 4px 8px;">Medium</button>
+                <button class="control-btn opt-btn" id="opt-joy-large" data-size="large" style="font-size: 0.75rem; padding: 4px 8px;">Large</button>
+              </div>
+            </div>
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+              <span style="font-size: 0.82rem; color: #cbd5e1;">Deck Vertical Offset</span>
+              <div style="display: flex; gap: 6px;" id="joystick-offset-group">
+                <button class="control-btn opt-btn" id="opt-offset-up" data-offset="-10" style="font-size: 0.75rem; padding: 4px 8px;">-10px</button>
+                <button class="control-btn opt-btn active" id="opt-offset-zero" data-offset="0" style="font-size: 0.75rem; padding: 4px 8px;">0px</button>
+                <button class="control-btn opt-btn" id="opt-offset-down" data-offset="10" style="font-size: 0.75rem; padding: 4px 8px;">+10px</button>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- Panel 3: Display & Accessibility -->

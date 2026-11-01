@@ -21,6 +21,15 @@ export class NeonDashGame {
   setDimensions(width, height) {
     this.width = width;
     this.height = height;
+    this.floorY = Math.round(height * 0.8);
+    this.ceilY = Math.round(height * 0.2);
+    if (this.player) {
+      if (this.player.gravityDir === 1) {
+        this.player.y = this.floorY - this.player.size / 2;
+      } else {
+        this.player.y = this.ceilY + this.player.size / 2;
+      }
+    }
   }
 
   // Mulberry32 deterministic 32-bit PRNG for gameplay hazards & obstacles

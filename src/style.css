@@ -1407,21 +1407,22 @@ canvas {
     border: 1px solid rgba(0, 243, 255, 0.25);
   }
 
-  /* 360° Virtual Joystick (Centered) */
+  /* 360° Virtual Joystick (Centered & Configurable) */
   body.in-game .deck-joystick-cluster {
-    width: 114px;
-    height: 114px;
+    width: var(--joystick-size, 114px);
+    height: var(--joystick-size, 114px);
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 0;
     margin: 0 auto;
+    transform: translateY(var(--deck-offset-y, 0px));
     touch-action: none;
   }
 
   body.in-game .joystick-base {
-    width: 110px;
-    height: 110px;
+    width: var(--joystick-base-size, 110px);
+    height: var(--joystick-base-size, 110px);
     border-radius: 50%;
     background: radial-gradient(circle at center, rgba(14, 26, 48, 0.9) 0%, rgba(5, 10, 22, 0.95) 75%);
     border: 2px solid rgba(0, 243, 255, 0.35);
@@ -1441,8 +1442,8 @@ canvas {
   }
 
   body.in-game .joystick-knob {
-    width: 48px;
-    height: 48px;
+    width: var(--joystick-knob-size, 48px);
+    height: var(--joystick-knob-size, 48px);
     border-radius: 50%;
     background: radial-gradient(circle at 35% 35%, #00f3ff 0%, #0088cc 60%, #003366 100%);
     border: 2px solid #ffffff;

@@ -18,7 +18,7 @@ export function buildManifest() {
     id: './',
     name: 'NeonPulse Arcade',
     short_name: 'NeonPulse',
-    description: 'Six retro cyberpunk arcade games with tech tree progression and a local Hall of Fame.',
+    description: 'Seven retro cyberpunk arcade games with tech tree progression and a local Hall of Fame.',
     start_url: './',
     scope: './',
     display: 'standalone',
@@ -89,12 +89,18 @@ export function pwaLite() {
 
       const iconDir = path.join(root, 'pwa');
       const iconFiles = [...ICONS.map((i) => i.file), 'apple-touch-icon.png', 'favicon-32.png'];
+      if (fs.existsSync(path.join(iconDir, 'favicon-16.png'))) {
+        iconFiles.push('favicon-16.png');
+      }
       for (const file of iconFiles) {
         const full = path.join(iconDir, file);
         if (!fs.existsSync(full)) {
           this.error(`PWA icon missing: ${path.relative(root, full)}`);
         }
         emit(`icons/${file}`, fs.readFileSync(full));
+      }
+      if (fs.existsSync(path.join(iconDir, 'favicon.ico'))) {
+        emit('favicon.ico', fs.readFileSync(path.join(iconDir, 'favicon.ico')));
       }
 
       const bundled = Object.keys(bundle).filter((name) => !name.endsWith('.map') && name !== 'sw.js');

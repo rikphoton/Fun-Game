@@ -144,6 +144,8 @@ const INITIAL_DATA = {
     haptics: true,
     highContrast: false,
     graphicsQuality: 'balanced',
+    joystickSize: 'medium',
+    deckVerticalOffset: 0,
     keyBindings: {
       moveUp: 'KeyW',
       moveDown: 'KeyS',
@@ -353,6 +355,12 @@ class StorageManager {
       if (typeof raw.settings.highContrast === 'boolean') clean.settings.highContrast = raw.settings.highContrast;
       if (typeof raw.settings.graphicsQuality === 'string' && ['low', 'balanced', 'high'].includes(raw.settings.graphicsQuality)) {
         clean.settings.graphicsQuality = raw.settings.graphicsQuality;
+      }
+      if (typeof raw.settings.joystickSize === 'string' && ['small', 'medium', 'large'].includes(raw.settings.joystickSize)) {
+        clean.settings.joystickSize = raw.settings.joystickSize;
+      }
+      if (typeof raw.settings.deckVerticalOffset === 'number' && !isNaN(raw.settings.deckVerticalOffset)) {
+        clean.settings.deckVerticalOffset = Math.max(-30, Math.min(30, Math.round(raw.settings.deckVerticalOffset)));
       }
       if (raw.settings.keyBindings && typeof raw.settings.keyBindings === 'object') {
         clean.settings.keyBindings = { ...clean.settings.keyBindings, ...raw.settings.keyBindings };

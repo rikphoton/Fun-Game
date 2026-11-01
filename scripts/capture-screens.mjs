@@ -51,13 +51,13 @@ function cdpSend(ws, method, params = {}) {
   });
 }
 
-async function captureScreen(ws, url, filename, width = 390, height = 844, waitMs = 1800) {
-  // 1. Emulate exact mobile device dimensions
+async function captureScreen(ws, url, filename, width = 390, height = 844, waitMs = 1800, mobile = true) {
+  // 1. Emulate device dimensions
   await cdpSend(ws, 'Emulation.setDeviceMetricsOverride', {
     width,
     height,
     deviceScaleFactor: 1,
-    mobile: true
+    mobile
   });
 
   // 2. Navigate to target URL
@@ -134,6 +134,10 @@ server.listen(PORT, async () => {
     await captureScreen(ws, `http://127.0.0.1:${PORT}/?game=neonDash&skipTutorial=1`, 'centered_game_neonDash_412x915.png', 412, 915, 1800);
     // 430px
     await captureScreen(ws, `http://127.0.0.1:${PORT}/?game=cyberPacman&skipTutorial=1`, 'centered_game_cyberPacman_430x932.png', 430, 932, 1800);
+
+    // 4. Desktop verification (1280x800)
+    await captureScreen(ws, `http://127.0.0.1:${PORT}/?game=cyberSurvivors&skipTutorial=1`, 'desktop_game_cyberSurvivors_1280x800.png', 1280, 800, 1500, false);
+    await captureScreen(ws, `http://127.0.0.1:${PORT}/`, 'desktop_hub_1280x800.png', 1280, 800, 1500, false);
 
     console.log('All centered mobile screenshots successfully captured!');
     ws.close();

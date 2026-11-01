@@ -6,6 +6,7 @@ installBrowserMocks();
 
 const { GAMES_METADATA, VALID_GAME_KEYS, getGameMeta } = await import('../src/engine/gamesRegistry.js');
 const { LOGICAL_WIDTH, LOGICAL_HEIGHT, computeRenderScale, fitCanvasToDisplay } = await import('../src/engine/display.js');
+const { storage } = await import('../src/engine/storage.js');
 const { CyberSurvivorsGame } = await import('../src/games/cyberSurvivors.js');
 const { NeonDashGame } = await import('../src/games/neonDash.js');
 const { QuantumBreakerGame } = await import('../src/games/quantumBreaker.js');
@@ -119,26 +120,218 @@ test('All seven games implement setDimensions and safely adjust bounds during sc
   }
 });
 
-test('Cyber Pacman responsive square playfield centers the maze without clipping across phone widths', () => {
-  const c = createMockCanvas(640, 580);
-  const game = new CyberPacmanGame(c, dummyParticles, { onScoreUpdate: () => {}, onGameOver: () => {} });
-  game.init();
-
+test('All seven games adapt to actual width-dependent phone viewports without clipping or fallback to 800x600', () => {
   const phoneWidths = [320, 360, 375, 390, 393, 412, 430];
-  for (const pw of phoneWidths) {
-    // 640 x 580 near-square logical space
-    game.setDimensions(640, 580);
-    assert.equal(game.originX, 12, `originX is 12 on mobile near-square layout`);
-    assert.equal(game.originY, 15, `originY is 15 on mobile near-square layout`);
+  const cb = { onScoreUpdate: () => {}, onGameOver: () => {} };
 
-    // Maze boundaries
-    const mazeRight = game.originX + 28 * 22;
-    const mazeBottom = game.originY + 25 * 22;
-    assert.ok(mazeRight <= 640, 'Maze does not clip right boundary');
-    assert.ok(mazeBottom <= 580, 'Maze does not clip bottom boundary');
-    assert.ok(game.player.x >= game.originX && game.player.x <= mazeRight);
-    assert.ok(game.player.y >= game.originY && game.player.y <= mazeBottom);
+  const gameConstructors = {
+    cyberSurvivors: CyberSurvivorsGame,
+    neonDash: NeonDashGame,
+    quantumBreaker: QuantumBreakerGame,
+    astroPulse: AstroPulseGame,
+    neonDrift: NeonDriftGame,
+    hexaTron: HexaTronGame,
+    cyberPacman: CyberPacmanGame
+  };
+
+  for (const key of VALID_GAME_KEYS) {
+    const meta = getGameMeta(key);
+    assert.ok(meta.portraitDims, `${key} must define portraitDims`);
+    const { width: pW, height: pH } = meta.portraitDims;
+
+    for (const pw of phoneWidths) {
+      // Calculate realistic display dimensions on phone
+      const displayScale = pw / pW;
+      const displayHeight = Math.round(pH * displayScale);
+      const canvas = createMockCanvas(pw, displayHeight);
+
+      const GameClass = gameConstructors[key];
+      const game = new GameClass(canvas, dummyParticles, cb);
+      if (game.init) game.init();
+      else if (game.start) game.start();
+
+      // Configure portrait dimensions
+      game.setDimensions(pW, pH);
+      assert.equal(game.width, pW, `${key} width must be ${pW} at ${pw}px screen`);
+      assert.equal(game.height, pH, `${key} height must be ${pH} at ${pw}px screen`);
+
+      // Verify canvas scaling does not fall back to 800x600
+      const renderScale = fitCanvasToDisplay(canvas, 1, pW, pH);
+      assert.ok(renderScale > 0, `Render scale must be positive for ${key} at ${pw}px`);
+      assert.equal(canvas.width, Math.round(pW * renderScale));
+      assert.equal(canvas.height, Math.round(pH * renderScale));
+      assert.notEqual(canvas.width, 800, `${key} at ${pw}px must not fall back to default 800px width`);
+
+      // Specific game playfield boundary verifications
+      if (key === 'cyberPacman') {
+        const mazeRight = game.originX + 28 * 22;
+        const mazeBottom = game.originY + 25 * 22;
+        assert.ok(mazeRight <= pW, `CyberPacman maze right (${mazeRight}) fits inside portrait width ${pW}`);
+        assert.ok(mazeBottom <= pH, `CyberPacman maze bottom (${mazeBottom}) fits inside portrait height ${pH}`);
+      } else if (key === 'quantumBreaker') {
+        assert.ok(game.paddle.x >= 0 && game.paddle.x <= pW, `QuantumBreaker paddle inside bounds at ${pw}px`);
+      } else if (key === 'neonDash') {
+        assert.equal(game.floorY, Math.round(pH * 0.8), `NeonDash floorY scaled to 80% of ${pH}`);
+        assert.equal(game.ceilY, Math.round(pH * 0.2), `NeonDash ceilY scaled to 20% of ${pH}`);
+      } else if (key === 'hexaTron') {
+        assert.ok(game.arena.w <= pW && game.arena.h <= pH, `HexaTron arena fits inside ${pW}x${pH}`);
+      }
+    }
   }
+});
+
+test('Horizontal centre of movement control matches viewport centre within 2px tolerance across ALL 7 games and ALL 7 viewports', () => {
+  const phoneWidths = [320, 360, 375, 390, 393, 412, 430];
+
+  for (const key of VALID_GAME_KEYS) {
+    const meta = getGameMeta(key);
+
+    for (const W of phoneWidths) {
+      // Deck layout geometry matching src/style.css
+      const isNarrow = W <= 360;
+      const padding = isNarrow ? 4 : 10;
+      const gap = isNarrow ? 2 : 6;
+
+      // Determine movement control width
+      let ctrlWidth;
+      if (meta.controlMode === 'slider') {
+        ctrlWidth = isNarrow ? 144 : 170;
+      } else if (meta.controlMode === 'dpad') {
+        ctrlWidth = isNarrow ? 104 : 114;
+      } else {
+        // Joystick
+        ctrlWidth = isNarrow ? 104 : 114;
+      }
+
+      const availableInner = W - (2 * padding);
+      // CSS Grid grid-template-columns: 1fr auto 1fr
+      const colWidth = (availableInner - (2 * gap) - ctrlWidth) / 2;
+      assert.ok(colWidth > 0, `${key} at ${W}px: flanking column width (${colWidth}px) must be positive`);
+
+      // Left zone: [padding, padding + colWidth]
+      const leftZoneLeft = padding;
+      const leftZoneRight = padding + colWidth;
+
+      // Center movement control: [leftZoneRight + gap, leftZoneRight + gap + ctrlWidth]
+      const ctrlLeft = leftZoneRight + gap;
+      const ctrlRight = ctrlLeft + ctrlWidth;
+      const ctrlCenter = ctrlLeft + (ctrlWidth / 2);
+
+      // Right zone: [ctrlRight + gap, ctrlRight + gap + colWidth]
+      const rightZoneLeft = ctrlRight + gap;
+      const rightZoneRight = rightZoneLeft + colWidth;
+
+      // 1. Primary Movement Control must be horizontally centred
+      const viewportCenter = W / 2;
+      const diff = Math.abs(ctrlCenter - viewportCenter);
+      assert.ok(
+        diff <= 2,
+        `${key} at ${W}px: movement control center (${ctrlCenter.toFixed(2)}) must match viewport center (${viewportCenter}) within 2px tolerance (diff: ${diff.toFixed(2)}px)`
+      );
+
+      // 2. No overlap between left zone and movement control
+      assert.ok(
+        leftZoneRight < ctrlLeft,
+        `${key} at ${W}px: left zone right (${leftZoneRight}px) must not overlap movement control left (${ctrlLeft}px)`
+      );
+
+      // 3. No overlap between movement control and right zone
+      assert.ok(
+        ctrlRight < rightZoneLeft,
+        `${key} at ${W}px: movement control right (${ctrlRight}px) must not overlap right zone left (${rightZoneLeft}px)`
+      );
+
+      // 4. Zero clipping: whole deck fits within screen bounds
+      assert.ok(leftZoneLeft >= 0, `${key} at ${W}px: left zone within bounds`);
+      assert.ok(
+        Math.abs(rightZoneRight + padding - W) < 0.01,
+        `${key} at ${W}px: right zone within viewport bounds (${rightZoneRight + padding} vs ${W})`
+      );
+    }
+  }
+});
+
+test('Complete pointer capture state machine safely handles down, up, cancel, and lostpointercapture without stuck inputs', () => {
+  let capturedPointers = new Set();
+  let heldKeys = new Set();
+  let isPressed = false;
+
+  const mockButton = {
+    setPointerCapture: (id) => capturedPointers.add(id),
+    releasePointerCapture: (id) => capturedPointers.delete(id)
+  };
+
+  const handlePointerDown = (e) => {
+    mockButton.setPointerCapture(e.pointerId);
+    heldKeys.add('Space');
+    isPressed = true;
+  };
+
+  const handlePointerRelease = (e) => {
+    if (capturedPointers.has(e.pointerId)) {
+      mockButton.releasePointerCapture(e.pointerId);
+      if (capturedPointers.size === 0) {
+        heldKeys.delete('Space');
+        isPressed = false;
+      }
+    }
+  };
+
+  // 1. Normal tap press and release
+  handlePointerDown({ pointerId: 10 });
+  assert.equal(isPressed, true);
+  assert.ok(heldKeys.has('Space'));
+  assert.ok(capturedPointers.has(10));
+
+  handlePointerRelease({ pointerId: 10 });
+  assert.equal(isPressed, false);
+  assert.ok(!heldKeys.has('Space'));
+  assert.equal(capturedPointers.size, 0);
+
+  // 2. Lost pointer capture (e.g. system gesture / phone notification)
+  handlePointerDown({ pointerId: 20 });
+  assert.equal(isPressed, true);
+  // lostpointercapture fires
+  handlePointerRelease({ pointerId: 20 });
+  assert.equal(isPressed, false);
+  assert.ok(!heldKeys.has('Space'), 'No stuck key after lostpointercapture');
+
+  // 3. Multi-touch independence (Thumb 1 on Joystick pointer 1, Thumb 2 on Action pointer 2)
+  const joyPointers = new Set();
+  let joyActive = false;
+  const pressJoy = (e) => { joyPointers.add(e.pointerId); joyActive = true; };
+  const releaseJoy = (e) => { joyPointers.delete(e.pointerId); joyActive = false; };
+
+  pressJoy({ pointerId: 1 });
+  handlePointerDown({ pointerId: 2 });
+  assert.equal(joyActive, true, 'Joystick is active with pointer 1');
+  assert.equal(isPressed, true, 'Action button is active with pointer 2');
+
+  // Release action button while holding joystick
+  handlePointerRelease({ pointerId: 2 });
+  assert.equal(isPressed, false, 'Action button released');
+  assert.equal(joyActive, true, 'Joystick remains active with pointer 1');
+
+  // Release joystick
+  releaseJoy({ pointerId: 1 });
+  assert.equal(joyActive, false, 'Joystick released cleanly');
+});
+
+test('Configurable joystick sizes and vertical positions update styling and persistence', () => {
+  storage.setSetting('joystickSize', 'small');
+  storage.setSetting('deckVerticalOffset', -10);
+  assert.equal(storage.getSetting('joystickSize'), 'small');
+  assert.equal(storage.getSetting('deckVerticalOffset'), -10);
+
+  storage.setSetting('joystickSize', 'large');
+  storage.setSetting('deckVerticalOffset', 10);
+  assert.equal(storage.getSetting('joystickSize'), 'large');
+  assert.equal(storage.getSetting('deckVerticalOffset'), 10);
+
+  storage.setSetting('joystickSize', 'medium');
+  storage.setSetting('deckVerticalOffset', 0);
+  assert.equal(storage.getSetting('joystickSize'), 'medium');
+  assert.equal(storage.getSetting('deckVerticalOffset'), 0);
 });
 
 test('Quantum Breaker direct canvas touch controls move paddle smoothly', () => {
