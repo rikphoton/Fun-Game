@@ -152,6 +152,12 @@ class ArcadeApp {
     this.achievementsList = document.getElementById('achievements-list');
     this.btnCloseAchievements = document.getElementById('btn-close-achievements');
     this.toastContainer = document.getElementById('toast-container');
+    this.toastQueue = [];
+    this.activeToasts = new Set();
+    this.recentToastKeys = new Set();
+    this.MAX_CONCURRENT_TOASTS = 2;
+    this.TOAST_DISPLAY_MS = 2650;
+    this.TOAST_FADE_MS = 250;
 
     // Leaderboard & Initials Elements
     this.btnOpenLeaderboard = document.getElementById('btn-open-leaderboards');
@@ -1609,24 +1615,39 @@ class ArcadeApp {
     this.modalLeaderboard.style.display = 'flex';
   }
 
-  showToast(icon, title, text) {
-    const toast = document.createElement('div');
-    toast.className = 'achievement-toast';
-    toast.innerHTML = `
-      <div class="toast-icon">${icon}</div>
-      <div class="toast-text">
-        <h5>${title}</h5>
-        <p>${text}</p>
-      </div>
-    `;
-    this.toastContainer.appendChild(toast);
+  showToast(arg1, arg2, arg3) {
+    let icon = '🎮';
+    let badge = 'ARCADE SYSTEM';
+    let title = '';
+    let reward = '';
 
-    setTimeout(() => {
-      toast.style.opacity = '0';
-      toast.style.transform = 'translateX(60px)';
-      toast.style.transition = 'all 0.4s ease';
-      setTimeout(() => toast.remove(), 400);
-    }, 3800);
+    if (arg2 !== undefined && arg3 !== undefined) {
+      icon = arg1 || '🎮';
+      badge = arg2;
+      title = arg3;
+    } else if (arg2 !== undefined) {
+      badge = arg1;
+      title = arg2;
+    } else if (typeof arg1 === 'string') {
+      const msg = arg1.trim();
+      const emojiMatch = msg.match(/^(\p{Extended_Pictographic}+|\S+)\s*(.*)$/u);
+      if (emojiMatch && /[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/u.test(emojiMatch[1])) {
+        icon = emojiMatch[1];
+        title = emojiMatch[2];
+        badge = 'ARCADE SYSTEM';
+      } else {
+        title = msg;
+        badge = 'ARCADE SYSTEM';
+      }
+    }
+
+    this.enqueueToast({
+      type: 'general',
+      icon,
+      badge,
+      title,
+      reward
+    });
   }
 
   // --- CYBER LAB TECH TREE RENDERER ---
@@ -3098,25 +3119,105 @@ class ArcadeApp {
   }
 
   showAchievementToast(ach) {
+    if (!ach) return;
+
+    // Deduplication check: prevent firing duplicate toasts for the same achievement
+    const achKey = 'ach_' + (ach.id || ach.title);
+    if (this.recentToastKeys.has(achKey)) return;
+    this.recentToastKeys.add(achKey);
+    setTimeout(() => this.recentToastKeys.delete(achKey), 8000);
+
     sound.playVictory();
     sound.announce('Achievement Unlocked!');
+
+    this.enqueueToast({
+      type: 'achievement',
+      id: ach.id,
+      icon: ach.icon || '🏆',
+      badge: 'ACHIEVEMENT UNLOCKED',
+      title: ach.title || 'Unknown Achievement',
+      reward: '+100 Neon Credits'
+    });
+  }
+
+  enqueueToast(toastItem) {
+    this.toastQueue.push(toastItem);
+    this.processToastQueue();
+  }
+
+  processToastQueue() {
+    if (!this.toastContainer) {
+      this.toastContainer = document.getElementById('toast-container');
+      if (!this.toastContainer) return;
+    }
+
+    // Narrow mobile screens display 1 toast at a time to keep screen clear
+    const isNarrowMobile = typeof window !== 'undefined' && window.innerWidth <= 480;
+    const maxAllowed = isNarrowMobile ? 1 : this.MAX_CONCURRENT_TOASTS;
+
+    while (this.activeToasts.size < maxAllowed && this.toastQueue.length > 0) {
+      const item = this.toastQueue.shift();
+      this.mountToastElement(item);
+    }
+  }
+
+  mountToastElement(item) {
+    if (!this.toastContainer) return;
+
     const toast = document.createElement('div');
-    toast.className = 'achievement-toast';
+    const isAch = item.type === 'achievement';
+    toast.className = `arcade-toast ${isAch ? 'toast-achievement achievement-toast' : 'toast-general'}`;
+    toast.setAttribute('role', 'alert');
+    toast.setAttribute('aria-live', 'assertive');
+
+    const rewardHtml = item.reward ? `<div class="toast-reward">${item.reward}</div>` : '';
+
     toast.innerHTML = `
-      <div class="toast-icon">${ach.icon}</div>
-      <div class="toast-text">
-        <h5>Achievement Unlocked! (+100 💎)</h5>
-        <p>${ach.title}</p>
+      <div class="toast-icon" aria-hidden="true">${item.icon}</div>
+      <div class="toast-content toast-text">
+        <h5 class="toast-badge">${item.badge}</h5>
+        <p class="toast-title" title="${item.title}">${item.title}</p>
+        ${rewardHtml}
       </div>
     `;
+
     this.toastContainer.appendChild(toast);
+    this.activeToasts.add(toast);
+
+    // Auto-dismiss after display duration
+    const dismissTimer = setTimeout(() => {
+      this.dismissToastElement(toast);
+    }, this.TOAST_DISPLAY_MS);
+
+    toast._dismissTimer = dismissTimer;
+  }
+
+  dismissToastElement(toast) {
+    if (!toast) return;
+
+    if (toast._dismissTimer) {
+      clearTimeout(toast._dismissTimer);
+      toast._dismissTimer = null;
+    }
+
+    toast.classList.add('toast-hiding');
 
     setTimeout(() => {
-      toast.style.opacity = '0';
-      toast.style.transform = 'translateX(60px)';
-      toast.style.transition = 'all 0.4s ease';
-      setTimeout(() => toast.remove(), 400);
-    }, 3800);
+      if (toast.parentNode) {
+        toast.parentNode.removeChild(toast);
+      }
+      this.activeToasts.delete(toast);
+      this.processToastQueue();
+    }, this.TOAST_FADE_MS);
+  }
+
+  clearAllToasts() {
+    this.toastQueue = [];
+    for (const toast of this.activeToasts) {
+      if (toast._dismissTimer) clearTimeout(toast._dismissTimer);
+      if (toast.parentNode) toast.parentNode.removeChild(toast);
+    }
+    this.activeToasts.clear();
   }
 
   handleGamepadInput() {
