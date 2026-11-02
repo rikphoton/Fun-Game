@@ -1246,6 +1246,45 @@ class SoundEngine {
     this.playSuperNova();
   }
 
+  playFlipper() {
+    if (this.isMuted || !this.sfxEnabled || !this.ctx) return;
+    try {
+      const now = this.ctx.currentTime;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(190, now);
+      osc.frequency.exponentialRampToValueAtTime(55, now + 0.05);
+      gain.gain.setValueAtTime(0.35, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+      osc.connect(gain);
+      gain.connect(this.sfxGain || this.masterGain);
+      osc.start(now);
+      osc.stop(now + 0.05);
+      this.registerVoice(osc);
+    } catch (e) {}
+  }
+
+  playCombo(streak = 1) {
+    if (this.isMuted || !this.sfxEnabled || !this.ctx) return;
+    try {
+      const now = this.ctx.currentTime;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      const baseFreq = Math.min(1200, 440 + streak * 40);
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(baseFreq, now);
+      osc.frequency.exponentialRampToValueAtTime(baseFreq * 1.5, now + 0.15);
+      gain.gain.setValueAtTime(0.2, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+      osc.connect(gain);
+      gain.connect(this.sfxGain || this.masterGain);
+      osc.start(now);
+      osc.stop(now + 0.15);
+      this.registerVoice(osc);
+    } catch (e) {}
+  }
+
   // --- NEON DRIFT PROCEDURAL REAL-TIME ENGINE SYNTHESIS ---
 
   startEngineSound() {
@@ -1703,6 +1742,50 @@ class SoundEngine {
         bassNotes = [130.81, 110, 87.31, 98];
         break;
 
+      case 'cyberPinball':
+        tempo = 124;
+        chords = [
+          [220, 277.18, 329.63, 440],
+          [196, 246.94, 293.66, 392],
+          [220, 261.63, 329.63, 440],
+          [164.81, 207.65, 246.94, 329.63]
+        ];
+        bassNotes = [110, 98, 110, 82.41];
+        break;
+
+      case 'voxelTankSiege':
+        tempo = 120;
+        chords = [
+          [146.83, 174.61, 220, 293.66],
+          [130.81, 155.56, 196, 261.63],
+          [110, 138.59, 164.81, 220],
+          [146.83, 174.61, 220, 293.66]
+        ];
+        bassNotes = [73.42, 65.41, 55, 73.42];
+        break;
+
+      case 'synthBlade':
+        tempo = 138;
+        chords = [
+          [220, 261.63, 329.63, 440],
+          [261.63, 329.63, 392, 523.25],
+          [174.61, 220, 261.63, 349.23],
+          [196, 246.94, 293.66, 392]
+        ];
+        bassNotes = [110, 130.81, 87.31, 98];
+        break;
+
+      case 'laserMatrix':
+        tempo = 112;
+        chords = [
+          [196, 246.94, 293.66, 392],
+          [220, 261.63, 329.63, 440],
+          [174.61, 220, 261.63, 349.23],
+          [130.81, 164.81, 196, 261.63]
+        ];
+        bassNotes = [98, 110, 87.31, 65.41];
+        break;
+
       case 'lobby':
       case 'synthwave':
       default:
@@ -1847,6 +1930,14 @@ class SoundEngine {
     if (this.bgmGain && this.ctx) {
       this.bgmGain.gain.setTargetAtTime(this.bgmVolume * 0.25, this.ctx.currentTime, 0.08);
     }
+  }
+
+  duckBgm() {
+    this.pauseBgm();
+  }
+
+  restoreBgm() {
+    this.resumeBgm();
   }
 
   resumeBgm() {

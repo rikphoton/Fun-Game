@@ -278,6 +278,151 @@ export const GAMES_METADATA = {
 
 export const VALID_GAME_KEYS = Object.freeze(Object.keys(GAMES_METADATA));
 
+export const EXPANSION_GAMES_METADATA = {
+  cyberPinball: {
+    key: 'cyberPinball',
+    title: 'Cyber Pinball',
+    genre: 'Neon Flipper Physics',
+    tag: 'PINBALL',
+    badge: 'EXPANSION',
+    controlMode: 'buttons',
+    portraitDims: { width: 600, height: 750 },
+    desktopDims: { width: 600, height: 750 },
+    instructions: 'Left Flipper: <kbd>A</kbd>/Left | Right Flipper: <kbd>D</kbd>/Right | Plunger: <kbd>SPACE</kbd>',
+    hintText: '🕹️ FLIPPERS: LEFT & RIGHT | 🚀 PLUNGER: SPACE',
+    primaryLabel: 'R FLIP',
+    subLabel: 'L FLIP',
+    superLabel: 'PLUNGE',
+    primaryIcon: '🕹️',
+    subIcon: '🕹️',
+    superIcon: '🚀',
+    showSub: true,
+    showSuper: true,
+    showPrimary: true,
+    hud: { hp: true, super: false },
+    briefing: {
+      objective: 'Hit kinetic plasma bumpers, drop C-Y-B-E-R targets to trigger 3-ball Multiball Frenzy, and keep the ball in play!',
+      keyboard: [
+        'A / Left Arrow: Left Flipper',
+        'D / Right Arrow: Right Flipper',
+        'SPACE / Down Arrow: Hold to charge plunger, release to launch'
+      ],
+      mobile: [
+        'L FLIP (left button): Engage left flipper',
+        'R FLIP (right button): Engage right flipper',
+        'PLUNGE (super button): Charge & launch spring plunger'
+      ]
+    }
+  },
+  voxelTankSiege: {
+    key: 'voxelTankSiege',
+    title: 'Voxel Tank Siege',
+    genre: 'Tactical Arena Combat',
+    tag: 'TACTICAL',
+    badge: 'EXPANSION',
+    controlMode: 'joystick',
+    portraitDims: { width: 720, height: 720 },
+    desktopDims: { width: 800, height: 600 },
+    instructions: 'Drive: <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> | Fire: <kbd>SPACE</kbd> / Click | Mine: <kbd>SHIFT</kbd>',
+    hintText: '🕹️ DRIVE: JOYSTICK | 💥 FIRE: RIGHT | 💣 MINE: LEFT',
+    primaryLabel: 'FIRE',
+    subLabel: 'MINE',
+    superLabel: '',
+    primaryIcon: '💥',
+    subIcon: '💣',
+    superIcon: '',
+    showSub: true,
+    showSuper: false,
+    showPrimary: true,
+    hud: { hp: true, super: false },
+    briefing: {
+      objective: 'Drive an armored cyber tank, bounce shells off arena walls, blast destructible barricades, and deploy proximity mines.',
+      keyboard: [
+        'WASD or Arrow Keys to maneuver chassis',
+        'Mouse / Direction to aim turret, SPACE or Click to fire ricochet cannon',
+        'SHIFT: Drop timed proximity energy mine'
+      ],
+      mobile: [
+        'Centred 360° Joystick: Steer tank chassis',
+        '💥 FIRE (right): Discharge ricocheting plasma shell',
+        '💣 MINE (left): Deploy high-yield energy mine'
+      ]
+    }
+  },
+  synthBlade: {
+    key: 'synthBlade',
+    title: 'Synth Blade',
+    genre: 'Rhythm Beat Slasher',
+    tag: 'RHYTHM',
+    badge: 'EXPANSION',
+    controlMode: 'buttons',
+    portraitDims: { width: 600, height: 700 },
+    desktopDims: { width: 600, height: 700 },
+    instructions: 'Lanes: <kbd>D</kbd> <kbd>F</kbd> <kbd>J</kbd> <kbd>K</kbd> or <kbd>←</kbd> <kbd>↓</kbd> <kbd>↑</kbd> <kbd>→</kbd>',
+    hintText: '🎵 STRIKE 4 LANES IN TIME WITH SYNTH BEATS',
+    primaryLabel: 'K / →',
+    subLabel: 'D / ←',
+    superLabel: '',
+    primaryIcon: '⚡',
+    subIcon: '⚡',
+    superIcon: '',
+    showSub: true,
+    showSuper: false,
+    showPrimary: true,
+    hud: { hp: true, super: false },
+    briefing: {
+      objective: 'Slash notes flowing down 4 matrix lanes in tempo with synthwave drops. Reach 20 combo to activate Fever Mode 4x!',
+      keyboard: [
+        'D, F, J, K keys (or Left, Down, Up, Right arrows) for Lanes 1, 2, 3, 4',
+        'Time strikes precisely as notes cross the lower target line',
+        'Build streak to enter Fever Mode with 4x scoring'
+      ],
+      mobile: [
+        'Tap the 4 interactive lane buttons at bottom of screen',
+        'Hit within target line for PERFECT (+200) or GREAT (+100)',
+        'Maintain high combo to unlock Fever Mode aura'
+      ]
+    }
+  },
+  laserMatrix: {
+    key: 'laserMatrix',
+    title: 'Laser Matrix',
+    genre: 'Optical Quantum Puzzle',
+    tag: 'PUZZLE',
+    badge: 'EXPANSION',
+    controlMode: 'buttons',
+    portraitDims: { width: 650, height: 650 },
+    desktopDims: { width: 700, height: 650 },
+    instructions: 'Rotate Mirrors: Click / Tap mirrors to reflect laser into target cores',
+    hintText: '🔮 TAP MIRRORS TO REDIRECT LASER BEAMS',
+    primaryLabel: 'ROTATE',
+    subLabel: '',
+    superLabel: '',
+    primaryIcon: '🔄',
+    subIcon: '',
+    superIcon: '',
+    showSub: false,
+    showSuper: false,
+    showPrimary: true,
+    hud: { hp: false, super: false },
+    briefing: {
+      objective: 'Guide laser beams through a quantum matrix by rotating angled mirrors 45° to power all target cores.',
+      keyboard: [
+        'Click on any mirror with mouse to rotate 45 degrees',
+        'Laser beam reflects in real-time based on mirror angle',
+        'Power all green target cores to clear stage and advance'
+      ],
+      mobile: [
+        'Tap mirrors directly on the touch screen grid to rotate',
+        'Clear all 5 progressive optical quantum puzzles'
+      ]
+    }
+  }
+};
+
+export const EXPANSION_GAME_KEYS = Object.freeze(Object.keys(EXPANSION_GAMES_METADATA));
+export const ALL_GAME_KEYS = Object.freeze([...VALID_GAME_KEYS, ...EXPANSION_GAME_KEYS]);
+
 export function getGameMeta(key) {
-  return GAMES_METADATA[key] || null;
+  return GAMES_METADATA[key] || EXPANSION_GAMES_METADATA[key] || null;
 }

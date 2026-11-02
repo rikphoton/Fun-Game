@@ -66,6 +66,10 @@
         ⚡ Tournament
       </button>
 
+      <button class="control-btn" id="btn-open-expansions" title="Play Secret & Expansion Arcade Cabinets">
+        🕹️ Expansions
+      </button>
+
       <button class="control-btn" id="btn-open-leaderboards" title="Local Hall of Fame (saved on this device)">
         🏆 Hall of Fame
       </button>
@@ -104,6 +108,24 @@
         </div>
         <button class="play-btn gold" id="btn-play-daily" style="min-width: 170px;">
           <span>⚡</span> Enter Daily Run
+        </button>
+      </div>
+
+      <!-- Expansion Cabinets Showcase Banner -->
+      <div id="expansion-cabinets-banner" style="background: linear-gradient(90deg, rgba(236, 72, 153, 0.08), rgba(20, 184, 166, 0.08)); border: 1px solid rgba(236, 72, 153, 0.35); border-radius: 12px; padding: 14px 20px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+        <div style="display: flex; align-items: center; gap: 14px;">
+          <div style="font-size: 2rem;">🕹️</div>
+          <div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span class="daily-challenge-badge" style="background: rgba(236, 72, 153, 0.25); color: #ec4899; border-color: #ec4899;">ARCADE EXPANSION</span>
+              <span style="font-size: 0.75rem; color: #00f3ff; font-weight: bold;">● 4 NEW PLAYABLE CABINETS</span>
+            </div>
+            <h3 style="margin: 4px 0 2px 0; color: #fff; font-size: 1.15rem;">Cyber Pinball, Tank Siege, Synth Blade & Laser Matrix</h3>
+            <p style="margin: 0; color: #94a3b8; font-size: 0.85rem; max-width: 580px;">Specialized arcade prototypes featuring kinetic flipper physics, rhythm beat slasher, tactical ricochet combat, and optical laser puzzles.</p>
+          </div>
+        </div>
+        <button class="play-btn pink" id="btn-open-expansions-banner" style="min-width: 170px;">
+          <span>▶</span> Enter Expansions
         </button>
       </div>
 
@@ -400,6 +422,99 @@
 
       <div class="modal-actions" style="margin-top: 22px;">
         <button class="play-btn" id="btn-close-lab">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Expansion Cabinets Modal -->
+  <div class="modal-overlay" id="modal-expansions">
+    <div class="modal-box" style="max-width: 840px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+        <h2 class="modal-title cyan" style="margin: 0;">🕹️ ARCADE EXPANSION CABINETS</h2>
+        <div class="credits-badge" style="font-size: 1.1rem;">💎 <span id="expansions-credits-display">200</span> NC</div>
+      </div>
+      <p class="modal-subtitle">Four specialized prototype arcade cabinets engineered with unique physics, mechanics, and synthwave soundtracks</p>
+
+      <div class="expansion-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin-top: 18px;">
+        <!-- Expansion 1: Cyber Pinball -->
+        <div class="expansion-card" style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(236, 72, 153, 0.4); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; justify-content: space-between;">
+          <div>
+            <div class="card-badge" style="background: rgba(236, 72, 153, 0.2); color: #ec4899; border-color: #ec4899;">Neon Flipper Physics</div>
+            <div style="font-size: 2rem; margin: 8px 0;">🎯</div>
+            <h3 style="color: #fff; margin: 0 0 6px 0; font-size: 1.1rem;">Cyber Pinball</h3>
+            <p style="color: #94a3b8; font-size: 0.82rem; margin: 0 0 12px 0;">Kinetic flippers, glowing plasma bumpers, C-Y-B-E-R drop targets, and 3-ball Multiball Frenzy jackpot!</p>
+          </div>
+          <div>
+            <div class="card-meta" style="display: flex; justify-content: space-between; font-size: 0.75rem; color: #64748b; margin-bottom: 8px;">
+              <span>Best Score</span>
+              <span class="high-score-tag" id="best-score-pinball">0 PTS</span>
+            </div>
+            <button class="play-btn pink" id="btn-play-pinball" style="width: 100%;">
+              <span>▶</span> Launch Pinball
+            </button>
+          </div>
+        </div>
+
+        <!-- Expansion 2: Voxel Tank Siege -->
+        <div class="expansion-card" style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(20, 184, 166, 0.4); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; justify-content: space-between;">
+          <div>
+            <div class="card-badge" style="background: rgba(20, 184, 166, 0.2); color: #14b8a6; border-color: #14b8a6;">Tactical Arena Combat</div>
+            <div style="font-size: 2rem; margin: 8px 0;">🛡️</div>
+            <h3 style="color: #fff; margin: 0 0 6px 0; font-size: 1.1rem;">Voxel Tank Siege</h3>
+            <p style="color: #94a3b8; font-size: 0.82rem; margin: 0 0 12px 0;">Drive hover-tanks, bounce plasma shells off walls, blast destructible barricades, and drop proximity energy mines.</p>
+          </div>
+          <div>
+            <div class="card-meta" style="display: flex; justify-content: space-between; font-size: 0.75rem; color: #64748b; margin-bottom: 8px;">
+              <span>Best Score</span>
+              <span class="high-score-tag" id="best-score-tank">0 PTS</span>
+            </div>
+            <button class="play-btn cyan" id="btn-play-tank" style="width: 100%;">
+              <span>▶</span> Deploy Tank
+            </button>
+          </div>
+        </div>
+
+        <!-- Expansion 3: Synth Blade -->
+        <div class="expansion-card" style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(168, 85, 247, 0.4); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; justify-content: space-between;">
+          <div>
+            <div class="card-badge" style="background: rgba(168, 85, 247, 0.2); color: #a855f7; border-color: #a855f7;">Rhythm Beat Slasher</div>
+            <div style="font-size: 2rem; margin: 8px 0;">🎵</div>
+            <h3 style="color: #fff; margin: 0 0 6px 0; font-size: 1.1rem;">Synth Blade</h3>
+            <p style="color: #94a3b8; font-size: 0.82rem; margin: 0 0 12px 0;">4-lane beat slasher synced to procedural synthwave drops. Score PERFECT / GREAT ratings to trigger Fever Mode 4x!</p>
+          </div>
+          <div>
+            <div class="card-meta" style="display: flex; justify-content: space-between; font-size: 0.75rem; color: #64748b; margin-bottom: 8px;">
+              <span>Best Score</span>
+              <span class="high-score-tag" id="best-score-blade">0 PTS</span>
+            </div>
+            <button class="play-btn purple" id="btn-play-blade" style="width: 100%;">
+              <span>▶</span> Strike Beats
+            </button>
+          </div>
+        </div>
+
+        <!-- Expansion 4: Laser Matrix -->
+        <div class="expansion-card" style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(2, 132, 199, 0.4); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; justify-content: space-between;">
+          <div>
+            <div class="card-badge" style="background: rgba(2, 132, 199, 0.2); color: #0284c7; border-color: #0284c7;">Optical Quantum Puzzle</div>
+            <div style="font-size: 2rem; margin: 8px 0;">🔮</div>
+            <h3 style="color: #fff; margin: 0 0 6px 0; font-size: 1.1rem;">Laser Matrix</h3>
+            <p style="color: #94a3b8; font-size: 0.82rem; margin: 0 0 12px 0;">Rotate 45° angled mirrors to guide ray-traced laser beams through grid corridors into quantum receiver cores.</p>
+          </div>
+          <div>
+            <div class="card-meta" style="display: flex; justify-content: space-between; font-size: 0.75rem; color: #64748b; margin-bottom: 8px;">
+              <span>Best Score</span>
+              <span class="high-score-tag" id="best-score-matrix">0 PTS</span>
+            </div>
+            <button class="play-btn yellow" id="btn-play-matrix" style="width: 100%;">
+              <span>▶</span> Solve Matrix
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-actions" style="margin-top: 22px;">
+        <button class="play-btn" id="btn-close-expansions">Close Showroom</button>
       </div>
     </div>
   </div>

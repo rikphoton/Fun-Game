@@ -32,6 +32,22 @@ body.theme-matrix {
   --neon-yellow: #73ff00;
 }
 
+body.theme-outrun_sunset {
+  --bg-dark: #1f0b18;
+  --bg-card: rgba(45, 14, 32, 0.75);
+  --neon-cyan: #f59e0b;
+  --neon-pink: #ff007f;
+  --neon-yellow: #facc15;
+}
+
+body.theme-monolith_chrome {
+  --bg-dark: #0f1117;
+  --bg-card: rgba(26, 30, 42, 0.75);
+  --neon-cyan: #a855f7;
+  --neon-pink: #38bdf8;
+  --neon-yellow: #e2e8f0;
+}
+
 * {
   margin: 0;
   padding: 0;

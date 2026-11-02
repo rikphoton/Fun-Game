@@ -35,8 +35,13 @@ export class QuantumBreakerGame {
     this.combo = 0;
     this.maxComboThisRun = 0;
     this.isExploding = false;
-    this.barrierActive = false;
-    this.barrierTimer = 0;
+
+    // Cyber Lab tech tree bonuses
+    const startShield = storage.getLabBonus ? storage.getLabBonus('shield') : false;
+    const thrusterBonus = 1 + (storage.getLabBonus ? storage.getLabBonus('thrusters') : 0);
+
+    this.barrierActive = Boolean(startShield);
+    this.barrierTimer = startShield ? 15 : 0;
 
     // Paddle
     this.paddle = {
@@ -44,13 +49,13 @@ export class QuantumBreakerGame {
       y: this.height - 40,
       width: 110,
       height: 14,
-      speed: 550,
+      speed: Math.round(550 * thrusterBonus),
       color: '#00f3ff',
       hasLaser: false,
       laserTimer: 0,
       hasFireball: false,
       fireballTimer: 0,
-      hasShield: false
+      hasShield: Boolean(startShield)
     };
 
     this.balls = [];

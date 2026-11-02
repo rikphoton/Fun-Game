@@ -12,6 +12,10 @@ import { AstroPulseGame } from './games/astroPulse.js';
 import { NeonDriftGame } from './games/neonDrift.js';
 import { HexaTronGame } from './games/hexaTron.js';
 import { CyberPacmanGame } from './games/cyberPacman.js';
+import { CyberPinballGame } from './games/cyberPinball.js';
+import { VoxelTankSiegeGame } from './games/voxelTankSiege.js';
+import { SynthBladeGame } from './games/synthBlade.js';
+import { LaserMatrixGame } from './games/laserMatrix.js';
 import { leaderboard } from './engine/leaderboard.js';
 import { gamepad } from './engine/gamepad.js';
 import { getGameMeta } from './engine/gamesRegistry.js';
@@ -95,6 +99,8 @@ class ArcadeApp {
     this.btnOpenArmory = document.getElementById('btn-open-armory');
     this.btnOpenArmoryBadge = document.getElementById('btn-open-armory-badge');
     this.btnOpenAudio = document.getElementById('btn-open-audio');
+    this.btnOpenExpansions = document.getElementById('btn-open-expansions');
+    this.btnOpenExpansionsBanner = document.getElementById('btn-open-expansions-banner');
     this.btnCrt = document.getElementById('btn-toggle-crt');
     this.btnAchievements = document.getElementById('btn-open-achievements');
     this.btnFullscreen = document.getElementById('btn-toggle-fullscreen');
@@ -119,6 +125,14 @@ class ArcadeApp {
     this.labCreditsDisplay = document.getElementById('lab-credits-display');
     this.labUpgradesList = document.getElementById('lab-upgrades-list');
     this.btnCloseLab = document.getElementById('btn-close-lab');
+
+    this.modalExpansions = document.getElementById('modal-expansions');
+    this.expansionsCreditsDisplay = document.getElementById('expansions-credits-display');
+    this.btnCloseExpansions = document.getElementById('btn-close-expansions');
+    this.btnPlayPinball = document.getElementById('btn-play-pinball');
+    this.btnPlayTank = document.getElementById('btn-play-tank');
+    this.btnPlayBlade = document.getElementById('btn-play-blade');
+    this.btnPlayMatrix = document.getElementById('btn-play-matrix');
 
     this.modalQuests = document.getElementById('modal-quests');
     this.questCreditsDisplay = document.getElementById('quest-credits-display');
@@ -320,6 +334,44 @@ class ArcadeApp {
             this.hudHpFill.style.width = `${Math.max(0, (lives / 3) * 100)}%`;
           }
         }
+      }),
+
+      cyberPinball: new CyberPinballGame(this.canvas, this.particles, {
+        onGameOver: (data) => this.handleGameOver(data),
+        onScoreUpdate: (score, balls, multiplier) => {
+          this.hudScore.textContent = score;
+          this.hudSecondary.innerHTML = `BALLS: <span>${'⚪'.repeat(Math.max(0, balls))}</span> | COMBO: <span>${multiplier}x</span>`;
+        }
+      }),
+
+      voxelTankSiege: new VoxelTankSiegeGame(this.canvas, this.particles, {
+        onGameOver: (data) => this.handleGameOver(data),
+        onScoreUpdate: (score, wave, hp, maxHp) => {
+          this.hudScore.textContent = score;
+          this.hudSecondary.innerHTML = `WAVE: <span>${wave}</span>`;
+          if (this.hudHpFill) {
+            this.hudHpFill.style.width = `${Math.max(0, (hp / maxHp) * 100)}%`;
+          }
+        }
+      }),
+
+      synthBlade: new SynthBladeGame(this.canvas, this.particles, {
+        onGameOver: (data) => this.handleGameOver(data),
+        onScoreUpdate: (score, combo, hp, maxHp) => {
+          this.hudScore.textContent = score;
+          this.hudSecondary.innerHTML = `COMBO: <span>${combo}x</span>`;
+          if (this.hudHpFill) {
+            this.hudHpFill.style.width = `${Math.max(0, (hp / maxHp) * 100)}%`;
+          }
+        }
+      }),
+
+      laserMatrix: new LaserMatrixGame(this.canvas, this.particles, {
+        onGameOver: (data) => this.handleGameOver(data),
+        onScoreUpdate: (score, level, powered, total) => {
+          this.hudScore.textContent = score;
+          this.hudSecondary.innerHTML = `STAGE: <span>${level}/5</span> | CORES: <span>${powered}/${total}</span>`;
+        }
       })
     };
   }
@@ -348,6 +400,15 @@ class ArcadeApp {
     if (tEl) tEl.textContent = `${tScore.toLocaleString()} PTS`;
     const pEl = document.getElementById('best-score-pacman');
     if (pEl) pEl.textContent = `${pScore.toLocaleString()} PTS`;
+
+    const pinEl = document.getElementById('best-score-pinball');
+    if (pinEl) pinEl.textContent = `${(storage.getHighScore('cyberPinball') || 0).toLocaleString()} PTS`;
+    const tankEl = document.getElementById('best-score-tank');
+    if (tankEl) tankEl.textContent = `${(storage.getHighScore('voxelTankSiege') || 0).toLocaleString()} PTS`;
+    const bladeEl = document.getElementById('best-score-blade');
+    if (bladeEl) bladeEl.textContent = `${(storage.getHighScore('synthBlade') || 0).toLocaleString()} PTS`;
+    const matEl = document.getElementById('best-score-matrix');
+    if (matEl) matEl.textContent = `${(storage.getHighScore('laserMatrix') || 0).toLocaleString()} PTS`;
   }
 
   updateCreditsDisplay() {
@@ -356,6 +417,7 @@ class ArcadeApp {
     if (this.shopCreditsDisplay) this.shopCreditsDisplay.textContent = credits.toLocaleString();
     if (this.labCreditsDisplay) this.labCreditsDisplay.textContent = credits.toLocaleString();
     if (this.questCreditsDisplay) this.questCreditsDisplay.textContent = credits.toLocaleString();
+    if (this.expansionsCreditsDisplay) this.expansionsCreditsDisplay.textContent = credits.toLocaleString();
   }
 
   applyCabinetTheme(theme) {
@@ -377,6 +439,52 @@ class ArcadeApp {
       sound.playButtonClick();
       this.modalLab.style.display = 'none';
     });
+
+    // Expansion Cabinets Modal
+    const openExpansions = () => {
+      sound.init();
+      sound.playMenuOpen();
+      this.updateCreditsDisplay();
+      this.updateLobbyScores();
+      if (this.modalExpansions) this.modalExpansions.style.display = 'flex';
+    };
+    if (this.btnOpenExpansions) this.btnOpenExpansions.addEventListener('click', openExpansions);
+    if (this.btnOpenExpansionsBanner) this.btnOpenExpansionsBanner.addEventListener('click', openExpansions);
+    if (this.btnCloseExpansions) {
+      this.btnCloseExpansions.addEventListener('click', () => {
+        sound.playButtonClick();
+        if (this.modalExpansions) this.modalExpansions.style.display = 'none';
+      });
+    }
+
+    if (this.btnPlayPinball) {
+      this.btnPlayPinball.addEventListener('click', () => {
+        sound.playButtonClick();
+        if (this.modalExpansions) this.modalExpansions.style.display = 'none';
+        this.launchGame('cyberPinball');
+      });
+    }
+    if (this.btnPlayTank) {
+      this.btnPlayTank.addEventListener('click', () => {
+        sound.playButtonClick();
+        if (this.modalExpansions) this.modalExpansions.style.display = 'none';
+        this.launchGame('voxelTankSiege');
+      });
+    }
+    if (this.btnPlayBlade) {
+      this.btnPlayBlade.addEventListener('click', () => {
+        sound.playButtonClick();
+        if (this.modalExpansions) this.modalExpansions.style.display = 'none';
+        this.launchGame('synthBlade');
+      });
+    }
+    if (this.btnPlayMatrix) {
+      this.btnPlayMatrix.addEventListener('click', () => {
+        sound.playButtonClick();
+        if (this.modalExpansions) this.modalExpansions.style.display = 'none';
+        this.launchGame('laserMatrix');
+      });
+    }
 
     // Daily Quests Modal
     this.btnOpenQuests.addEventListener('click', () => {
@@ -943,6 +1051,12 @@ class ArcadeApp {
       if (this.activeGame && this.activeGame.handlePointerDown) {
         this.activeGame.handlePointerDown(pos.x, pos.y);
       }
+      if (this.activeGame && this.activeGame.onCanvasClick) {
+        this.activeGame.onCanvasClick(pos.x, pos.y);
+      }
+      if (this.activeGameKey === 'voxelTankSiege' && this.activeGame) {
+        this.activeGame.pointerTarget = pos;
+      }
       if (this.activeGameKey === 'neonDash' && this.activeGame && this.activeGame.jump) {
         this.activeGame.jump();
       } else if (this.activeGameKey === 'neonDash' && this.activeGame && this.activeGame.handleAction) {
@@ -954,6 +1068,9 @@ class ArcadeApp {
       const pos = getCanvasPos(e);
       if (this.activeGame && this.activeGame.handlePointerMove) {
         this.activeGame.handlePointerMove(pos.x, pos.y);
+      }
+      if (this.activeGameKey === 'voxelTankSiege' && this.activeGame) {
+        this.activeGame.pointerTarget = pos;
       }
     }, { passive: false });
 
@@ -2250,6 +2367,8 @@ class ArcadeApp {
       { id: 'cyberpunk', name: 'Cyberpunk 2077', desc: 'Classic electric cyan & neon pink aesthetic', cost: 0 },
       { id: 'vaporwave', name: '1984 Vaporwave', desc: 'Dreamy retro magenta, purple & sunset cyan', cost: 75 },
       { id: 'matrix', name: 'Matrix Terminal', desc: 'Dark retro phosphor green mainframe theme', cost: 150 },
+      { id: 'outrun_sunset', name: 'Outrun Sunset', desc: 'Blazing sunset amber & hot magenta synthwave vector chassis', cost: 120 },
+      { id: 'monolith_chrome', name: 'Monolith Chrome', desc: 'Brushed titanium chassis with prismatic ultraviolet piping', cost: 180 },
       { id: 'highcontrast', name: 'High Contrast Pro', desc: 'Accessibility-first stark black & white high contrast', cost: 50 }
     ];
 

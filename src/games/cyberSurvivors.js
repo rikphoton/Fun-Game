@@ -81,6 +81,14 @@ export class CyberSurvivorsGame {
       color = '#a855f7';
     }
 
+    // Cyber Lab tech tree bonuses
+    const hullBonus = storage.getLabBonus ? storage.getLabBonus('hull') : 0;
+    const thrusterBonus = 1 + (storage.getLabBonus ? storage.getLabBonus('thrusters') : 0);
+    const startShield = storage.getLabBonus ? storage.getLabBonus('shield') : false;
+
+    maxHp += hullBonus;
+    speed = Math.round(speed * thrusterBonus);
+
     this.player = {
       x: this.width / 2,
       y: this.height / 2,
@@ -119,12 +127,12 @@ export class CyberSurvivorsGame {
       railgunTimer: 0,
       railgunCooldown: 2.2,
 
-      shieldActive: false,
-      shieldLevel: 0,
+      shieldActive: Boolean(startShield),
+      shieldLevel: startShield ? 1 : 0,
       shieldTimer: 0,
       shieldCooldown: 6.0,
       shieldMaxHp: 40,
-      shieldHp: 0
+      shieldHp: startShield ? 40 : 0
     };
 
     this.enemies = [];

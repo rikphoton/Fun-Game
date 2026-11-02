@@ -178,11 +178,11 @@ export class NeonDriftGame {
     this.curveTimer = 0;
 
     // Apply Cyber Lab Tech Tree upgrades
-    const armorLvl = storage.getLabUpgradeLevel('armor');
-    const batteryLvl = storage.getLabUpgradeLevel('battery');
-    this.maxHp = 100 + armorLvl * 25;
+    const hullBonus = storage.getLabBonus ? storage.getLabBonus('hull') : 0;
+    const thrusterBonus = storage.getLabBonus ? storage.getLabBonus('thrusters') : 0;
+    this.maxHp = 100 + hullBonus;
     this.hp = this.maxHp;
-    this.maxNitro = 100 + batteryLvl * 20;
+    this.maxSpeed = Math.round(220 * (1 + thrusterBonus));
     this.nitro = this.maxNitro;
 
     sound.announce('Ignition. Floor it!');
